@@ -1,0 +1,48 @@
+/* Gerado por scripts/build-tokens.mjs a partir de replica/design/tokens.json. Não editar à mão. */
+:root {
+  color-scheme: dark;
+  --c-bg: #0b0b0d;
+  --c-surface: #17171a;
+  --c-surface-2: #202024;
+  --c-surface-3: #2a2a2f;
+  --c-border: #2e2e33;
+  --c-border-input: #6b6b73;
+  --c-text: #f4f4f5;
+  --c-text-body: #c8c8ce;
+  --c-text-muted: #a1a1aa;
+  --c-accent: #e4e4e7;
+  --c-on-accent: #18181b;
+  --c-focus: #e4e4e7;
+  --c-income: #4ade80;
+  --c-expense: #fb7185;
+  --c-danger: #f87171;
+  --c-success: #4ade80;
+  --c-warning: #fbbf24;
+  --c-info: #93c5fd;
+  --shadow-card-v: 0 1px 2px rgba(0,0,0,.24), 0 1px 3px rgba(0,0,0,.32);
+  --shadow-pop-v: 0 16px 40px rgba(0,0,0,.45);
+}
+
+[data-theme='light'] {
+  color-scheme: light;
+  --c-bg: #fafafa;
+  --c-surface: #ffffff;
+  --c-surface-2: #f4f4f5;
+  --c-surface-3: #e4e4e7;
+  --c-border: #e4e4e7;
+  --c-border-input: #71717a;
+  --c-text: #18181b;
+  --c-text-body: #3f3f46;
+  --c-text-muted: #52525b;
+  --c-accent: #27272a;
+  --c-on-accent: #fafafa;
+  --c-focus: #27272a;
+  --c-income: #15803d;
+  --c-expense: #be123c;
+  --c-danger: #b91c1c;
+  --c-success: #15803d;
+  --c-warning: #a16207;
+  --c-info: #1d4ed8;
+  --shadow-card-v: 0 1px 2px rgba(24,24,27,.06), 0 1px 3px rgba(24,24,27,.08);
+  --shadow-pop-v: 0 8px 24px rgba(24,24,27,.10);
+}

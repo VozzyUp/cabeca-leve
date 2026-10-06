@@ -17,6 +17,15 @@ O planejamento segue o pacote de skills Replica, na pasta `replica/`:
 | `replica/architecture.md` | stack, como o assistente funciona, API, partes difíceis e ordem de construção |
 | `replica/schema.sql` | esquema do banco (Postgres/Supabase): 53 tabelas, 2 views, RLS |
 | `replica/schema-test.mjs` | testes do esquema num Postgres local (PGlite) |
+| `replica/design/` | tokens (`tokens.json`), especificação dos componentes e capturas da vitrine `/design` |
 
 Ordem das etapas: recon → architect → design → build → backend → test → diff →
 entrepreneur → brand → launch → deploy.
+
+## Rodar o app
+
+```bash
+npm install
+npm run dev        # http://localhost:3000/design mostra o sistema visual
+npm run tokens     # regera app/tokens.css depois de mudar replica/design/tokens.json
+```
