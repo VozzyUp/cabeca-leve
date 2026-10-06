@@ -1,0 +1,143 @@
+feature,area,priority,original,clone,notes
+Cadastro e login com e-mail e senha,conta e assinatura,must,yes,no,
+Recuperar senha por e-mail,conta e assinatura,must,yes,no,
+Planos mensal e anual com checkout,conta e assinatura,must,yes,no,"original: R$ 49,90/mês ou R$ 399/ano; 14 dias de garantia [conferir]"
+Acesso liberado automaticamente quando o pagamento é aprovado,conta e assinatura,must,yes,no,original libera pelo e-mail da compra; e-mails diferentes geram 'assinatura inválida' (suporte)
+Cancelar a assinatura dentro do app com acesso até o fim do ciclo,conta e assinatura,must,yes,no,suporte
+Mesma conta em vários dispositivos com sincronização em tempo real,conta e assinatura,must,yes,no,suporte
+Layout responsivo: barra inferior no celular e barra lateral no computador,conta e assinatura,must,yes,no,capturas da App Store
+Nota fiscal enviada por e-mail após o pagamento,conta e assinatura,should,yes,no,suporte
+Período de teste gratuito,conta e assinatura,could,yes,no,termos preveem trial 'quando aplicável' [conferir]
+Tela inicial do assistente com saudação e atalho para o briefing,assistente,must,yes,no,S01
+Conversa por texto em linguagem natural (pt-BR),assistente,must,yes,no,S02
+Uma mensagem cria vários itens de áreas diferentes,assistente,must,yes,no,loop central (F01)
+Card de confirmação no chat para cada item criado,assistente,must,yes,no,S02: lembrete criado / transação criada
+Desfazer a ação pelo card,assistente,must,yes,no,S02
+Atalho do card para abrir o item na área certa,assistente,must,yes,no,S02: abrir em lembretes / abrir no extrato
+Perguntas sobre os próprios dados respondidas com números e cards,assistente,must,yes,no,F03
+Editar concluir e apagar itens pelo chat,assistente,must,yes,no,
+Datas e horas relativas no fuso do usuário,assistente,must,yes,no,amanhã / sexta / daqui a 5 dias
+Pergunta de volta quando falta informação no pedido,assistente,must,yes,no,
+Indicador das etapas enquanto o assistente trabalha,assistente,should,yes,no,
+Histórico da conversa com filtro por dia semana e mês,assistente,should,yes,no,S02
+Enviar foto ou documento no chat e usar o conteúdo,assistente,should,yes,no,App Store 3.0
+Memória de preferências e fatos do usuário,assistente,should,yes,no,site [conferir]
+Briefing diário em texto,assistente,should,yes,no,S04
+Briefing do dia em áudio,assistente,could,yes,no,site [conferir]
+Pesquisar um assunto resumir e salvar como nota,assistente,could,yes,no,site [conferir]
+Ditado no campo de mensagem,voz,must,yes,no,S01
+Enviar áudio e ter o conteúdo transcrito e organizado,voz,must,yes,no,
+Modo de voz com resposta falada,voz,should,yes,no,App Store 3.0; S03
+Escolher a voz do assistente,voz,could,yes,no,site [conferir]
+Vincular número de WhatsApp com mensagem de boas-vindas,whatsapp,must,yes,no,suporte
+Conversar com o assistente pelo WhatsApp em texto,whatsapp,must,yes,no,
+Mandar áudio pelo WhatsApp e ter tudo organizado,whatsapp,must,yes,no,
+Receber lembretes e avisos pelo WhatsApp,whatsapp,must,yes,no,App Store 2.0
+Mesmos dados e histórico entre app e WhatsApp,whatsapp,must,yes,no,
+Mandar foto pelo WhatsApp (comprovante ou fatura),whatsapp,should,yes,no,site [conferir]
+Conversar e receber lembretes pelo Telegram,telegram,could,yes,no,site [conferir]
+Notificação push de lembretes no navegador e no celular,notificações,must,yes,no,
+"Preferências de notificação: canais, silêncio e limite por dia",notificações,should,yes,no,site [conferir]
+Notificação 'seu dia' mostrando o que vem a seguir,notificações,should,yes,no,novidades Google Play
+Despertador para lembretes importantes,notificações,could,yes,no,App Store 3.0; exige app nativo
+Visão do dia com linha do tempo de compromissos tarefas hábitos e lembretes,visão do dia,must,yes,no,S05
+Contador de itens em aberto e itens sem horário,visão do dia,should,yes,no,S05
+Card 'em foco agora' com o próximo item,visão do dia,should,yes,no,S05
+Calendário unificado (mês e semana) com filtro por fonte,visão do dia,should,yes,no,S06
+Modo foco com timer e som no fim,visão do dia,could,yes,no,S07
+Radar das áreas da vida,visão do dia,could,yes,no,site [conferir]
+Conectar Google Agenda e ver os eventos,agenda,should,yes,no,App Store 3.0; exige verificação OAuth do Google
+Conectar Outlook e ver os eventos,agenda,should,yes,no,App Store 3.0
+Vários calendários por conta,agenda,should,yes,no,App Store 3.1
+Criar evento com convidados pelo chat,agenda,should,yes,no,site [conferir]
+Mover ou editar evento pelo chat,agenda,could,yes,no,site [conferir]
+Criar tarefa com prazo prioridade e observações,tarefas,must,yes,no,Google Play
+Tarefas recorrentes,tarefas,must,yes,no,
+Listas de hoje próximas e atrasadas,tarefas,must,yes,no,
+Subtarefas,tarefas,should,yes,no,Google Play
+Quadro Kanban (a fazer fazendo feito),tarefas,should,yes,no,site [conferir]
+Análise de conclusão por semana,tarefas,could,yes,no,site [conferir]
+Projetos com tarefas ligadas e barra de progresso,projetos,should,yes,no,
+Marcos com datas,projetos,should,yes,no,exclusão: etapas
+Situação do projeto pelo prazo decorrido (no rumo ou em risco),projetos,could,yes,no,site [conferir]
+Modelos de projeto,projetos,could,yes,no,exclusão: modelos de projeto
+Orçamento do projeto ligado aos gastos,projetos,could,yes,no,site [conferir]
+Lembrete único em data e hora,lembretes,must,yes,no,
+Lembretes recorrentes (diário semanal mensal),lembretes,must,yes,no,App Store 3.1: lembretes mensais
+Avisar com antecedência (ex.: 1 dia e 1 hora antes),lembretes,should,yes,no,site [conferir]
+Resumo diário dos lembretes pela manhã,lembretes,should,yes,no,site [conferir]
+Marcar lembrete como importante,lembretes,could,yes,no,site [conferir]
+Criar hábito com dias da semana e horário,hábitos,must,yes,no,
+Marcar hábito como feito inclusive em dia anterior,hábitos,must,yes,no,
+Sequência atual e recorde,hábitos,must,yes,no,exclusão: histórico de sequências
+Meta por tempo quantidade ou ação simples,hábitos,should,yes,no,site [conferir]
+Constância do mês em calendário,hábitos,should,yes,no,S12
+Cobrança quando o hábito passa do horário,hábitos,should,yes,no,App Store 3.0: avisos proativos
+Cor por hábito,hábitos,could,yes,no,novidades Google Play
+Análise de padrões (melhores dias e ranking),hábitos,could,yes,no,S12 aba análise
+Ficha de treino com exercícios séries e carga,saúde,could,yes,no,S15
+Registrar treino série a série com descanso,saúde,could,yes,no,S15
+Última execução e recorde por exercício,saúde,could,yes,no,S15
+Plano de dieta com refeições e metas de macros,saúde,could,yes,no,App Store 3.0
+Registrar refeições e ver calorias e macros do dia,saúde,could,yes,no,site [conferir]
+Medidas corporais com gráfico e histórico,saúde,could,yes,no,S17
+Sincronizar treinos passos e sono do Apple Saúde e Health Connect,saúde,could,yes,no,exige app nativo
+Conectar Strava e marcar hábitos esportivos sozinho,saúde,could,yes,no,suporte; privacidade 6.1
+Lançar despesa e receita pelo chat com categoria e meio de pagamento,finanças,must,yes,no,S02
+Resumo do mês: entrou saiu sobra e patrimônio,finanças,must,yes,no,S18
+Extrato com busca e filtros,finanças,must,yes,no,S24
+Categorias e subcategorias,finanças,must,yes,no,
+Contas bancárias com saldo atualizado pelos lançamentos,finanças,must,yes,no,S02: saldo antes e depois
+Cartões de crédito com limite fechamento e vencimento,finanças,should,yes,no,S22
+Compra no crédito cai na fatura e não na conta,finanças,should,yes,no,site [conferir]
+Compras parceladas com parcelas pagas e data de quitação,finanças,should,yes,no,S21
+Contas recorrentes e assinaturas com pausar e pular cobrança,finanças,should,yes,no,S20
+Previsão do mês (realizado mais previsto) e projeção do saldo,finanças,should,yes,no,S18
+Gastos por dia e por categoria com média diária,finanças,should,yes,no,S18
+Lista 'a resolver' com contas atrasadas e próximas e botão confirmar,finanças,should,yes,no,S18
+Transferência entre contas e ajuste de saldo fora de gasto e receita,finanças,should,yes,no,site [conferir]
+Importar fatura ou comprovante por foto sem duplicar,finanças,could,yes,no,site [conferir]
+Análises de vários meses,finanças,could,yes,no,S23
+Valores a receber de terceiros,finanças,could,yes,no,site [conferir]
+Teto de gastos por categoria,finanças,could,yes,no,citado em avaliação da App Store [conferir]
+Metas financeiras com aportes e previsão de conclusão,metas,should,yes,no,S25
+Metas ligadas a hábitos ou projetos que avançam sozinhas,metas,should,yes,no,site [conferir]
+Ritmo da meta (no ritmo atrás à frente) e pausar,metas,could,yes,no,site [conferir]
+Notas organizadas em áreas e cadernos,conhecimento,should,yes,no,S26
+Diário,conhecimento,should,yes,no,exclusão: entradas de diário
+Busca por sentido nas notas e conversas,conhecimento,should,yes,no,exclusão: índices de busca semântica
+Caixa de entrada de ideias para revisar depois,conhecimento,could,yes,no,site [conferir]
+Mapa de conexões entre ideias,conhecimento,could,yes,no,site [conferir]
+Transformar nota em tarefa,conhecimento,could,yes,no,site [conferir]
+Registro de livros e cursos,conhecimento,could,yes,no,Google Play
+Criar revisão agendada com dia hora fontes e instrução,automações,should,yes,no,App Store 3.1
+Revisão entregue no chat com push opcional,automações,should,yes,no,novidades Google Play
+Histórico de execuções da automação,automações,could,yes,no,site [conferir]
+Prévia da revisão antes de salvar,automações,could,yes,no,site [conferir]
+Aviso de conta a vencer,avisos proativos,should,yes,no,site [conferir]
+Aviso de cartão perto do limite,avisos proativos,should,yes,no,site [conferir]
+Aviso de renda comprometida,avisos proativos,should,yes,no,site [conferir]
+Aviso de projeto parado,avisos proativos,could,yes,no,site [conferir]
+Aviso de aperto previsto para o próximo mês,avisos proativos,could,yes,no,site [conferir]
+Mensagem de reconhecimento quando o dia fecha com tudo feito,avisos proativos,could,yes,no,site [conferir]
+Placar do dia no fim da tarde,avisos proativos,could,yes,no,site [conferir]
+Tom de conversa escolhido ou descrito pelo usuário,personalização,should,yes,no,site [conferir]
+Tema claro e escuro,personalização,should,yes,no,App Store 3.1
+Apps iOS e Android nas lojas,apps nativos,could,yes,no,fora da v1: plataformas escolhidas são web e WhatsApp
+Widgets na tela inicial e bloqueada,apps nativos,could,yes,no,App Store 3.0 e 3.1; exige app nativo
+Captura por voz pelo widget sem abrir o app,apps nativos,could,yes,no,exige app nativo
+Treino ao vivo na tela bloqueada,apps nativos,could,yes,no,exige app nativo
+App para Apple Watch,apps nativos,could,yes,no,App Store 3.0; exige app nativo
+Skill da Alexa,apps nativos,could,yes,no,site [conferir]; exige certificação da Amazon
+Chamar Uber pelo chat com destino pronto,integrações extras,could,yes,no,site [conferir]
+Buscar e tocar vídeos do YouTube dentro do app,integrações extras,could,yes,no,privacidade 6.2
+Excluir a conta e todos os dados pelo app,privacidade,must,yes,no,exclusão de conta; exigido pela Apple e pela LGPD
+Excluir só algumas seções dos dados,privacidade,should,yes,no,exclusão de conta
+Exportar os dados (portabilidade),privacidade,should,yes,no,privacidade: direitos do titular
+Desconectar integrações e revogar acessos,privacidade,should,yes,no,privacidade 6
+Marca nome logo orbe e textos do Néctar,marca e conteúdo,could,yes,skip,pertencem ao original; o /replica-brand cria os seus
+Personas com nomes de personagens de terceiros,marca e conteúdo,could,yes,skip,marcas de terceiros; crie personas próprias
+Vídeos aulas depoimentos e comunidade,marca e conteúdo,could,yes,skip,conteúdo e rede do original
+Ofertas vitalícias e promoções de aniversário,marca e conteúdo,could,yes,skip,decisão comercial deles; a sua sai do /replica-launch
+Venda pela Hotmart (marketplace e afiliados),marca e conteúdo,could,yes,skip,parceria deles; o clone escolhe o próprio meio de cobrança
+Base de usuários e avaliações,marca e conteúdo,could,yes,skip,pertencem ao original
