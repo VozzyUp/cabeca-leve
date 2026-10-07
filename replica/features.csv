@@ -57,8 +57,8 @@ Listas de hoje próximas e atrasadas,tarefas,must,yes,yes,também sem prazo e fe
 Subtarefas,tarefas,should,yes,no,Google Play
 Quadro Kanban (a fazer fazendo feito),tarefas,should,yes,no,site [conferir]
 Análise de conclusão por semana,tarefas,could,yes,no,site [conferir]
-Projetos com tarefas ligadas e barra de progresso,projetos,should,yes,no,
-Marcos com datas,projetos,should,yes,no,exclusão: etapas
+Projetos com tarefas ligadas e barra de progresso,projetos,should,yes,partial,S10: progresso pelas etapas; ligar tarefas ao projeto depois
+Marcos com datas,projetos,should,yes,partial,etapas marcáveis na tela; data por etapa depois
 Situação do projeto pelo prazo decorrido (no rumo ou em risco),projetos,could,yes,no,site [conferir]
 Modelos de projeto,projetos,could,yes,no,exclusão: modelos de projeto
 Orçamento do projeto ligado aos gastos,projetos,could,yes,no,site [conferir]
@@ -100,18 +100,18 @@ Importar fatura ou comprovante por foto sem duplicar,finanças,could,yes,no,site
 Análises de vários meses,finanças,could,yes,yes,"S23: médias de 5 meses, entrou × saiu por mês e categorias contra a média"
 Valores a receber de terceiros,finanças,could,yes,no,site [conferir]
 Teto de gastos por categoria,finanças,could,yes,no,citado em avaliação da App Store [conferir]
-Metas financeiras com aportes e previsão de conclusão,metas,should,yes,no,S25
+Metas financeiras com aportes e previsão de conclusão,metas,should,yes,yes,"S25: registrar aporte, quanto falta por mês até o prazo"
 Metas ligadas a hábitos ou projetos que avançam sozinhas,metas,should,yes,no,site [conferir]
-Ritmo da meta (no ritmo atrás à frente) e pausar,metas,could,yes,no,site [conferir]
-Notas organizadas em áreas e cadernos,conhecimento,should,yes,no,S26
-Diário,conhecimento,should,yes,no,exclusão: entradas de diário
+Ritmo da meta (no ritmo atrás à frente) e pausar,metas,could,yes,partial,"à frente, no ritmo ou atrás pelo tempo decorrido; pausar depois"
+Notas organizadas em áreas e cadernos,conhecimento,should,yes,yes,"S26: cadernos como filtro, busca, fixar, criar"
+Diário,conhecimento,should,yes,yes,S26: aba Diário
 Busca por sentido nas notas e conversas,conhecimento,should,yes,no,exclusão: índices de busca semântica
 Caixa de entrada de ideias para revisar depois,conhecimento,could,yes,no,site [conferir]
 Mapa de conexões entre ideias,conhecimento,could,yes,no,site [conferir]
 Transformar nota em tarefa,conhecimento,could,yes,no,site [conferir]
 Registro de livros e cursos,conhecimento,could,yes,no,Google Play
-Criar revisão agendada com dia hora fontes e instrução,automações,should,yes,no,App Store 3.1
-Revisão entregue no chat com push opcional,automações,should,yes,no,novidades Google Play
+Criar revisão agendada com dia hora fontes e instrução,automações,should,yes,partial,"S27 lista, pausa e descreve; criar pela conversa com o Claude no /replica-backend"
+Revisão entregue no chat com push opcional,automações,should,yes,no,envio pela fila (QStash) no /replica-backend; S28 já guarda o que chegou
 Histórico de execuções da automação,automações,could,yes,no,site [conferir]
 Prévia da revisão antes de salvar,automações,could,yes,no,site [conferir]
 Aviso de conta a vencer,avisos proativos,should,yes,no,site [conferir]

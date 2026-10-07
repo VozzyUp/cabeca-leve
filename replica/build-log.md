@@ -19,6 +19,11 @@
 | S21 parcelas | 2026-10-07 | parcial | registrar parcelado pela conversa | arredondamento: a última parcela absorve os centavos que sobram |
 | S22 contas e cartões | 2026-10-07 | parcial | cadastrar contas e cartões | ciclo da fatura depende de hoje estar antes ou depois do fechamento; dois números grandes lado a lado estouravam no celular |
 | S23 análise | 2026-10-07 | feito | — | — |
+| S10 projetos | 2026-10-07 | parcial | tarefas ligadas, datas por etapa, criar pela tela | — |
+| S25 metas | 2026-10-07 | parcial | pausar, metas ligadas a hábitos | o ritmo compara o avanço com o tempo decorrido (5 pontos de folga); no celular o cartão estourava a largura: grade sem `grid-cols-1` cresce até o conteúdo mínimo |
+| S26 notas | 2026-10-07 | parcial | editar e apagar, busca por sentido (embeddings no backend) | — |
+| S27 revisões agendadas | 2026-10-07 | parcial | criar e editar (pela conversa), envio pela fila | — |
+| S28 avisos | 2026-10-07 | feito | — | no celular, a hora à direita espremia o texto: foi para baixo do aviso |
 
 Fatia vertical (M1) verificada de ponta a ponta no navegador: "gastei 35 na padaria e me lembra
 do mercado às 18h" cria dois cards, desfazer tira o lembrete da tela de Lembretes, o gasto aparece

@@ -1,5 +1,5 @@
-import { ScreenStub } from "@/components/screens/screen-stub";
+import { AutomationsScreen } from "@/components/screens/organization-screens";
 
 export default function Page() {
-  return <ScreenStub id="S27" />;
+  return <AutomationsScreen />;
 }

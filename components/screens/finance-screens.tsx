@@ -195,7 +195,7 @@ export async function InstallmentsScreen() {
           </Card>
           <section aria-labelledby="parcelas-abertas" className="flex flex-col gap-2">
             <h2 id="parcelas-abertas" className="text-label text-muted">Em aberto</h2>
-            <ul className="grid gap-3 sm:grid-cols-2">
+            <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {open.map((i) => (
                 <li key={i.id}>
                   <Card className="flex flex-col gap-3">
@@ -243,7 +243,7 @@ export async function AccountsScreen() {
       </Card>
       <section aria-labelledby="contas" className="flex flex-col gap-2">
         <h2 id="contas" className="text-label text-muted">Contas</h2>
-        <ul className="grid gap-3 sm:grid-cols-2">
+        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {accounts.map((a) => (
             <li key={a.id}>
               <Card className="flex items-center gap-3">
@@ -261,7 +261,7 @@ export async function AccountsScreen() {
           <EmptyState icon={<CreditCard className="size-8" />} title="Nenhum cartão"
             text='Diga na conversa: "meu cartão fecha dia 3 e vence dia 10, limite de 5 mil".' />
         ) : (
-          <ul className="grid gap-3 sm:grid-cols-2">
+          <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {statuses.map((c) => (
               <li key={c.id}>
                 <Card className="flex flex-col gap-4">

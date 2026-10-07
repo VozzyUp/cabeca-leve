@@ -119,7 +119,7 @@ export function ChatScreen() {
             ) : (
               <>
                 {m.cards.length > 0 && (
-                  <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     {m.cards.map((c) => (
                       <ActionCard key={c.actionId} kind={CARD[c.kind].kind} title={c.title}
                         value={c.value} valueTone={c.valueTone} meta={c.meta} state={c.undone ? "undone" : "created"}
