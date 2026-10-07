@@ -1,5 +1,5 @@
-import { ScreenStub } from "@/components/screens/screen-stub";
+import { MoneyScreen } from "@/components/screens/money-screen";
 
 export default function Page() {
-  return <ScreenStub id="S18" />;
+  return <MoneyScreen />;
 }
