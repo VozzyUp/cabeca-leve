@@ -1,5 +1,5 @@
-import { ScreenStub } from "@/components/screens/screen-stub";
+import { VariableScreen } from "@/components/screens/finance-screens";
 
 export default function Page() {
-  return <ScreenStub id="S19" />;
+  return <VariableScreen />;
 }

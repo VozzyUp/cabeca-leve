@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api";
 import { useResource } from "@/lib/hooks";
 import { formatDayLabel, formatMoney } from "@/lib/time";
+import { FinanceNav } from "./finance-nav";
 
 type Data = Awaited<ReturnType<typeof api.transactions>>;
 
@@ -18,6 +19,7 @@ const METHOD: Record<string, string> = { pix: "Pix", debit: "débito", credit: "
 export function StatementScreen() {
   const { data, error, reload: load } = useResource<Data>(api.transactions);
   const [query, setQuery] = useState("");
+  const [days, setDays] = useState(20);  // dias mostrados; o resto vem em "Mostrar mais"
 
   const catName = useMemo(() => new Map(data?.categories.map((c) => [c.id, c.name])), [data]);
   const filtered = useMemo(() => {
@@ -44,6 +46,7 @@ export function StatementScreen() {
         </div>
         {data && <Metric label="Saldo em conta" value={formatMoney(balance)} />}
       </header>
+      <FinanceNav />
 
       <div className="relative max-w-md">
         <label htmlFor="busca" className="sr-only">Buscar no extrato</label>
@@ -70,7 +73,7 @@ export function StatementScreen() {
         <p className="text-sm text-muted">Nada encontrado para “{query}”.</p>
       )}
 
-      {data && byDay.map(([day, items]) => {
+      {data && byDay.slice(0, days).map(([day, items]) => {
         const total = items.reduce((s, t) => s + (t.type === "income" ? t.amountCents : -t.amountCents), 0);
         return (
           <section key={day} aria-label={formatDayLabel(day, now, data.timezone)}>
@@ -96,6 +99,9 @@ export function StatementScreen() {
           </section>
         );
       })}
+      {data && byDay.length > days && (
+        <Button variant="secondary" className="self-center" onClick={() => setDays((d) => d + 20)}>Mostrar mais</Button>
+      )}
     </div>
   );
 }

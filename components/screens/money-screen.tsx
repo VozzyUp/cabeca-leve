@@ -9,6 +9,7 @@ import { LoadError, PageHeader } from "@/components/ui/load-error";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api";
 import { useResource } from "@/lib/hooks";
+import { FinanceNav } from "./finance-nav";
 import { capitalizeFirst, formatMoney } from "@/lib/time";
 
 function shiftMonth(month: string, delta: number) {
@@ -41,6 +42,7 @@ export function MoneyScreen() {
           </div>
         )}
       </PageHeader>
+      <FinanceNav />
 
       {error && <LoadError what="carregar o resumo do mês" onRetry={reload} />}
       {!data && !error && <div className="grid gap-3 sm:grid-cols-4"><Skeleton className="h-20" /><Skeleton className="h-20" /><Skeleton className="h-20" /><Skeleton className="h-20" /></div>}

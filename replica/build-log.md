@@ -13,6 +13,12 @@
 | S18 dinheiro | 2026-10-07 | parcial | previsão do mês, "a resolver", contas e cartões (M3) | o CSS `capitalize` deixava "Outubro De 2026": maiúscula agora só na primeira letra |
 | S05 meu dia | 2026-10-07 | parcial | compromissos da agenda (M3), modo foco | — |
 | banco provisório | 2026-10-07 | — | — | um teste parecia mostrar perda de dados; medindo, era a 1ª chamada de rota compilando em dev (~600 ms) e o teste navegando antes da resposta. O banco provisório passou a gravar em `.data/fake-db.json` (sobrevive a reinícios) e os testes esperam a confirmação |
+| banco provisório (M3/M4) | 2026-10-07 | — | — | 6 meses de histórico gerados com semente fixa (capturas e testes estáveis); arquivos antigos de `.data/` são completados sozinhos. Telas novas leem no servidor (`lib/server.ts`) e gravam por ações de servidor (`app/actions.ts`), sempre pelo mesmo DataStore |
+| S19 gastos do dia a dia | 2026-10-07 | feito | — | variável = gasto sem fixo ligado; a comparação com o mês anterior usa o mesmo período, não o mês inteiro |
+| S20 fixos | 2026-10-07 | parcial | pular uma cobrança, editar | o aluguel do dia 5 aparecia "vence 5 de nov." sem ter sido pago em outubro: agora avisa que o dia passou sem pagamento |
+| S21 parcelas | 2026-10-07 | parcial | registrar parcelado pela conversa | arredondamento: a última parcela absorve os centavos que sobram |
+| S22 contas e cartões | 2026-10-07 | parcial | cadastrar contas e cartões | ciclo da fatura depende de hoje estar antes ou depois do fechamento; dois números grandes lado a lado estouravam no celular |
+| S23 análise | 2026-10-07 | feito | — | — |
 
 Fatia vertical (M1) verificada de ponta a ponta no navegador: "gastei 35 na padaria e me lembra
 do mercado às 18h" cria dois cards, desfazer tira o lembrete da tela de Lembretes, o gasto aparece
