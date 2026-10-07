@@ -27,7 +27,6 @@ export default function DesignPage() {
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [range, setRange] = useState<"day" | "week" | "month">("day");
   const [tab, setTab] = useState("summary");
-  const [nav, setNav] = useState("chat");
   const [chips, setChips] = useState({ agenda: true, money: true, forecast: false });
   const [checks, setChecks] = useState([false, true, false]);
   const [undone, setUndone] = useState(false);
@@ -38,7 +37,7 @@ export default function DesignPage() {
 
   return (
     <div className="flex flex-1">
-      <div className="hidden lg:flex"><NavRail current={nav} onNavigate={setNav} notifications={3} /></div>
+      <div className="hidden lg:flex"><NavRail notifications={3} /></div>
       <main className="mx-auto flex w-full max-w-[1120px] flex-col gap-10 px-4 py-8 pb-28 lg:px-8">
         <header className="flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -138,7 +137,7 @@ export default function DesignPage() {
           </div>
         </Block>
       </main>
-      <div className="fixed inset-x-4 bottom-4 lg:hidden"><BottomNav current={nav} onNavigate={setNav} /></div>
+      <div className="fixed inset-x-4 bottom-4 lg:hidden"><BottomNav /></div>
     </div>
   );
 }

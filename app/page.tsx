@@ -1,11 +1,6 @@
-import Link from "next/link";
+import { redirect } from "next/navigation";
 
-// Página provisória: as telas reais chegam no /replica-build
+// Sem login ainda (chega no /replica-backend): a entrada do app é a conversa
 export default function Home() {
-  return (
-    <main className="mx-auto flex max-w-xl flex-1 flex-col justify-center gap-4 p-8">
-      <h1 className="text-xl font-bold">Assistente pessoal</h1>
-      <p className="text-body">Projeto em construção. O sistema visual está em <Link className="text-info underline" href="/design">/design</Link>.</p>
-    </main>
-  );
+  redirect("/conversa");
 }

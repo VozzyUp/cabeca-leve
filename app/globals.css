@@ -58,10 +58,13 @@ body {
   color: var(--c-text);
 }
 
-/* Foco visível em tudo que é interativo: anel de 2px na cor de foco */
-:where(a, button, input, textarea, select, [tabindex]):focus-visible {
-  outline: 2px solid var(--c-focus);
-  outline-offset: 2px;
+/* Foco visível em tudo que é interativo: anel de 2px na cor de foco.
+   Na camada base, para um componente poder trocar o anel (ex.: o campo de mensagem). */
+@layer base {
+  :where(a, button, input, textarea, select, [tabindex]):focus-visible {
+    outline: 2px solid var(--c-focus);
+    outline-offset: 2px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
