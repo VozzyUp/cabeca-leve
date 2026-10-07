@@ -1,5 +1,5 @@
-import { ScreenStub } from "@/components/screens/screen-stub";
+import { HabitsScreen } from "@/components/screens/habits-screen";
 
 export default function Page() {
-  return <ScreenStub id="S12" />;
+  return <HabitsScreen />;
 }
