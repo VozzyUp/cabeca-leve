@@ -61,3 +61,16 @@ export function capitalizeFirst(s: string): string {
 export function formatMoney(cents: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(cents / 100);
 }
+
+// "outubro de 2026" (long) ou "out." (short) a partir de AAAA-MM
+export function formatMonth(month: string, style: "long" | "short" = "long"): string {
+  const [y, m] = month.split("-").map(Number);
+  const opts: Intl.DateTimeFormatOptions = style === "long" ? { month: "long", year: "numeric" } : { month: "short" };
+  return new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC", ...opts }).format(new Date(Date.UTC(y, m - 1, 1)));
+}
+
+// "14 de out." a partir de AAAA-MM-DD
+export function formatShortDate(isoDay: string): string {
+  const [y, m, d] = isoDay.split("-").map(Number);
+  return new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC", day: "numeric", month: "short" }).format(new Date(Date.UTC(y, m - 1, d)));
+}

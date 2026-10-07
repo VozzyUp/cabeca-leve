@@ -2,7 +2,12 @@ import fs from "node:fs";
 import path from "node:path";
 import { addDays, DEFAULT_TZ, localDate, zonedToUtc } from "@/lib/time";
 import type { DataStore } from "./store";
-import type { Account, ActionRecord, Category, ChatMessage, Habit, HabitLog, Reminder, Task, Transaction } from "./types";
+import { seedFinance, seedHealth, seedOrganization, seedSettings } from "./seed-extra";
+import type {
+  Account, ActionRecord, Automation, BodyMeasurement, CalendarEvent, Category, ChatMessage, CreditCard, FocusSession, Goal,
+  Habit, HabitLog, InstallmentPurchase, Meal, MealLog, Note, Notice, Project, Recurrence, Reminder, Settings, Task,
+  Transaction, Workout, WorkoutLog,
+} from "./types";
 
 // Banco provisório com dados de exemplo, só até o /replica-backend ligar o Supabase.
 // Grava num arquivo (.data/fake-db.json) em vez de só na memória: no modo de
@@ -19,6 +24,22 @@ type State = {
   accounts: Account[];
   actions: ActionRecord[];
   messages: ChatMessage[];
+  cards: CreditCard[];
+  recurrences: Recurrence[];
+  installments: InstallmentPurchase[];
+  projects: Project[];
+  goals: Goal[];
+  notes: Note[];
+  automations: Automation[];
+  notices: Notice[];
+  events: CalendarEvent[];
+  focusSessions: FocusSession[];
+  workouts: Workout[];
+  workoutLogs: WorkoutLog[];
+  meals: Meal[];
+  mealLogs: MealLog[];
+  measurements: BodyMeasurement[];
+  settings: Settings;
 };
 
 const id = () => crypto.randomUUID();
@@ -63,6 +84,15 @@ export function seedState(now = new Date(), tz = DEFAULT_TZ): State {
     if (d !== 4) habitLogs.push({ habitId: habits[0].id, day: addDays(today, -d) });
     if (d % 2 === 0) habitLogs.push({ habitId: habits[1].id, day: addDays(today, -d) });
   }
+  const recent = [
+    tx(6, "income", 650000, "Salário", "Salário", "other"),
+    tx(5, "expense", 18990, "Compra do mês", "Mercado", "debit"),
+    tx(3, "expense", 4590, "Assinatura de música", "Assinaturas", "credit"),
+    tx(2, "expense", 2350, "Corrida de aplicativo", "Transporte", "pix"),
+    tx(1, "expense", 6200, "Jantar com amigos", "Lazer", "pix"),
+  ];
+  const finance = seedFinance({ today, now, tz, categories, accountId: account.id, skipSalaryMonth: recent[0].occurredOn.slice(0, 7) });
+  for (const t of recent) if (t.paymentMethod === "credit") t.cardId = finance.cards[0].id;
   return {
     tasks: [
       task("Enviar o orçamento para o cliente", 0, "high"),
@@ -76,13 +106,13 @@ export function seedState(now = new Date(), tz = DEFAULT_TZ): State {
     habitLogs,
     categories,
     accounts: [account],
-    transactions: [
-      tx(6, "income", 650000, "Salário", "Salário", "other"),
-      tx(5, "expense", 18990, "Compra do mês", "Mercado", "debit"),
-      tx(3, "expense", 4590, "Assinatura de música", "Assinaturas", "credit"),
-      tx(2, "expense", 2350, "Corrida de aplicativo", "Transporte", "pix"),
-      tx(1, "expense", 6200, "Jantar com amigos", "Lazer", "pix"),
-    ],
+    transactions: [...finance.transactions, ...recent],
+    cards: finance.cards,
+    recurrences: finance.recurrences,
+    installments: finance.installments,
+    ...seedOrganization({ today, now, tz }),
+    ...seedHealth({ today }),
+    settings: seedSettings({ today, tz }),
     reminders: [
       reminder("Pagar a conta de internet", at(1, 9)),
       reminder("Renovar a CNH", at(4, 10)),
@@ -98,7 +128,13 @@ const FILE = path.join(process.cwd(), ".data", "fake-db.json");
 // Lê o arquivo a cada operação (o estado é pequeno) e cria com os exemplos na primeira vez
 function load(): State {
   try {
-    return JSON.parse(fs.readFileSync(FILE, "utf8")) as State;
+    const s = JSON.parse(fs.readFileSync(FILE, "utf8")) as State;
+    // arquivo criado antes das telas do M3: completa com os exemplos novos
+    if (!s.settings) {
+      const fresh = seedState();
+      for (const k of Object.keys(fresh) as Array<keyof State>) if (!(k in s)) Object.assign(s, { [k]: fresh[k] });
+    }
+    return s;
   } catch {
     const s = seedState();
     save(s);
@@ -240,5 +276,140 @@ export const fakeStore: DataStore = {
   },
   async markCardsUndone(actionId) {
     mutate((s) => { for (const m of s.messages) for (const c of m.cards) if (c.actionId === actionId) c.undone = true; });
+  },
+
+  async listCards() {
+    return load().cards;
+  },
+  async listRecurrences() {
+    return load().recurrences.sort((a, b) => a.dayOfMonth - b.dayOfMonth);
+  },
+  async setRecurrenceActive(rid, active) {
+    return mutate((s) => {
+      const r = s.recurrences.find((x) => x.id === rid);
+      if (r) r.active = active;
+      return !!r;
+    });
+  },
+  async listInstallments() {
+    return load().installments;
+  },
+
+  async listProjects() {
+    return load().projects;
+  },
+  async setMilestoneDone(projectId, milestoneId, done) {
+    return mutate((s) => {
+      const m = s.projects.find((p) => p.id === projectId)?.milestones.find((x) => x.id === milestoneId);
+      if (m) m.done = done;
+      return !!m;
+    });
+  },
+  async listGoals() {
+    return load().goals;
+  },
+  async addGoalProgress(gid, delta) {
+    return mutate((s) => {
+      const g = s.goals.find((x) => x.id === gid);
+      if (!g) return null;
+      g.currentValue = Math.max(0, g.currentValue + delta);
+      return g;
+    });
+  },
+  async listNotes() {
+    return load().notes.sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt.localeCompare(a.updatedAt));
+  },
+  async createNote(input) {
+    const at = new Date().toISOString();
+    const n: Note = { ...input, id: id(), pinned: false, createdAt: at, updatedAt: at };
+    mutate((s) => s.notes.push(n));
+    return n;
+  },
+  async updateNote(nid, patch) {
+    return mutate((s) => {
+      const n = s.notes.find((x) => x.id === nid);
+      if (!n) return null;
+      Object.assign(n, patch, { updatedAt: new Date().toISOString() });
+      return n;
+    });
+  },
+  async listAutomations() {
+    return load().automations;
+  },
+  async setAutomationActive(aid, active) {
+    return mutate((s) => {
+      const a = s.automations.find((x) => x.id === aid);
+      if (a) a.active = active;
+      return !!a;
+    });
+  },
+  async listNotices() {
+    return load().notices.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  },
+  async markNoticesRead(ids) {
+    mutate((s) => {
+      const at = new Date().toISOString();
+      for (const n of s.notices) if (!n.readAt && (ids === "all" || ids.includes(n.id))) n.readAt = at;
+    });
+  },
+  async listEvents() {
+    const s = load();
+    // só as agendas conectadas aparecem
+    return s.events.filter((e) => s.settings.calendars[e.source]).sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+  },
+  async listFocusSessions() {
+    return load().focusSessions.sort((a, b) => b.startedAt.localeCompare(a.startedAt));
+  },
+  async saveFocusSession(input) {
+    const f: FocusSession = { ...input, id: id() };
+    mutate((s) => s.focusSessions.push(f));
+    return f;
+  },
+
+  async listWorkouts() {
+    return load().workouts;
+  },
+  async listWorkoutLogs() {
+    return load().workoutLogs;
+  },
+  async setWorkoutDone(workoutId, day, done) {
+    return mutate((s) => {
+      if (!s.workouts.some((w) => w.id === workoutId)) return false;
+      s.workoutLogs = s.workoutLogs.filter((l) => !(l.workoutId === workoutId && l.day === day));
+      if (done) s.workoutLogs.push({ workoutId, day });
+      return true;
+    });
+  },
+  async listMeals() {
+    return load().meals.sort((a, b) => a.time.localeCompare(b.time));
+  },
+  async listMealLogs() {
+    return load().mealLogs;
+  },
+  async setMealDone(mealId, day, done) {
+    return mutate((s) => {
+      if (!s.meals.some((m) => m.id === mealId)) return false;
+      s.mealLogs = s.mealLogs.filter((l) => !(l.mealId === mealId && l.day === day));
+      if (done) s.mealLogs.push({ mealId, day });
+      return true;
+    });
+  },
+  async listMeasurements() {
+    return load().measurements.sort((a, b) => a.day.localeCompare(b.day));
+  },
+  async addMeasurement(input) {
+    const m: BodyMeasurement = { ...input, id: id() };
+    mutate((s) => {
+      s.measurements = s.measurements.filter((x) => x.day !== input.day);  // uma medida por dia
+      s.measurements.push(m);
+    });
+    return m;
+  },
+
+  async getSettings() {
+    return load().settings;
+  },
+  async updateSettings(patch) {
+    return mutate((s) => Object.assign(s.settings, patch));
   },
 };

@@ -61,7 +61,8 @@ const ok = (c, m) => { console.log((c ? 'ok    ' : 'FALHOU') + ' ' + m); if (!c)
   const rows = await p.locator('table tbody tr').count();
   ok(rows >= 4, `S18: gastos por categoria (${rows} linhas)`);
   await p.screenshot({ path: `${out}/S18-desktop.png` });
-  await p.getByRole('button', { name: 'Mês anterior' }).click();
+  // os exemplos têm 6 meses de histórico: o 7º mês para trás está vazio
+  for (let i = 0; i < 6; i++) { await p.getByRole('button', { name: 'Mês anterior' }).click(); await p.waitForLoadState('networkidle'); }
   await p.getByText('Nenhum gasto neste mês').waitFor({ timeout: 5000 });
   ok(true, 'S18: mês sem lançamentos mostra estado vazio');
   ok(await p.getByRole('button', { name: 'Próximo mês' }).isEnabled(), 'S18: dá para voltar ao mês atual');
