@@ -1,5 +1,5 @@
-import { ScreenStub } from "@/components/screens/screen-stub";
+import { TasksScreen } from "@/components/screens/tasks-screen";
 
 export default function Page() {
-  return <ScreenStub id="S09" />;
+  return <TasksScreen />;
 }
