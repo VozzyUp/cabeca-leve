@@ -6,6 +6,8 @@ import { addDays, localDate, zonedToUtc } from "@/lib/time";
 
 export type Intent =
   | { kind: "reminder"; title: string; at: Date }
+  | { kind: "task"; title: string; dueOn: string | null; priority: "low" | "medium" | "high" }
+  | { kind: "habit"; name: string; weekdays: number[]; time: string | null }
   | { kind: "transaction"; type: Transaction["type"]; amountCents: number; description: string;
       categoryName: string; paymentMethod: Transaction["paymentMethod"] };
 
@@ -67,6 +69,59 @@ function parseReminder(clause: string, now: Date, tz: string): Intent | null {
   return { kind: "reminder", title, at };
 }
 
+const WEEKDAYS: Array<[RegExp, number]> = [
+  [/domingo/i, 0], [/segunda/i, 1], [/ter[cç]a/i, 2], [/quarta/i, 3], [/quinta/i, 4], [/sexta/i, 5], [/s[aá]bado/i, 6],
+];
+
+function capitalize(s: string) {
+  return s ? s[0].toUpperCase() + s.slice(1) : s;
+}
+
+// Dia do prazo: hoje, amanhã, depois de amanhã, "até sexta" (próxima sexta, ou hoje se for sexta)
+function parseDue(clause: string, now: Date, tz: string): string | null {
+  const today = localDate(now, tz);
+  const word = clause.match(DAY)?.[1]?.toLowerCase();
+  if (word) return word.startsWith("depois") ? addDays(today, 2) : word.startsWith("amanh") ? addDays(today, 1) : today;
+  const until = clause.match(/(?<!\p{L})(?:at[eé]|na|no|pra|para)\s+(?:a\s+|o\s+)?(domingo|segunda|ter[cç]a|quarta|quinta|sexta|s[aá]bado)/iu);
+  if (until) {
+    const target = WEEKDAYS.find(([re]) => re.test(until[1]))![1];
+    const [y, m, d] = today.split("-").map(Number);
+    const wd = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+    return addDays(today, (target - wd + 7) % 7);
+  }
+  return null;
+}
+
+function parseTask(clause: string, now: Date, tz: string): Intent | null {
+  const m = clause.match(/(?<!\p{L})(?:cri[ae]r?|adiciona|anota|coloca)\s+(?:uma\s+|a\s+)?tarefas?\s*(?:de|para|pra|:)?\s*(.+)$/iu);
+  if (!m) return null;
+  const priority = /urgente|important[ea]/i.test(clause) ? "high" : "medium";
+  const title = m[1]
+    .replace(DAY, " ")
+    .replace(/(?<!\p{L})(?:at[eé]|na|no|pra|para)\s+(?:a\s+|o\s+)?(domingo|segunda|ter[cç]a|quarta|quinta|sexta|s[aá]bado)(?:-feira)?/iu, " ")
+    .replace(/,?\s*(?:é\s+)?(urgente|importante)\b/iu, " ")
+    .replace(/\s+/g, " ").trim().replace(/[.,!]+$/, "");
+  if (!title) return null;
+  return { kind: "task", title: capitalize(title), dueOn: parseDue(clause, now, tz), priority };
+}
+
+function parseHabit(clause: string): Intent | null {
+  const explicit = clause.match(/(?<!\p{L})cri[ae]r?\s+(?:um\s+|o\s+)?h[aá]bito\s+(?:de\s+)?(.+)$/iu);
+  const wish = clause.match(/(?<!\p{L})(?:quero|vou)\s+(?:come[cç]ar\s+a\s+)?(.+?)\s+(?:todo dia|todos os dias|toda\s|nas?\s+(?:segundas?|ter[cç]as?|quartas?|quintas?|sextas?|s[aá]bados?|domingos?))/iu);
+  const body = explicit?.[1] ?? wish?.[1];
+  if (!body) return null;
+  const days = WEEKDAYS.filter(([re]) => re.test(clause)).map(([, n]) => n);
+  const weekdays = /dias [uú]teis/i.test(clause) ? [1, 2, 3, 4, 5] : days.length ? days : [0, 1, 2, 3, 4, 5, 6];
+  const t = clause.match(TIME);
+  const time = t ? `${t[1].padStart(2, "0")}:${t[2] ?? "00"}` : null;
+  const name = body
+    .replace(TIME, " ")
+    .replace(/(?<!\p{L})(todo dia|todos os dias|nos dias [uú]teis|dias [uú]teis)(?!\p{L})/iu, " ")
+    .replace(/\s+/g, " ").trim().replace(/[.,!]+$/, "");
+  if (!name) return null;
+  return { kind: "habit", name: capitalize(name), weekdays, time };
+}
+
 function parseTransaction(clause: string): Intent | null {
   const m = clause.match(
     /\b(gastei|paguei|comprei|recebi|ganhei)\s+(?:r\$\s*)?(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?)\s*(?:reais|conto)?\s*(.*)$/i);
@@ -88,12 +143,12 @@ function parseTransaction(clause: string): Intent | null {
 // Separa "gastei 35 na padaria e me lembra do mercado às 18h" em pedidos
 export function splitClauses(text: string): string[] {
   return text
-    .split(/(?:[.;\n]+|,\s*|\s+e\s+)(?=\s*(?:me\s+lembr|me\s+avis|lembr|gastei|paguei|comprei|recebi|ganhei|hoje|amanh))/i)
+    .split(/(?:[.;\n]+|,\s*|\s+e\s+)(?=\s*(?:me\s+lembr|me\s+avis|lembr|gastei|paguei|comprei|recebi|ganhei|hoje|amanh|cri[ae]|adiciona|anota|quero|vou\s))/i)
     .map((s) => s.trim()).filter(Boolean);
 }
 
 export function parseMessage(text: string, now: Date, tz: string): Intent[] {
   return splitClauses(text)
-    .map((c) => parseReminder(c, now, tz) ?? parseTransaction(c))
+    .map((c) => parseReminder(c, now, tz) ?? parseTask(c, now, tz) ?? parseHabit(c) ?? parseTransaction(c))
     .filter((x): x is Intent => x !== null);
 }

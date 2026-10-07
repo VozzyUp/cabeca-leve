@@ -19,12 +19,13 @@ export function RemindersScreen() {
   const [view, setView] = useState<"next" | "done">("next");
   const error = loadError || saveError;
 
+  // muda na hora; volta ao estado anterior se o servidor recusar
   async function toggle(r: Reminder) {
     const status = r.status === "active" ? "done" : "active";
-    try {
-      const { reminder } = await api.updateReminder(r.id, { status });
-      setData((d) => d && { ...d, reminders: d.reminders.map((x) => (x.id === r.id ? reminder : x)) });
-    } catch { setSaveError(true); }
+    const replace = (next: Reminder) => setData((d) => d && { ...d, reminders: d.reminders.map((x) => (x.id === r.id ? next : x)) });
+    replace({ ...r, status });
+    try { replace((await api.updateReminder(r.id, { status })).reminder); }
+    catch { replace(r); setSaveError(true); }
   }
 
   const now = new Date();

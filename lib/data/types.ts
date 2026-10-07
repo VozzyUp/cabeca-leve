@@ -12,6 +12,27 @@ export type Reminder = {
   createdAt: string;
 };
 
+export type Task = {
+  id: string;
+  title: string;
+  dueOn: string | null;       // dia local AAAA-MM-DD
+  priority: "low" | "medium" | "high";
+  status: "todo" | "doing" | "done";
+  completedAt: string | null;
+  createdAt: string;
+};
+
+export type Habit = {
+  id: string;
+  name: string;
+  weekdays: number[];         // 0 = domingo
+  time: string | null;        // "HH:MM" planejado
+  active: boolean;
+  createdAt: string;
+};
+
+export type HabitLog = { habitId: string; day: string };
+
 export type Category = { id: string; name: string; kind: "expense" | "income" };
 export type Account = { id: string; name: string; openingBalanceCents: number };
 
@@ -31,7 +52,7 @@ export type Transaction = {
 // Card que o assistente devolve no chat para cada item que criou
 export type ActionCardData = {
   actionId: string;
-  kind: "reminder" | "transaction";
+  kind: "reminder" | "transaction" | "task" | "habit";
   title: string;
   value: string;
   valueTone: "neutral" | "income" | "expense";
@@ -50,7 +71,7 @@ export type ChatMessage = {
 
 export type ActionRecord = {
   id: string;
-  entity: "reminder" | "transaction";
+  entity: "reminder" | "transaction" | "task" | "habit";
   entityId: string;
   operation: "create";
   undoneAt: string | null;

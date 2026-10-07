@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // planejamento do pacote Replica, não é código do app
     "replica/**",
+    // scripts de verificação em CommonJS, rodados direto com node
+    "scripts/**/*.cjs",
   ]),
 ]);
 

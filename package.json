@@ -10,7 +10,8 @@
     "tokens": "node scripts/build-tokens.mjs",
     "predev": "npm run tokens",
     "prebuild": "npm run tokens",
-    "test": "vitest run"
+    "test": "vitest run",
+    "reset:data": "node -e \"require('fs').rmSync('.data',{recursive:true,force:true})\""
   },
   "dependencies": {
     "lucide-react": "^1.52.0",

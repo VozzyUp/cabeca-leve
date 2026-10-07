@@ -1,4 +1,7 @@
-import type { Account, Category, ChatMessage, Reminder, Transaction } from "@/lib/data/types";
+import type { Account, Category, ChatMessage, Habit, Reminder, Task, Transaction } from "@/lib/data/types";
+import type { DayItem } from "@/lib/domain/day";
+import type { FinanceSummary } from "@/lib/domain/finance";
+import type { HabitStats } from "@/lib/domain/habits";
 
 // Chamadas das telas para as rotas de API (camada "service")
 async function call<T>(url: string, init?: RequestInit): Promise<T> {
@@ -19,4 +22,17 @@ export const api = {
   transactions: () => call<{
     transactions: Transaction[]; categories: Category[]; accounts: Array<Account & { balanceCents: number }>; timezone: string;
   }>("/api/transactions"),
+  tasks: () => call<{ tasks: Task[]; today: string }>("/api/tasks"),
+  createTask: (input: { title: string; dueOn: string | null; priority: Task["priority"] }) =>
+    call<{ task: Task }>("/api/tasks", { method: "POST", body: JSON.stringify(input) }),
+  updateTask: (id: string, patch: Partial<Pick<Task, "status" | "title" | "dueOn" | "priority">>) =>
+    call<{ task: Task }>(`/api/tasks/${id}`, { method: "PATCH", body: JSON.stringify(patch) }),
+  habits: () => call<{ today: string; habits: Array<Habit & { stats: HabitStats }> }>("/api/habits"),
+  createHabit: (input: { name: string; weekdays: number[]; time: string | null }) =>
+    call<{ habit: Habit }>("/api/habits", { method: "POST", body: JSON.stringify(input) }),
+  setHabitDone: (id: string, day: string, done: boolean) =>
+    call<{ ok: true }>(`/api/habits/${id}/logs/${day}`, { method: done ? "PUT" : "DELETE" }),
+  financeSummary: (month?: string) =>
+    call<FinanceSummary & { balanceCents: number; today: string }>(`/api/finance/summary${month ? `?month=${month}` : ""}`),
+  day: () => call<{ today: string; timezone: string; items: DayItem[] }>("/api/day"),
 };

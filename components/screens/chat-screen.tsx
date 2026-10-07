@@ -13,10 +13,18 @@ import { useOnline, useResource } from "@/lib/hooks";
 
 type Local = ChatMessage & { status?: "sending" | "error" };
 
+const CARD = {
+  reminder: { kind: "Lembrete", open: "Ver nos lembretes" },
+  transaction: { kind: "Lançamento", open: "Ver no extrato" },
+  task: { kind: "Tarefa", open: "Ver nas tarefas" },
+  habit: { kind: "Hábito", open: "Ver nos hábitos" },
+} as const;
+
 const SUGGESTIONS = [
   "Gastei 35 na padaria e me lembra do mercado às 18h",
   "Me lembra de pagar a luz amanhã às 9h",
-  "Recebi 1.200 de freela no pix",
+  "Cria uma tarefa de enviar o relatório até sexta",
+  "Quero ler 20 minutos todo dia às 21h",
 ];
 
 const loadHistory = async (): Promise<Local[]> => (await api.chatHistory()).messages;
@@ -113,9 +121,9 @@ export function ChatScreen() {
                 {m.cards.length > 0 && (
                   <div className="grid gap-3 sm:grid-cols-2">
                     {m.cards.map((c) => (
-                      <ActionCard key={c.actionId} kind={c.kind === "reminder" ? "Lembrete" : "Lançamento"} title={c.title}
+                      <ActionCard key={c.actionId} kind={CARD[c.kind].kind} title={c.title}
                         value={c.value} valueTone={c.valueTone} meta={c.meta} state={c.undone ? "undone" : "created"}
-                        openLabel={c.kind === "reminder" ? "Ver nos lembretes" : "Ver no extrato"}
+                        openLabel={CARD[c.kind].open}
                         onOpen={() => router.push(c.href)} onUndo={() => undo(c.actionId)} />
                     ))}
                   </div>

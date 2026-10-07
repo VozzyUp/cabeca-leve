@@ -22,7 +22,7 @@ export function Segmented<T extends string>({ label, options, value, onChange }:
     refs.current[next]?.focus();
   }
   return (
-    <div role="radiogroup" aria-label={label} className="inline-flex rounded-full border border-border bg-surface p-1">
+    <div role="radiogroup" aria-label={label} className="inline-flex shrink-0 rounded-full border border-border bg-surface p-1">
       {options.map((o, i) => {
         const active = o.value === value;
         return (
@@ -36,7 +36,7 @@ export function Segmented<T extends string>({ label, options, value, onChange }:
             onClick={() => onChange(o.value)}
             onKeyDown={(e) => onKey(e, i)}
             className={cn(
-              "h-8 rounded-full px-4 text-sm font-medium transition-colors",
+              "h-8 whitespace-nowrap rounded-full px-4 text-sm font-medium transition-colors",
               active ? "bg-surface-3 text-text" : "text-muted hover:text-text",
             )}
           >

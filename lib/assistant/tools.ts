@@ -1,6 +1,7 @@
 import type { DataStore } from "@/lib/data/store";
-import type { ActionCardData, Transaction } from "@/lib/data/types";
+import type { ActionCardData, Task, Transaction } from "@/lib/data/types";
 import { formatDayLabel, formatMoney, formatTime, localDate } from "@/lib/time";
+import { describeWeekdays } from "./weekdays";
 
 // Ferramentas do assistente (ver architecture.md). Cada uma grava, registra a ação
 // para o "desfazer" e devolve o card do chat. O agente de verdade (Claude, no
@@ -21,6 +22,32 @@ export async function createReminder(
     actionId: action.id, kind: "reminder", title: r.title,
     value: formatTime(r.nextFireAt!, tz), valueTone: "neutral",
     meta: `${day[0].toUpperCase()}${day.slice(1)} · aviso no celular`, href: "/lembretes", undone: false,
+  };
+}
+
+const PRIORITY_LABEL: Record<Task["priority"], string> = { low: "prioridade baixa", medium: "prioridade média", high: "prioridade alta" };
+
+export async function createTask(
+  store: DataStore, input: { title: string; dueOn: string | null; priority: Task["priority"] }, now: Date,
+): Promise<ActionCardData> {
+  const tz = store.timezone();
+  const t = await store.createTask(input);
+  const action = await store.recordAction("task", t.id);
+  const due = t.dueOn ? formatDayLabel(t.dueOn, now, tz) : "sem prazo";
+  return {
+    actionId: action.id, kind: "task", title: t.title, value: due[0].toUpperCase() + due.slice(1),
+    valueTone: "neutral", meta: PRIORITY_LABEL[t.priority], href: "/tarefas", undone: false,
+  };
+}
+
+export async function createHabit(
+  store: DataStore, input: { name: string; weekdays: number[]; time: string | null },
+): Promise<ActionCardData> {
+  const h = await store.createHabit(input);
+  const action = await store.recordAction("habit", h.id);
+  return {
+    actionId: action.id, kind: "habit", title: h.name, value: h.time ?? "sem horário",
+    valueTone: "neutral", meta: describeWeekdays(h.weekdays), href: "/habitos", undone: false,
   };
 }
 

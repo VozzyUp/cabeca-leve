@@ -53,6 +53,11 @@ export function formatDayLabel(isoDay: string, now: Date, tz: string): string {
     .format(new Date(Date.UTC(y, m - 1, d)));
 }
 
+// Só a primeira letra maiúscula ("outubro de 2026" -> "Outubro de 2026"); o CSS capitalize erraria o "de"
+export function capitalizeFirst(s: string): string {
+  return s ? s[0].toLocaleUpperCase("pt-BR") + s.slice(1) : s;
+}
+
 export function formatMoney(cents: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(cents / 100);
 }

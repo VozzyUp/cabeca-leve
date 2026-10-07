@@ -57,3 +57,29 @@ describe("parseMessage", () => {
     expect(parseMessage("como você está?", NOW, TZ)).toEqual([]);
   });
 });
+
+describe("tarefas e hábitos", () => {
+  it("tarefa com prazo em dia da semana (hoje é terça, 7/10)", () => {
+    expect(parseMessage("cria uma tarefa de enviar o relatório até sexta", NOW, TZ)[0])
+      .toEqual({ kind: "task", title: "Enviar o relatório", dueOn: "2026-10-09", priority: "medium" });
+  });
+  it("tarefa urgente para amanhã", () => {
+    expect(parseMessage("adiciona tarefa pagar o boleto amanhã, é urgente", NOW, TZ)[0])
+      .toEqual({ kind: "task", title: "Pagar o boleto", dueOn: "2026-10-08", priority: "high" });
+  });
+  it("tarefa sem prazo", () => {
+    expect(parseMessage("anota a tarefa: organizar a garagem", NOW, TZ)[0]).toMatchObject({ title: "Organizar a garagem", dueOn: null });
+  });
+  it("hábito diário com horário", () => {
+    expect(parseMessage("quero meditar 10 minutos todo dia às 7h", NOW, TZ)[0])
+      .toEqual({ kind: "habit", name: "Meditar 10 minutos", weekdays: [0, 1, 2, 3, 4, 5, 6], time: "07:00" });
+  });
+  it("hábito em dias escolhidos", () => {
+    expect(parseMessage("quero correr nas segundas, quartas e sextas às 6h30", NOW, TZ)[0])
+      .toEqual({ kind: "habit", name: "Correr", weekdays: [1, 3, 5], time: "06:30" });
+  });
+  it("tarefa, hábito e gasto na mesma mensagem", () => {
+    const r = parseMessage("gastei 20 no almoço, cria uma tarefa de ligar pro banco amanhã e quero ler todo dia às 21h", NOW, TZ);
+    expect(r.map((x) => x.kind)).toEqual(["transaction", "task", "habit"]);
+  });
+});
