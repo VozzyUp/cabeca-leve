@@ -101,3 +101,10 @@ export async function updateSettings(patch: Partial<Settings>) {
   revalidatePath("/", "layout");
   return s;
 }
+
+export async function setCalendarConnected(source: "google" | "outlook", connected: boolean) {
+  const store = getStore();
+  const { calendars } = await store.getSettings();
+  await store.updateSettings({ calendars: { ...calendars, [z.enum(["google", "outlook"]).parse(source)]: connected } });
+  revalidatePath("/", "layout");
+}

@@ -24,6 +24,11 @@
 | S26 notas | 2026-10-07 | parcial | editar e apagar, busca por sentido (embeddings no backend) | — |
 | S27 revisões agendadas | 2026-10-07 | parcial | criar e editar (pela conversa), envio pela fila | — |
 | S28 avisos | 2026-10-07 | feito | — | no celular, a hora à direita espremia o texto: foi para baixo do aviso |
+| S05 meu dia (+agenda) | 2026-10-07 | feito | — | compromissos entram como itens com horário; o card "a seguir" só oferece foco para hábito, não para compromisso |
+| S04 resumo do dia | 2026-10-07 | parcial | envio no horário, texto no tom escolhido (Claude) | contas "dos próximos 3 dias" usam a próxima ocorrência, que vira o mês quando o dia já passou |
+| S06 calendário | 2026-10-07 | feito | — | foco do teclado precisa seguir o dia depois de redesenhar a grade (requestAnimationFrame) |
+| S07 modo foco | 2026-10-07 | feito | — | o tempo vem da hora de término, não de somar tiques: o intervalo atrasa com a aba em segundo plano |
+| S08 agenda | 2026-10-07 | parcial | OAuth do Google e da Microsoft | — |
 
 Fatia vertical (M1) verificada de ponta a ponta no navegador: "gastei 35 na padaria e me lembra
 do mercado às 18h" cria dois cards, desfazer tira o lembrete da tela de Lembretes, o gasto aparece

@@ -1,5 +1,5 @@
-import { ScreenStub } from "@/components/screens/screen-stub";
+import { CalendarScreen } from "@/components/screens/plan-screens";
 
 export default function Page() {
-  return <ScreenStub id="S06" />;
+  return <CalendarScreen />;
 }

@@ -1,19 +1,22 @@
-import type { Habit, HabitLog, Reminder, Task } from "@/lib/data/types";
+import type { CalendarEvent, Habit, HabitLog, Reminder, Task } from "@/lib/data/types";
 import { localDate, zonedParts } from "@/lib/time";
 import { habitStats } from "./habits";
 
 export type DayItem = {
   id: string;
-  kind: "reminder" | "task" | "habit";
+  kind: "reminder" | "task" | "habit" | "event";
   title: string;
   time: string | null;        // "HH:MM" local, null = sem horário
   done: boolean;
   overdue: boolean;
   href: string;
+  meta?: string;              // compromisso: "até 11:00 · Sala 3"
 };
 
 // Tudo que é de hoje: lembretes do dia, tarefas com prazo hoje ou atrasadas, hábitos planejados
-export function dayItems(input: { reminders: Reminder[]; tasks: Task[]; habits: Habit[]; logs: HabitLog[]; now: Date; tz: string }): DayItem[] {
+export function dayItems(input: {
+  reminders: Reminder[]; tasks: Task[]; habits: Habit[]; logs: HabitLog[]; events?: CalendarEvent[]; now: Date; tz: string;
+}): DayItem[] {
   const { now, tz } = input;
   const today = localDate(now, tz);
   const p = zonedParts(now, tz);
@@ -41,7 +44,20 @@ export function dayItems(input: { reminders: Reminder[]; tasks: Task[]; habits: 
     items.push({ id: h.id, kind: "habit", title: h.name, time: h.time, done: s.doneToday,
       overdue: !s.doneToday && !!h.time && h.time < nowHm, href: "/habitos" });
   }
+  for (const e of input.events ?? []) {
+    if (localDate(new Date(e.startsAt), tz) !== today) continue;
+    const ended = new Date(e.endsAt) <= now;
+    items.push({ id: e.id, kind: "event", title: e.title, time: hm(e.startsAt), done: ended, overdue: false, href: "/agenda",
+      meta: [`até ${hm(e.endsAt)}`, e.location].filter(Boolean).join(" · ") });
+  }
   // com horário primeiro, em ordem; depois os sem horário (atrasados no topo)
   return items.sort((a, b) =>
     a.time && b.time ? a.time.localeCompare(b.time) : a.time ? -1 : b.time ? 1 : Number(b.overdue) - Number(a.overdue));
+}
+
+// O próximo item com horário que ainda não passou (card "a seguir")
+export function nextItem(items: DayItem[], now: Date, tz: string): DayItem | null {
+  const p = zonedParts(now, tz);
+  const nowHm = `${String(p.hour).padStart(2, "0")}:${String(p.minute).padStart(2, "0")}`;
+  return items.find((i) => i.time && !i.done && i.time >= nowHm) ?? null;
 }

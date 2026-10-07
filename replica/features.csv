@@ -8,7 +8,7 @@ Mesma conta em vários dispositivos com sincronização em tempo real,conta e as
 Layout responsivo: barra inferior no celular e barra lateral no computador,conta e assinatura,must,yes,yes,capturas da App Store
 Nota fiscal enviada por e-mail após o pagamento,conta e assinatura,should,yes,no,suporte
 Período de teste gratuito,conta e assinatura,could,yes,no,termos preveem trial 'quando aplicável' [conferir]
-Tela inicial do assistente com saudação e atalho para o briefing,assistente,must,yes,partial,saudação e exemplos prontos; briefing chega no M3 | S01
+Tela inicial do assistente com saudação e atalho para o briefing,assistente,must,yes,yes,"saudação, exemplos prontos e atalho para o resumo do dia (S04) | S01"
 Conversa por texto em linguagem natural (pt-BR),assistente,must,yes,partial,intérprete de regras provisório; Claude entra no /replica-backend | S02
 Uma mensagem cria vários itens de áreas diferentes,assistente,must,yes,partial,"gasto, entrada, lembrete, tarefa e hábito na mesma mensagem; o resto com o Claude"
 Card de confirmação no chat para cada item criado,assistente,must,yes,yes,S02: lembrete criado / transação criada
@@ -22,8 +22,8 @@ Indicador das etapas enquanto o assistente trabalha,assistente,should,yes,no,
 Histórico da conversa com filtro por dia semana e mês,assistente,should,yes,no,S02
 Enviar foto ou documento no chat e usar o conteúdo,assistente,should,yes,no,App Store 3.0
 Memória de preferências e fatos do usuário,assistente,should,yes,no,site [conferir]
-Briefing diário em texto,assistente,should,yes,no,S04
-Briefing do dia em áudio,assistente,could,yes,no,site [conferir]
+Briefing diário em texto,assistente,should,yes,partial,S04 montado com os dados do dia; envio no horário pela fila e texto pelo Claude no /replica-backend
+Briefing do dia em áudio,assistente,could,yes,partial,S04: botão Ouvir com a voz do navegador; áudio gerado no servidor depois
 Pesquisar um assunto resumir e salvar como nota,assistente,could,yes,no,site [conferir]
 Ditado no campo de mensagem,voz,must,yes,no,S01
 Enviar áudio e ter o conteúdo transcrito e organizado,voz,must,yes,no,
@@ -40,14 +40,14 @@ Notificação push de lembretes no navegador e no celular,notificações,must,ye
 "Preferências de notificação: canais, silêncio e limite por dia",notificações,should,yes,no,site [conferir]
 Notificação 'seu dia' mostrando o que vem a seguir,notificações,should,yes,no,novidades Google Play
 Despertador para lembretes importantes,notificações,could,yes,no,App Store 3.0; exige app nativo
-Visão do dia com linha do tempo de compromissos tarefas hábitos e lembretes,visão do dia,must,yes,partial,sem compromissos da agenda (Google/Outlook no M3)
+Visão do dia com linha do tempo de compromissos tarefas hábitos e lembretes,visão do dia,must,yes,yes,"S05 com compromissos das agendas conectadas (exemplo até o backend), tarefas, hábitos e lembretes"
 Contador de itens em aberto e itens sem horário,visão do dia,should,yes,yes,
-Card 'em foco agora' com o próximo item,visão do dia,should,yes,no,S05
-Calendário unificado (mês e semana) com filtro por fonte,visão do dia,should,yes,no,S06
-Modo foco com timer e som no fim,visão do dia,could,yes,no,S07
+Card 'em foco agora' com o próximo item,visão do dia,should,yes,yes,S05: card 'a seguir' com atalho para o modo foco
+Calendário unificado (mês e semana) com filtro por fonte,visão do dia,should,yes,yes,"S06: mês e semana, filtro por fonte, setas do teclado"
+Modo foco com timer e som no fim,visão do dia,could,yes,yes,"S07: 15/25/50 min, pausar, terminar antes, som no fim, histórico"
 Radar das áreas da vida,visão do dia,could,yes,no,site [conferir]
-Conectar Google Agenda e ver os eventos,agenda,should,yes,no,App Store 3.0; exige verificação OAuth do Google
-Conectar Outlook e ver os eventos,agenda,should,yes,no,App Store 3.0
+Conectar Google Agenda e ver os eventos,agenda,should,yes,partial,S08: tela e estados conectada/desconectada com eventos de exemplo; OAuth no /replica-backend
+Conectar Outlook e ver os eventos,agenda,should,yes,partial,S08: idem; OAuth da Microsoft no /replica-backend
 Vários calendários por conta,agenda,should,yes,no,App Store 3.1
 Criar evento com convidados pelo chat,agenda,should,yes,no,site [conferir]
 Mover ou editar evento pelo chat,agenda,could,yes,no,site [conferir]

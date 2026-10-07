@@ -34,5 +34,5 @@ export const api = {
     call<{ ok: true }>(`/api/habits/${id}/logs/${day}`, { method: done ? "PUT" : "DELETE" }),
   financeSummary: (month?: string) =>
     call<FinanceSummary & { balanceCents: number; today: string }>(`/api/finance/summary${month ? `?month=${month}` : ""}`),
-  day: () => call<{ today: string; timezone: string; items: DayItem[] }>("/api/day"),
+  day: () => call<{ today: string; timezone: string; items: DayItem[]; next: DayItem | null }>("/api/day"),
 };

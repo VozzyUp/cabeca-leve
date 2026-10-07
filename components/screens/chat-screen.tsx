@@ -1,5 +1,6 @@
 "use client";
 import { MessageCircle } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { ActionCard } from "@/components/ui/action-card";
@@ -95,6 +96,7 @@ export function ChatScreen() {
             <div>
               <p className="text-label text-muted">{greeting()}</p>
               <p className="mt-1 text-xl font-semibold">O que você quer tirar da cabeça?</p>
+              <Link href="/briefing" className="mt-2 inline-block text-sm font-medium text-info hover:underline">Ver o resumo do dia</Link>
             </div>
             <ul className="flex w-full flex-col gap-2" aria-label="Exemplos">
               {SUGGESTIONS.map((s) => (

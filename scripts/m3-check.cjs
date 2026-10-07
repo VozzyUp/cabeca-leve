@@ -78,6 +78,54 @@ const groups = {
       ok(true, 'S28: marcar todos como lidos');
     }],
   ],
+  plano: [
+    ['S05', '/dia', async (p) => {
+      ok(await p.getByText('Reunião de alinhamento').isVisible(), 'S05: compromisso da agenda no dia');
+    }],
+    ['S04', '/briefing', async (p) => {
+      ok(await p.getByText(/^(Bom dia|Boa tarde|Boa noite), Fernanda\.$/).isVisible(), 'S04: saudação com o nome');
+      ok(await p.getByText(/^Hoje você tem .*compromisso/).isVisible(), 'S04: frase de resumo');
+      ok(await p.getByRole('button', { name: 'Ouvir' }).isVisible(), 'S04: ouvir em voz alta');
+    }],
+    ['S06', '/dia/calendario', async (p) => {
+      const sel = () => p.locator('[role=gridcell][aria-selected=true] button');
+      const before = await sel().getAttribute('data-day');
+      await sel().focus();
+      await p.keyboard.press('ArrowRight');
+      const after = await sel().getAttribute('data-day');
+      ok(before !== after && await p.evaluate(() => document.activeElement?.getAttribute('data-day')) === after, `S06: seta → move o dia e o foco (${before} -> ${after})`);
+      await p.keyboard.press('ArrowLeft');
+      ok(await p.getByRole('link', { name: /Reunião de alinhamento/ }).isVisible(), 'S06: itens do dia escolhido');
+      await p.getByRole('button', { name: 'Agenda' }).click();
+      ok(!(await p.getByRole('link', { name: /Reunião de alinhamento/ }).isVisible()), 'S06: filtro por fonte esconde a agenda');
+      await p.getByRole('button', { name: 'Agenda' }).click();
+      await p.getByRole('radio', { name: 'Semana' }).click();
+      ok(await p.locator('[role=gridcell]').count() === 7, 'S06: visão de semana');
+      await p.getByRole('radio', { name: 'Mês' }).click();
+    }],
+    ['S08', '/agenda', async (p) => {
+      ok(!(await p.getByText('Entrega do relatório').isVisible()), 'S08: Outlook desligado não mostra os eventos dele');
+      await Promise.all([p.waitForResponse((r) => r.request().method() === 'POST'), p.getByRole('switch', { name: 'Outlook conectada' }).click()]);
+      await p.getByText('Entrega do relatório').waitFor();
+      ok(true, 'S08: conectar o Outlook mostra os eventos dele');
+      await Promise.all([p.waitForResponse((r) => r.request().method() === 'POST'), p.getByRole('switch', { name: 'Outlook conectada' }).click()]);
+    }],
+    ['S07', '/foco', async (p) => {
+      await p.getByRole('button', { name: 'Começar' }).click();
+      ok(await p.getByText('Diga no que você vai focar.').isVisible(), 'S07: sem título mostra erro');
+      await p.getByLabel('No que você vai focar?').fill('Revisar a proposta');
+      await p.getByRole('radio', { name: '15 min' }).click();
+      await p.getByRole('button', { name: 'Começar' }).click();
+      await p.waitForTimeout(1300);
+      ok(/14:5\d/.test(await p.locator('p.font-mono').innerText()), 'S07: contagem regressiva');
+      await p.getByRole('button', { name: 'Pausar' }).click();
+      await Promise.all([p.waitForResponse((r) => r.request().method() === 'POST'), p.getByRole('button', { name: 'Terminar' }).click()]);
+      await p.getByText('Sessão concluída.').waitFor();
+      ok(true, 'S07: terminar antes salva a sessão');
+      ok(await p.locator('li', { hasText: 'Revisar a proposta' }).isVisible(), 'S07: sessão no histórico');
+      await p.getByRole('button', { name: 'Nova sessão' }).click();
+    }],
+  ],
 };
 
 (async () => {

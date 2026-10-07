@@ -1,5 +1,5 @@
 "use client";
-import { Bell, CalendarDays, CheckSquare, Sprout } from "lucide-react";
+import { Bell, CalendarDays, CheckSquare, Clock, Sprout, Timer } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
@@ -12,8 +12,8 @@ import type { DayItem } from "@/lib/domain/day";
 import { useResource } from "@/lib/hooks";
 import { capitalizeFirst } from "@/lib/time";
 
-const ICON = { reminder: Bell, task: CheckSquare, habit: Sprout };
-const KIND = { reminder: "Lembrete", task: "Tarefa", habit: "Hábito" };
+const ICON = { reminder: Bell, task: CheckSquare, habit: Sprout, event: Clock };
+const KIND = { reminder: "Lembrete", task: "Tarefa", habit: "Hábito", event: "Compromisso" };
 
 // S05: o dia de hoje numa linha do tempo
 export function DayScreen() {
@@ -41,7 +41,7 @@ export function DayScreen() {
 
   const row = (i: DayItem) => {
     const Icon = ICON[i.kind];
-    const checkable = i.kind !== "reminder";
+    const checkable = i.kind === "task" || i.kind === "habit";
     return (
       <li key={`${i.kind}-${i.id}`} className="flex items-center gap-3 px-2 py-2.5">
         <span className={cn("w-12 shrink-0 font-mono text-sm", i.overdue && !i.done ? "text-warning" : "text-muted")}>{i.time ?? "—"}</span>
@@ -52,7 +52,7 @@ export function DayScreen() {
         <Link href={i.href} className="min-w-0 flex-1 rounded-sm hover:underline">
           <span className={cn("block truncate text-sm", i.done ? "text-muted line-through" : "text-text")}>{i.title}</span>
           <span className={cn("text-xs", i.overdue && !i.done ? "text-warning" : "text-muted")}>
-            {KIND[i.kind]}{i.overdue && !i.done ? (i.time ? " · passou do horário" : " · atrasada") : ""}
+            {KIND[i.kind]}{i.meta ? ` · ${i.meta}` : ""}{i.overdue && !i.done ? (i.time ? " · passou do horário" : " · atrasada") : ""}
           </span>
         </Link>
       </li>
@@ -73,6 +73,20 @@ export function DayScreen() {
       {data && total > 0 && (
         <>
           <Progress label="Feito hoje" value={done} max={total} display={`${done} de ${total}`} />
+          {data.next && (
+            <Card className="flex flex-wrap items-center gap-3">
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="text-label text-muted">A seguir · {data.next.time}</span>
+                <span className="truncate font-medium text-text">{data.next.title}</span>
+              </span>
+              {data.next.kind === "habit" && (
+                <Link href={`/foco?titulo=${encodeURIComponent(data.next.title)}`}
+                  className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border px-3 text-sm font-medium text-text hover:bg-surface-2">
+                  <Timer aria-hidden className="size-4" />Focar nisso
+                </Link>
+              )}
+            </Card>
+          )}
           {timed.length > 0 && (
             <section aria-label="Com horário">
               <h2 className="mb-2 text-label text-muted">Com horário</h2>
