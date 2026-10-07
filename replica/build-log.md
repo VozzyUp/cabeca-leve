@@ -34,6 +34,11 @@
 | S15 treino | 2026-10-07 | parcial | registrar série a série com descanso | — |
 | S16 dieta | 2026-10-07 | parcial | macros, refeição fora do plano, foto do prato | um texto só para leitor de tela (`sr-only`, posição absoluta) dentro de tabela rolável vazava e criava rolagem na página: a célula precisa ser `relative` |
 | S17 progresso do corpo | 2026-10-07 | feito | — | — |
+| S29 ajustes | 2026-10-07 | parcial | sair, cancelar assinatura, silêncio e limite de avisos | o Chromium tem `SpeechRecognition` sem prefixo: o simulador dos testes precisou cobrir os dois nomes |
+| S30 jeito do assistente | 2026-10-07 | parcial | lista do que a memória guardou (backend) | `Segmented` esticava numa coluna flex: agora tem `w-fit` |
+| S31 entrar | 2026-10-07 | parcial | autenticação de verdade (Supabase Auth) | — |
+| S32 planos | 2026-10-07 | parcial | checkout e liberação automática do acesso | preços provisórios em `lib/plans.ts` até o /replica-entrepreneur |
+| S03 conversa por voz | 2026-10-07 | parcial | transcrição no servidor (funciona em qualquer navegador e no WhatsApp) | — |
 
 Fatia vertical (M1) verificada de ponta a ponta no navegador: "gastei 35 na padaria e me lembra
 do mercado às 18h" cria dois cards, desfazer tira o lembrete da tela de Lembretes, o gasto aparece
@@ -42,3 +47,11 @@ no Extrato e um lembrete marcado para o minuto seguinte avisa no horário.
 **Provisório até o /replica-backend:** banco em arquivo (`lib/data/fake-store.ts` grava em `.data/fake-db.json`;
 `npm run reset:data` volta aos exemplos) e intérprete de regras (`lib/assistant/rule-parser.ts`). As telas, as rotas e as
 ferramentas (`lib/assistant/tools.ts`) já são as definitivas.
+
+**Fim do /replica-build (2026-10-07):** as 32 telas do mapa estão construídas com dados de exemplo
+(nenhuma em esboço). Paridade 37,9/100 (era 17,4); 10 de 40 obrigatórias completas e quase todas as
+outras parciais. O que falta nelas depende do backend: Claude no lugar do intérprete de regras, login e
+assinatura, WhatsApp, áudio, push com o app fechado, OAuth das agendas e envio das revisões pela fila.
+Verificação no navegador: `scripts/slice-check.cjs`, `scripts/m2-check.cjs` e `scripts/m3-check.cjs`
+(grupos financas, organizacao, plano, saude, conta e exclusao), em 1440 e 390 px, sem erros no console.
+

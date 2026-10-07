@@ -63,4 +63,6 @@ export interface DataStore {
   // conta e preferências
   getSettings(): Promise<Settings>;
   updateSettings(patch: Partial<Settings>): Promise<Settings>;
+  // exclusão de conta: apaga tudo do usuário (no Supabase, cascata a partir de auth.users)
+  deleteAllData(): Promise<void>;
 }

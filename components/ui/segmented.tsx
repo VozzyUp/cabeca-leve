@@ -22,7 +22,7 @@ export function Segmented<T extends string>({ label, options, value, onChange }:
     refs.current[next]?.focus();
   }
   return (
-    <div role="radiogroup" aria-label={label} className="inline-flex shrink-0 rounded-full border border-border bg-surface p-1">
+    <div role="radiogroup" aria-label={label} className="inline-flex w-fit shrink-0 rounded-full border border-border bg-surface p-1">
       {options.map((o, i) => {
         const active = o.value === value;
         return (

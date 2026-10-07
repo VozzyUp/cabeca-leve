@@ -412,4 +412,12 @@ export const fakeStore: DataStore = {
   async updateSettings(patch) {
     return mutate((s) => Object.assign(s.settings, patch));
   },
+  async deleteAllData() {
+    // conta nova e vazia: só categorias padrão, uma conta zerada e preferências padrão
+    const fresh = seedState();
+    const empty = Object.fromEntries(Object.entries(fresh).map(([k, v]) => [k, Array.isArray(v) ? [] : v])) as unknown as State;
+    save({ ...empty, categories: fresh.categories, accounts: fresh.accounts.map((a) => ({ ...a, openingBalanceCents: 0 })),
+      settings: { ...fresh.settings, name: "você", email: "", plan: "none", trialEndsOn: null, briefingTime: null,
+        calendars: { google: false, outlook: false }, channels: { whatsapp: null, telegram: false, email: false, push: false } } });
+  },
 };

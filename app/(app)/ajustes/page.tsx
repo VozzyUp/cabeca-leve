@@ -1,5 +1,5 @@
-import { ScreenStub } from "@/components/screens/screen-stub";
+import { SettingsScreen } from "@/components/screens/account-screens";
 
 export default function Page() {
-  return <ScreenStub id="S29" />;
+  return <SettingsScreen />;
 }

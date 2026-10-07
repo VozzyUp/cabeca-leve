@@ -115,3 +115,27 @@ export async function setHabitDay(habitId: string, onDay: string, done: boolean)
   await getStore().setHabitDone(uuid.parse(habitId), parsed, done);
   revalidatePath("/habitos", "layout");
 }
+
+// Portabilidade (LGPD): tudo do usuário num JSON
+export async function exportData() {
+  const s = getStore();
+  const [settings, tasks, reminders, habits, habitLogs, transactions, categories, accounts, cards, recurrences, installments,
+    projects, goals, notes, automations, notices, focusSessions, workouts, workoutLogs, meals, mealLogs, measurements, messages] = await Promise.all([
+    s.getSettings(), s.listTasks(), s.listReminders(), s.listHabits(), s.listHabitLogs(), s.listTransactions(), s.listCategories(),
+    s.listAccounts(), s.listCards(), s.listRecurrences(), s.listInstallments(), s.listProjects(), s.listGoals(), s.listNotes(),
+    s.listAutomations(), s.listNotices(), s.listFocusSessions(), s.listWorkouts(), s.listWorkoutLogs(), s.listMeals(), s.listMealLogs(),
+    s.listMeasurements(), s.listMessages(),
+  ]);
+  return JSON.stringify({
+    exportedAt: new Date().toISOString(), settings, tasks, reminders, habits, habitLogs, transactions, categories, accounts, cards,
+    recurrences, installments, projects, goals, notes, automations, notices, focusSessions, workouts, workoutLogs, meals, mealLogs,
+    measurements, messages,
+  }, null, 2);
+}
+
+export async function deleteAccount(confirmation: string) {
+  if (confirmation.trim().toUpperCase() !== "EXCLUIR") throw new Error("Confirmação errada");
+  await getStore().deleteAllData();
+  revalidatePath("/", "layout");
+  return { ok: true as const };
+}

@@ -139,7 +139,7 @@ export function ChatScreen() {
         <div ref={bottom} className="scroll-mb-40 lg:scroll-mb-28" />
       </div>
       <div className="sticky bottom-20 -mx-4 bg-bg px-4 pb-4 pt-2 lg:bottom-0 lg:mx-0 lg:px-0 lg:pb-6">
-        <Composer onSend={(t) => send(t)} sending={sending} offline={offline} />
+        <Composer onSend={(t) => send(t)} sending={sending} offline={offline} onVoiceMode={() => router.push("/conversa/voz")} />
       </div>
     </div>
   );

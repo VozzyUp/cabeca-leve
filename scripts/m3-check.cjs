@@ -167,6 +167,80 @@ const groups = {
       ok(await p.getByRole('table', { name: 'Peso ao longo do tempo' }).isVisible(), 'S17: gráfico também como tabela');
     }],
   ],
+  conta: [
+    ['S29', '/ajustes', async (p) => {
+      await p.getByLabel('Como o assistente chama você').fill('Fê');
+      await Promise.all([p.waitForResponse((r) => r.request().method() === 'POST'), p.getByRole('button', { name: 'Salvar', exact: true }).click()]);
+      await p.getByText('Salvo', { exact: true }).waitFor();
+      await p.getByLabel('WhatsApp').fill('123');
+      await p.getByRole('button', { name: 'Vincular' }).click();
+      ok(await p.getByText('Use o número com DDD').isVisible(), 'S29: número inválido mostra erro');
+      await p.getByLabel('WhatsApp').fill('(11) 98765-4321');
+      await Promise.all([p.waitForResponse((r) => r.request().method() === 'POST'), p.getByRole('button', { name: 'Vincular' }).click()]);
+      await p.reload({ waitUntil: 'networkidle' });
+      ok(await p.getByText('Vinculado: +5511987654321').isVisible(), 'S29: WhatsApp vinculado fica salvo em E.164');
+      const [dl] = await Promise.all([p.waitForEvent('download'), p.getByRole('button', { name: 'Baixar' }).click()]);
+      const json = JSON.parse(require('fs').readFileSync(await dl.path(), 'utf8'));
+      ok(json.settings.name === 'Fê' && json.transactions.length > 100, 'S29: baixar meus dados traz tudo em JSON');
+      ok(await p.getByRole('button', { name: 'Excluir tudo' }).isDisabled(), 'S29: excluir só libera depois de digitar EXCLUIR');
+    }],
+    ['S30', '/ajustes/assistente', async (p) => {
+      await Promise.all([p.waitForResponse((r) => r.request().method() === 'POST'), p.getByRole('radio', { name: 'Direto' }).click()]);
+      ok(await p.getByText('Feito: lembrete para amanhã às 9h.', { exact: false }).isVisible(), 'S30: exemplo muda com o tom');
+      await Promise.all([p.waitForResponse((r) => r.request().method() === 'POST'), p.getByRole('radio', { name: 'Claro' }).click()]);
+      await p.waitForFunction(() => document.documentElement.dataset.theme === 'light');
+      const bg = await p.evaluate(() => getComputedStyle(document.body).backgroundColor);
+      ok(true, `S30: tema claro aplicado (fundo ${bg})`);
+      await p.waitForTimeout(400);  // espera a transição de cores terminar
+      await p.screenshot({ path: `${out}/S30-light.png` });
+      await Promise.all([p.waitForResponse((r) => r.request().method() === 'POST'), p.getByRole('radio', { name: 'Escuro' }).click()]);
+      await p.waitForFunction(() => document.documentElement.dataset.theme === 'dark');
+    }],
+    ['S31', '/entrar', async (p) => {
+      await p.getByRole('button', { name: 'Entrar', exact: true }).last().click();
+      ok(await p.getByText('Confira o e-mail').isVisible() && await p.getByText('pelo menos 8 caracteres').isVisible(), 'S31: erros nos campos');
+      await p.getByRole('button', { name: 'Esqueci a senha' }).click();
+      await p.getByLabel('E-mail').fill('ana@exemplo.com.br');
+      await p.getByRole('button', { name: 'Mandar o link' }).click();
+      ok(await p.getByText('Se existir uma conta com').isVisible(), 'S31: recuperar senha sem revelar se a conta existe');
+      await p.getByRole('button', { name: 'Voltar para entrar' }).click();
+      await p.getByLabel('Senha').fill('12345678');
+      await p.getByRole('button', { name: 'Entrar', exact: true }).last().click();
+      await p.waitForURL('**/conversa');
+      ok(true, 'S31: entrar leva à conversa');
+      await p.goto(base + '/entrar', { waitUntil: 'networkidle' });
+    }],
+    ['S32', '/planos', async (p) => {
+      ok(await p.getByText('R$ 39,90').isVisible() && await p.getByText('R$ 359,00').isVisible(), 'S32: preços mensal e anual');
+      ok(await p.getByText(/economize 25%/).isVisible(), 'S32: economia do anual');
+      await p.getByRole('link', { name: /Começar/ }).last().click();
+      await p.waitForURL('**/entrar?modo=criar&plano=yearly');
+      ok(await p.getByRole('heading', { name: 'Criar conta' }).isVisible(), 'S32: assinar leva ao cadastro');
+      await p.goto(base + '/planos', { waitUntil: 'networkidle' });
+    }],
+    ['S03', '/conversa/voz', async (p) => {
+      await p.getByRole('button', { name: 'Falar com o assistente' }).click();
+      await p.getByText(/Feito: salvei/).waitFor({ timeout: 10000 });
+      ok(await p.getByText('gastei 20 no café').isVisible(), 'S03: fala transcrita aparece');
+      await p.getByText('Toque para falar').waitFor({ timeout: 3000 });
+      ok(true, 'S03: resposta lida e volta a esperar');
+      const tx = await p.evaluate(async () => (await (await fetch('/api/transactions')).json()).transactions.some((t) => t.amountCents === 2000));
+      ok(tx, 'S03: o gasto falado foi salvo');
+    }],
+  ],
+  exclusao: [
+    ['S29', '/ajustes', async (p) => {
+      await p.getByLabel('Digite "EXCLUIR" para confirmar').fill('excluir');
+      await Promise.all([p.waitForResponse((r) => r.request().method() === 'POST'), p.getByRole('button', { name: 'Excluir tudo' }).click()]);
+      await p.waitForURL('**/entrar?conta=excluida');
+      ok(await p.getByText('Sua conta e todos os dados foram excluídos.').isVisible(), 'S29: excluir a conta apaga e leva ao login');
+      for (const [path, text] of [['/tarefas', 'Nada para hoje'], ['/dinheiro/fixos', 'Nenhum fixo cadastrado'], ['/notas', 'Nenhuma nota aqui'], ['/metas', 'Nenhuma meta']]) {
+        await p.goto(base + path, { waitUntil: 'networkidle' });
+        ok(await p.getByText(text, { exact: false }).first().isVisible(), `depois de excluir, ${path} mostra o estado vazio`);
+      }
+      await p.goto(base + '/ajustes', { waitUntil: 'networkidle' });
+    }],
+  ],
 };
 
 (async () => {
@@ -175,6 +249,14 @@ const groups = {
     if (only && only !== name) continue;
     for (const [vw, suffix] of [[{ width: 1440, height: 900 }, 'desktop'], [{ width: 390, height: 844 }, 'mobile']]) {
       const ctx = await b.newContext({ viewport: vw, locale: 'pt-BR', timezoneId: 'America/Sao_Paulo' });
+      // voz simulada: o Chromium de teste não tem microfone
+      await ctx.addInitScript(() => {
+        window.SpeechRecognition = window.webkitSpeechRecognition = class {
+          start() { setTimeout(() => { this.onresult?.({ results: [{ isFinal: true, 0: { transcript: 'gastei 20 no café' } }] }); this.onend?.(); }, 200); }
+          stop() { this.onend?.(); } abort() {}
+        };
+        speechSynthesis.speak = (u) => setTimeout(() => u.onend?.(), 200);
+      });
       const p = await ctx.newPage();
       const errors = [];
       p.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });

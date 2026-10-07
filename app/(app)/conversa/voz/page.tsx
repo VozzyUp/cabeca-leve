@@ -1,5 +1,5 @@
-import { ScreenStub } from "@/components/screens/screen-stub";
+import { VoiceScreen } from "@/components/screens/voice-screen";
 
 export default function Page() {
-  return <ScreenStub id="S03" />;
+  return <VoiceScreen />;
 }
