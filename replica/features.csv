@@ -5,18 +5,18 @@ Planos mensal e anual com checkout,conta e assinatura,must,yes,no,"original: R$ 
 Acesso liberado automaticamente quando o pagamento é aprovado,conta e assinatura,must,yes,no,original libera pelo e-mail da compra; e-mails diferentes geram 'assinatura inválida' (suporte)
 Cancelar a assinatura dentro do app com acesso até o fim do ciclo,conta e assinatura,must,yes,no,suporte
 Mesma conta em vários dispositivos com sincronização em tempo real,conta e assinatura,must,yes,no,suporte
-Layout responsivo: barra inferior no celular e barra lateral no computador,conta e assinatura,must,yes,no,capturas da App Store
+Layout responsivo: barra inferior no celular e barra lateral no computador,conta e assinatura,must,yes,yes,capturas da App Store
 Nota fiscal enviada por e-mail após o pagamento,conta e assinatura,should,yes,no,suporte
 Período de teste gratuito,conta e assinatura,could,yes,no,termos preveem trial 'quando aplicável' [conferir]
-Tela inicial do assistente com saudação e atalho para o briefing,assistente,must,yes,no,S01
-Conversa por texto em linguagem natural (pt-BR),assistente,must,yes,no,S02
-Uma mensagem cria vários itens de áreas diferentes,assistente,must,yes,no,loop central (F01)
-Card de confirmação no chat para cada item criado,assistente,must,yes,no,S02: lembrete criado / transação criada
-Desfazer a ação pelo card,assistente,must,yes,no,S02
-Atalho do card para abrir o item na área certa,assistente,must,yes,no,S02: abrir em lembretes / abrir no extrato
+Tela inicial do assistente com saudação e atalho para o briefing,assistente,must,yes,partial,saudação e exemplos prontos; briefing chega no M3 | S01
+Conversa por texto em linguagem natural (pt-BR),assistente,must,yes,partial,intérprete de regras provisório; Claude entra no /replica-backend | S02
+Uma mensagem cria vários itens de áreas diferentes,assistente,must,yes,partial,gasto e lembrete na mesma mensagem; outras áreas com o Claude | loop central (F01)
+Card de confirmação no chat para cada item criado,assistente,must,yes,yes,S02: lembrete criado / transação criada
+Desfazer a ação pelo card,assistente,must,yes,yes,S02
+Atalho do card para abrir o item na área certa,assistente,must,yes,yes,S02: abrir em lembretes / abrir no extrato
 Perguntas sobre os próprios dados respondidas com números e cards,assistente,must,yes,no,F03
 Editar concluir e apagar itens pelo chat,assistente,must,yes,no,
-Datas e horas relativas no fuso do usuário,assistente,must,yes,no,amanhã / sexta / daqui a 5 dias
+Datas e horas relativas no fuso do usuário,assistente,must,yes,partial,"hoje, amanhã, depois de amanhã e HH:MM no fuso de Brasília | amanhã / sexta / daqui a 5 dias"
 Pergunta de volta quando falta informação no pedido,assistente,must,yes,no,
 Indicador das etapas enquanto o assistente trabalha,assistente,should,yes,no,
 Histórico da conversa com filtro por dia semana e mês,assistente,should,yes,no,S02
@@ -36,7 +36,7 @@ Receber lembretes e avisos pelo WhatsApp,whatsapp,must,yes,no,App Store 2.0
 Mesmos dados e histórico entre app e WhatsApp,whatsapp,must,yes,no,
 Mandar foto pelo WhatsApp (comprovante ou fatura),whatsapp,should,yes,no,site [conferir]
 Conversar e receber lembretes pelo Telegram,telegram,could,yes,no,site [conferir]
-Notificação push de lembretes no navegador e no celular,notificações,must,yes,no,
+Notificação push de lembretes no navegador e no celular,notificações,must,yes,partial,aviso só com o app aberto; Web Push e fila no backend
 "Preferências de notificação: canais, silêncio e limite por dia",notificações,should,yes,no,site [conferir]
 Notificação 'seu dia' mostrando o que vem a seguir,notificações,should,yes,no,novidades Google Play
 Despertador para lembretes importantes,notificações,could,yes,no,App Store 3.0; exige app nativo
@@ -62,7 +62,7 @@ Marcos com datas,projetos,should,yes,no,exclusão: etapas
 Situação do projeto pelo prazo decorrido (no rumo ou em risco),projetos,could,yes,no,site [conferir]
 Modelos de projeto,projetos,could,yes,no,exclusão: modelos de projeto
 Orçamento do projeto ligado aos gastos,projetos,could,yes,no,site [conferir]
-Lembrete único em data e hora,lembretes,must,yes,no,
+Lembrete único em data e hora,lembretes,must,yes,partial,dados em memória até o /replica-backend
 Lembretes recorrentes (diário semanal mensal),lembretes,must,yes,no,App Store 3.1: lembretes mensais
 Avisar com antecedência (ex.: 1 dia e 1 hora antes),lembretes,should,yes,no,site [conferir]
 Resumo diário dos lembretes pela manhã,lembretes,should,yes,no,site [conferir]
@@ -83,11 +83,11 @@ Registrar refeições e ver calorias e macros do dia,saúde,could,yes,no,site [c
 Medidas corporais com gráfico e histórico,saúde,could,yes,no,S17
 Sincronizar treinos passos e sono do Apple Saúde e Health Connect,saúde,could,yes,no,exige app nativo
 Conectar Strava e marcar hábitos esportivos sozinho,saúde,could,yes,no,suporte; privacidade 6.1
-Lançar despesa e receita pelo chat com categoria e meio de pagamento,finanças,must,yes,no,S02
+Lançar despesa e receita pelo chat com categoria e meio de pagamento,finanças,must,yes,partial,dados em memória até o /replica-backend | S02
 Resumo do mês: entrou saiu sobra e patrimônio,finanças,must,yes,no,S18
-Extrato com busca e filtros,finanças,must,yes,no,S24
+Extrato com busca e filtros,finanças,must,yes,partial,busca por texto; filtros por conta e período depois; dados em memória até o /replica-backend | S24
 Categorias e subcategorias,finanças,must,yes,no,
-Contas bancárias com saldo atualizado pelos lançamentos,finanças,must,yes,no,S02: saldo antes e depois
+Contas bancárias com saldo atualizado pelos lançamentos,finanças,must,yes,partial,"saldo calculado; uma conta de exemplo, sem tela de contas | S02: saldo antes e depois"
 Cartões de crédito com limite fechamento e vencimento,finanças,should,yes,no,S22
 Compra no crédito cai na fatura e não na conta,finanças,should,yes,no,site [conferir]
 Compras parceladas com parcelas pagas e data de quitação,finanças,should,yes,no,S21
