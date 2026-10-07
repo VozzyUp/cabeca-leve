@@ -1,5 +1,5 @@
-import { ScreenStub } from "@/components/screens/screen-stub";
+import { DayScreen } from "@/components/screens/day-screen";
 
 export default function Page() {
-  return <ScreenStub id="S05" />;
+  return <DayScreen />;
 }

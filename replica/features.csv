@@ -10,7 +10,7 @@ Nota fiscal enviada por e-mail após o pagamento,conta e assinatura,should,yes,n
 Período de teste gratuito,conta e assinatura,could,yes,no,termos preveem trial 'quando aplicável' [conferir]
 Tela inicial do assistente com saudação e atalho para o briefing,assistente,must,yes,partial,saudação e exemplos prontos; briefing chega no M3 | S01
 Conversa por texto em linguagem natural (pt-BR),assistente,must,yes,partial,intérprete de regras provisório; Claude entra no /replica-backend | S02
-Uma mensagem cria vários itens de áreas diferentes,assistente,must,yes,partial,gasto e lembrete na mesma mensagem; outras áreas com o Claude | loop central (F01)
+Uma mensagem cria vários itens de áreas diferentes,assistente,must,yes,partial,"gasto, entrada, lembrete, tarefa e hábito na mesma mensagem; o resto com o Claude"
 Card de confirmação no chat para cada item criado,assistente,must,yes,yes,S02: lembrete criado / transação criada
 Desfazer a ação pelo card,assistente,must,yes,yes,S02
 Atalho do card para abrir o item na área certa,assistente,must,yes,yes,S02: abrir em lembretes / abrir no extrato
@@ -40,8 +40,8 @@ Notificação push de lembretes no navegador e no celular,notificações,must,ye
 "Preferências de notificação: canais, silêncio e limite por dia",notificações,should,yes,no,site [conferir]
 Notificação 'seu dia' mostrando o que vem a seguir,notificações,should,yes,no,novidades Google Play
 Despertador para lembretes importantes,notificações,could,yes,no,App Store 3.0; exige app nativo
-Visão do dia com linha do tempo de compromissos tarefas hábitos e lembretes,visão do dia,must,yes,no,S05
-Contador de itens em aberto e itens sem horário,visão do dia,should,yes,no,S05
+Visão do dia com linha do tempo de compromissos tarefas hábitos e lembretes,visão do dia,must,yes,partial,sem compromissos da agenda (Google/Outlook no M3)
+Contador de itens em aberto e itens sem horário,visão do dia,should,yes,yes,
 Card 'em foco agora' com o próximo item,visão do dia,should,yes,no,S05
 Calendário unificado (mês e semana) com filtro por fonte,visão do dia,should,yes,no,S06
 Modo foco com timer e som no fim,visão do dia,could,yes,no,S07
@@ -51,9 +51,9 @@ Conectar Outlook e ver os eventos,agenda,should,yes,no,App Store 3.0
 Vários calendários por conta,agenda,should,yes,no,App Store 3.1
 Criar evento com convidados pelo chat,agenda,should,yes,no,site [conferir]
 Mover ou editar evento pelo chat,agenda,could,yes,no,site [conferir]
-Criar tarefa com prazo prioridade e observações,tarefas,must,yes,no,Google Play
+Criar tarefa com prazo prioridade e observações,tarefas,must,yes,partial,prazo e prioridade pela tela e pela conversa; observações depois
 Tarefas recorrentes,tarefas,must,yes,no,
-Listas de hoje próximas e atrasadas,tarefas,must,yes,no,
+Listas de hoje próximas e atrasadas,tarefas,must,yes,yes,também sem prazo e feitas
 Subtarefas,tarefas,should,yes,no,Google Play
 Quadro Kanban (a fazer fazendo feito),tarefas,should,yes,no,site [conferir]
 Análise de conclusão por semana,tarefas,could,yes,no,site [conferir]
@@ -67,11 +67,11 @@ Lembretes recorrentes (diário semanal mensal),lembretes,must,yes,no,App Store 3
 Avisar com antecedência (ex.: 1 dia e 1 hora antes),lembretes,should,yes,no,site [conferir]
 Resumo diário dos lembretes pela manhã,lembretes,should,yes,no,site [conferir]
 Marcar lembrete como importante,lembretes,could,yes,no,site [conferir]
-Criar hábito com dias da semana e horário,hábitos,must,yes,no,
-Marcar hábito como feito inclusive em dia anterior,hábitos,must,yes,no,
-Sequência atual e recorde,hábitos,must,yes,no,exclusão: histórico de sequências
+Criar hábito com dias da semana e horário,hábitos,must,yes,yes,pela conversa com dias escolhidos; pela tela só diário
+Marcar hábito como feito inclusive em dia anterior,hábitos,must,yes,partial,só o dia de hoje
+Sequência atual e recorde,hábitos,must,yes,yes,dias não planejados não quebram a sequência
 Meta por tempo quantidade ou ação simples,hábitos,should,yes,no,site [conferir]
-Constância do mês em calendário,hábitos,should,yes,no,S12
+Constância do mês em calendário,hábitos,should,yes,partial,últimos 7 dias; calendário do mês no M3
 Cobrança quando o hábito passa do horário,hábitos,should,yes,no,App Store 3.0: avisos proativos
 Cor por hábito,hábitos,could,yes,no,novidades Google Play
 Análise de padrões (melhores dias e ranking),hábitos,could,yes,no,S12 aba análise
@@ -84,16 +84,16 @@ Medidas corporais com gráfico e histórico,saúde,could,yes,no,S17
 Sincronizar treinos passos e sono do Apple Saúde e Health Connect,saúde,could,yes,no,exige app nativo
 Conectar Strava e marcar hábitos esportivos sozinho,saúde,could,yes,no,suporte; privacidade 6.1
 Lançar despesa e receita pelo chat com categoria e meio de pagamento,finanças,must,yes,partial,dados em memória até o /replica-backend | S02
-Resumo do mês: entrou saiu sobra e patrimônio,finanças,must,yes,no,S18
+Resumo do mês: entrou saiu sobra e patrimônio,finanças,must,yes,partial,patrimônio = saldo em conta; sem investimentos; dados provisórios até o /replica-backend
 Extrato com busca e filtros,finanças,must,yes,partial,busca por texto; filtros por conta e período depois; dados em memória até o /replica-backend | S24
-Categorias e subcategorias,finanças,must,yes,no,
+Categorias e subcategorias,finanças,must,yes,partial,categorias padrão; sem subcategorias nem edição
 Contas bancárias com saldo atualizado pelos lançamentos,finanças,must,yes,partial,"saldo calculado; uma conta de exemplo, sem tela de contas | S02: saldo antes e depois"
 Cartões de crédito com limite fechamento e vencimento,finanças,should,yes,no,S22
 Compra no crédito cai na fatura e não na conta,finanças,should,yes,no,site [conferir]
 Compras parceladas com parcelas pagas e data de quitação,finanças,should,yes,no,S21
 Contas recorrentes e assinaturas com pausar e pular cobrança,finanças,should,yes,no,S20
 Previsão do mês (realizado mais previsto) e projeção do saldo,finanças,should,yes,no,S18
-Gastos por dia e por categoria com média diária,finanças,should,yes,no,S18
+Gastos por dia e por categoria com média diária,finanças,should,yes,partial,por categoria e média diária; gráfico por dia no M3
 Lista 'a resolver' com contas atrasadas e próximas e botão confirmar,finanças,should,yes,no,S18
 Transferência entre contas e ajuste de saldo fora de gasto e receita,finanças,should,yes,no,site [conferir]
 Importar fatura ou comprovante por foto sem duplicar,finanças,could,yes,no,site [conferir]
