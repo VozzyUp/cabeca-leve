@@ -1,5 +1,5 @@
-import { ScreenStub } from "@/components/screens/screen-stub";
+import { WorkoutScreen } from "@/components/screens/health-screens";
 
 export default function Page() {
-  return <ScreenStub id="S15" />;
+  return <WorkoutScreen />;
 }

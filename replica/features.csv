@@ -68,19 +68,19 @@ Avisar com antecedência (ex.: 1 dia e 1 hora antes),lembretes,should,yes,no,sit
 Resumo diário dos lembretes pela manhã,lembretes,should,yes,no,site [conferir]
 Marcar lembrete como importante,lembretes,could,yes,no,site [conferir]
 Criar hábito com dias da semana e horário,hábitos,must,yes,yes,pela conversa com dias escolhidos; pela tela só diário
-Marcar hábito como feito inclusive em dia anterior,hábitos,must,yes,partial,só o dia de hoje
+Marcar hábito como feito inclusive em dia anterior,hábitos,must,yes,yes,S12 marca hoje; S13 marca e desmarca qualquer dia planejado do mês atual e do anterior
 Sequência atual e recorde,hábitos,must,yes,yes,dias não planejados não quebram a sequência
 Meta por tempo quantidade ou ação simples,hábitos,should,yes,no,site [conferir]
-Constância do mês em calendário,hábitos,should,yes,partial,últimos 7 dias; calendário do mês no M3
+Constância do mês em calendário,hábitos,should,yes,yes,S13: mês atual e anterior; S12: últimos 7 dias
 Cobrança quando o hábito passa do horário,hábitos,should,yes,no,App Store 3.0: avisos proativos
 Cor por hábito,hábitos,could,yes,no,novidades Google Play
-Análise de padrões (melhores dias e ranking),hábitos,could,yes,no,S12 aba análise
-Ficha de treino com exercícios séries e carga,saúde,could,yes,no,S15
-Registrar treino série a série com descanso,saúde,could,yes,no,S15
-Última execução e recorde por exercício,saúde,could,yes,no,S15
-Plano de dieta com refeições e metas de macros,saúde,could,yes,no,App Store 3.0
-Registrar refeições e ver calorias e macros do dia,saúde,could,yes,no,site [conferir]
-Medidas corporais com gráfico e histórico,saúde,could,yes,no,S17
+Análise de padrões (melhores dias e ranking),hábitos,could,yes,partial,S13: taxa por dia da semana (90 dias) e melhor e pior dia; ranking entre hábitos depois
+Ficha de treino com exercícios séries e carga,saúde,could,yes,yes,"S15: séries × repetições, carga e dias da semana"
+Registrar treino série a série com descanso,saúde,could,yes,partial,S14/S15 marcam o treino do dia; série a série com descanso depois
+Última execução e recorde por exercício,saúde,could,yes,yes,S15: último treino e recorde por exercício
+Plano de dieta com refeições e metas de macros,saúde,could,yes,partial,"S16: refeições, itens e calorias; macros depois"
+Registrar refeições e ver calorias e macros do dia,saúde,could,yes,partial,S14/S16: marcar refeição do plano e calorias do dia; refeição fora do plano depois
+Medidas corporais com gráfico e histórico,saúde,could,yes,yes,"S17: peso, cintura e quadril; linha do peso com tabela"
 Sincronizar treinos passos e sono do Apple Saúde e Health Connect,saúde,could,yes,no,exige app nativo
 Conectar Strava e marcar hábitos esportivos sozinho,saúde,could,yes,no,suporte; privacidade 6.1
 Lançar despesa e receita pelo chat com categoria e meio de pagamento,finanças,must,yes,partial,dados em memória até o /replica-backend | S02

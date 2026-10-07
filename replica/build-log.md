@@ -29,6 +29,11 @@
 | S06 calendário | 2026-10-07 | feito | — | foco do teclado precisa seguir o dia depois de redesenhar a grade (requestAnimationFrame) |
 | S07 modo foco | 2026-10-07 | feito | — | o tempo vem da hora de término, não de somar tiques: o intervalo atrasa com a aba em segundo plano |
 | S08 agenda | 2026-10-07 | parcial | OAuth do Google e da Microsoft | — |
+| S13 detalhe do hábito | 2026-10-07 | feito | — | taxa de 30 dias não conta hoje ainda em aberto nem dias antes de o hábito existir |
+| S14 saúde | 2026-10-07 | parcial | passos e sono (exige app nativo) | — |
+| S15 treino | 2026-10-07 | parcial | registrar série a série com descanso | — |
+| S16 dieta | 2026-10-07 | parcial | macros, refeição fora do plano, foto do prato | um texto só para leitor de tela (`sr-only`, posição absoluta) dentro de tabela rolável vazava e criava rolagem na página: a célula precisa ser `relative` |
+| S17 progresso do corpo | 2026-10-07 | feito | — | — |
 
 Fatia vertical (M1) verificada de ponta a ponta no navegador: "gastei 35 na padaria e me lembra
 do mercado às 18h" cria dois cards, desfazer tira o lembrete da tela de Lembretes, o gasto aparece

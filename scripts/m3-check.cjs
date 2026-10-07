@@ -126,6 +126,47 @@ const groups = {
       await p.getByRole('button', { name: 'Nova sessão' }).click();
     }],
   ],
+  saude: [
+    ['S13', async (p) => {
+      await p.goto(base + '/habitos', { waitUntil: 'networkidle' });
+      return p.getByRole('link', { name: 'Meditar 10 minutos' }).getAttribute('href');
+    }, async (p) => {
+      ok(await p.getByRole('heading', { name: 'Meditar 10 minutos' }).isVisible(), 'S13: detalhe aberto pelo nome na lista de hábitos');
+      const day = await p.evaluate(() => { const d = new Date(Date.now() - 4 * 864e5); return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(d); });
+      const label = await p.evaluate((d) => new Intl.DateTimeFormat('pt-BR', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long' }).format(new Date(d + 'T12:00:00Z')), day);
+      const cell = p.getByRole('button', { name: new RegExp('^' + label + ': ') });
+      ok(await cell.getAttribute('aria-pressed') === 'false', 'S13: o dia sem registro (há 4 dias) aparece em aberto');
+      await Promise.all([p.waitForResponse((r) => r.request().method() === 'POST'), cell.click()]);
+      await p.reload({ waitUntil: 'networkidle' });
+      ok(await p.getByRole('button', { name: new RegExp('^' + label + ': ') }).getAttribute('aria-pressed') === 'true', 'S13: marcar um dia anterior fica salvo');
+      ok(await p.getByText(/Você vai melhor às/).isVisible(), 'S13: melhores dias da semana');
+    }],
+    ['S14', '/saude', async (p) => {
+      ok(await p.getByText('Calorias de hoje').isVisible() && await p.getByText('Refeições de hoje').isVisible(), 'S14: resumo do dia');
+      await Promise.all([p.waitForResponse((r) => r.request().method() === 'POST'), p.getByRole('checkbox', { name: /Almoço/ }).click()]);
+      await p.reload({ waitUntil: 'networkidle' });
+      ok(await p.getByRole('checkbox', { name: /Almoço/ }).isChecked(), 'S14: refeição marcada fica salva');
+    }],
+    ['S15', '/saude/treino', async (p) => {
+      ok(await p.getByRole('table', { name: /Treino A/ }).isVisible(), 'S15: ficha com exercícios');
+      ok(await p.getByRole('img', { name: 'no recorde' }).count() >= 1, 'S15: recorde marcado');
+    }],
+    ['S16', '/saude/dieta', async (p) => {
+      ok(await p.getByRole('progressbar', { name: 'Calorias de hoje' }).isVisible(), 'S16: calorias do dia');
+      ok(await p.getByRole('table', { name: /últimos 7 dias/ }).isVisible(), 'S16: adesão da semana');
+    }],
+    ['S17', '/saude/progresso', async (p) => {
+      await p.getByRole('button', { name: 'Salvar medida de hoje' }).click();
+      ok(await p.getByText('Preencha pelo menos uma medida.').isVisible(), 'S17: formulário vazio mostra erro');
+      await p.getByLabel('Peso (kg)').fill('80,4');
+      await Promise.all([p.waitForResponse((r) => r.request().method() === 'POST'), p.getByRole('button', { name: 'Salvar medida de hoje' }).click()]);
+      await p.getByText('Medida de hoje salva.').waitFor();
+      await p.locator('p.text-metric', { hasText: '80,4' }).first().waitFor({ timeout: 5000 }).catch(() => {});
+      ok((await p.locator('p.text-metric').first().innerText()).includes('80,4'), 'S17: peso novo vira o atual');
+      await p.getByText('Ver como tabela').click();
+      ok(await p.getByRole('table', { name: 'Peso ao longo do tempo' }).isVisible(), 'S17: gráfico também como tabela');
+    }],
+  ],
 };
 
 (async () => {
@@ -139,7 +180,9 @@ const groups = {
       p.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
       p.on('pageerror', (e) => errors.push(e.message));
       for (const [id, path, check] of screens) {
-        await p.goto(base + path, { waitUntil: 'networkidle' });
+        // o caminho pode depender dos dados (ex.: id do hábito)
+        const url = typeof path === 'function' ? await path(p) : path;
+        await p.goto(base + url, { waitUntil: 'networkidle' });
         // uma verificação que quebra conta como falha e não interrompe as outras telas
         if (suffix === 'desktop') await check(p).catch((e) => ok(false, `${id}: ${e.message.split('\n')[0]}`));
         const overflow = await p.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);

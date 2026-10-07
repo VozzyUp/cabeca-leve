@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Habit, HabitLog, Transaction } from "@/lib/data/types";
 import { dayItems } from "./day";
 import { financeSummary } from "./finance";
-import { habitStats } from "./habits";
+import { habitHistory, habitStats } from "./habits";
 
 const habit = (weekdays = [0, 1, 2, 3, 4, 5, 6]): Habit =>
   ({ id: "h", name: "Ler", weekdays, time: "21:00", active: true, createdAt: "2026-09-20T12:00:00Z" });
@@ -51,5 +51,15 @@ describe("dayItems", () => {
       habits: [habit()], logs: [],
     });
     expect(items.map((i) => [i.title, i.time, i.overdue])).toEqual([["Remédio", "09:00", true], ["Ler", "21:00", false], ["Atrasada", null, true]]);
+  });
+});
+
+describe("habitHistory", () => {
+  it("taxa dos últimos 30 dias ignora hoje em aberto e dias antes de criar o hábito", () => {
+    // criado em 20/09; feito em 6 dos 17 dias de 21/09 a 06/10 (+ 20/09)
+    const h = habitHistory(habit(), logs("2026-09-20", "2026-10-01", "2026-10-02", "2026-10-03", "2026-10-05", "2026-10-06"), "2026-10-07");
+    expect(h.total).toBe(6);
+    expect(h.rate30).toBeCloseTo(6 / 17);
+    expect(h.byWeekday[2].planned).toBeGreaterThan(0);  // terças
   });
 });

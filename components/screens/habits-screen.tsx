@@ -1,5 +1,6 @@
 "use client";
 import { Check, Flame, Plus, Sprout } from "lucide-react";
+import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { describeWeekdays } from "@/lib/assistant/weekdays";
 import { Button } from "@/components/ui/button";
@@ -61,7 +62,7 @@ export function HabitsScreen() {
               <Card className="flex h-full flex-col gap-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <h2 className="truncate text-base font-semibold">{h.name}</h2>
+                    <h2 className="truncate text-base font-semibold"><Link href={`/habitos/${h.id}`} className="hover:underline">{h.name}</Link></h2>
                     <p className="text-xs text-muted">{describeWeekdays(h.weekdays)}{h.time ? ` · ${h.time}` : ""}</p>
                   </div>
                   {h.stats.scheduledToday ? (

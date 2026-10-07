@@ -108,3 +108,10 @@ export async function setCalendarConnected(source: "google" | "outlook", connect
   await store.updateSettings({ calendars: { ...calendars, [z.enum(["google", "outlook"]).parse(source)]: connected } });
   revalidatePath("/", "layout");
 }
+
+export async function setHabitDay(habitId: string, onDay: string, done: boolean) {
+  const parsed = day.parse(onDay);
+  if (parsed > new Date().toISOString().slice(0, 10) && done) throw new Error("Dia no futuro");
+  await getStore().setHabitDone(uuid.parse(habitId), parsed, done);
+  revalidatePath("/habitos", "layout");
+}

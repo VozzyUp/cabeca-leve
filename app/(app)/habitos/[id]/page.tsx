@@ -1,5 +1,6 @@
-import { ScreenStub } from "@/components/screens/screen-stub";
+import { HabitDetailScreen } from "@/components/screens/health-screens";
 
-export default function Page() {
-  return <ScreenStub id="S13" />;
+export default async function Page({ params }: PageProps<"/habitos/[id]">) {
+  const { id } = await params;
+  return <HabitDetailScreen id={id} />;
 }
