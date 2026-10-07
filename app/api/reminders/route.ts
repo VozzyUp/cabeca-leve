@@ -2,7 +2,8 @@ import { z } from "zod";
 import { getStore } from "@/lib/data";
 
 export async function GET() {
-  return Response.json({ reminders: await getStore().listReminders(), timezone: getStore().timezone() });
+  const store = await getStore();
+  return Response.json({ reminders: await store.listReminders(), timezone: store.timezone() });
 }
 
 const Body = z.object({
@@ -13,5 +14,5 @@ const Body = z.object({
 export async function POST(request: Request) {
   const parsed = Body.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return Response.json({ error: "Dados inválidos" }, { status: 400 });
-  return Response.json({ reminder: await getStore().createReminder(parsed.data) }, { status: 201 });
+  return Response.json({ reminder: await (await getStore()).createReminder(parsed.data) }, { status: 201 });
 }

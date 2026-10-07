@@ -5,7 +5,7 @@ import { localDate } from "@/lib/time";
 
 // Hábitos com estatísticas calculadas no servidor (sequência, recorde, últimos 7 dias)
 export async function GET() {
-  const store = getStore();
+  const store = await getStore();
   const today = localDate(new Date(), store.timezone());
   const [habits, logs] = await Promise.all([store.listHabits(), store.listHabitLogs()]);
   return Response.json({ today, habits: habits.map((h) => ({ ...h, stats: habitStats(h, logs, today) })) });
@@ -20,5 +20,5 @@ const Body = z.object({
 export async function POST(request: Request) {
   const parsed = Body.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return Response.json({ error: parsed.error.issues[0]?.message ?? "Dados inválidos" }, { status: 400 });
-  return Response.json({ habit: await getStore().createHabit(parsed.data) }, { status: 201 });
+  return Response.json({ habit: await (await getStore()).createHabit(parsed.data) }, { status: 201 });
 }

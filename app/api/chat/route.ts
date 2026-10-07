@@ -14,7 +14,7 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return Response.json({ error: parsed.error.issues[0]?.message ?? "Pedido inválido" }, { status: 400 });
   }
-  const store = getStore();
+  const store = await getStore();
   const userMessage = await store.appendMessage({ role: "user", text: parsed.data.text, cards: [] });
   const reply = await handleMessage(store, parsed.data.text);
   const assistantMessage = await store.appendMessage({ role: "assistant", text: reply.text, cards: reply.cards });

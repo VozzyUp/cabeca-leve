@@ -3,6 +3,7 @@ import { Download, Play, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { deleteAccount, exportData, updateSettings } from "@/app/actions";
+import { signOut } from "@/app/auth-actions";
 import { Button } from "@/components/ui/button";
 import { Card, SectionLabel } from "@/components/ui/card";
 import { cn } from "@/components/ui/cn";
@@ -61,7 +62,7 @@ const toE164 = (s: string) => {
 };
 
 // ---- S29 ----
-export function SettingsForm({ initial }: { initial: Settings }) {
+export function SettingsForm({ initial, canSignOut }: { initial: Settings; canSignOut: boolean }) {
   const { settings, save, status } = useSaver(initial);
   const [name, setName] = useState(initial.name);
   const [phone, setPhone] = useState(initial.channels.whatsapp ?? "");
@@ -100,6 +101,12 @@ export function SettingsForm({ initial }: { initial: Settings }) {
           <Button type="submit" variant="secondary" disabled={!name.trim() || name.trim() === settings.name}>Salvar</Button>
         </form>
         <p className="text-sm text-body">E-mail: <span className="text-text">{settings.email || "—"}</span></p>
+        {canSignOut && (
+          <div className="flex flex-wrap gap-2">
+            <Button variant="secondary" size="sm" onClick={() => startExport(async () => { await signOut(false); router.push("/entrar"); router.refresh(); })}>Sair</Button>
+            <Button variant="ghost" size="sm" onClick={() => startExport(async () => { await signOut(true); router.push("/entrar"); router.refresh(); })}>Sair de todos os aparelhos</Button>
+          </div>
+        )}
       </Card>
 
       <Card className="flex flex-col">

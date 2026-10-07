@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/load-error";
 import { PLANS } from "@/lib/plans";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { serverContext } from "@/lib/server";
 import { formatMoney, formatShortDate } from "@/lib/time";
 import { AssistantForm, SettingsForm } from "./settings-forms";
@@ -34,7 +35,7 @@ export async function SettingsScreen() {
         <LinkRow href="/ajustes/assistente" icon={Sparkles} title="Jeito do assistente" hint="tom, voz, memória e tema" />
         <LinkRow href="/avisos" icon={Bell} title="Avisos" hint={unread ? `${unread} novo${unread === 1 ? "" : "s"}` : "tudo lido"} />
       </Card>
-      <SettingsForm initial={settings} />
+      <SettingsForm initial={settings} canSignOut={isSupabaseConfigured()} />
     </div>
   );
 }

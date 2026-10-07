@@ -4,7 +4,7 @@ import { localDate } from "@/lib/time";
 
 // GET /api/day: o dia de hoje numa linha do tempo
 export async function GET() {
-  const store = getStore();
+  const store = await getStore();
   const now = new Date();
   const tz = store.timezone();
   const [reminders, tasks, habits, logs, events] = await Promise.all([

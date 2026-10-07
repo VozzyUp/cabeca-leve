@@ -11,17 +11,17 @@ const uuid = z.uuid();
 const day = z.iso.date();
 
 export async function setRecurrenceActive(id: string, active: boolean) {
-  await getStore().setRecurrenceActive(uuid.parse(id), active);
+  await (await getStore()).setRecurrenceActive(uuid.parse(id), active);
   revalidatePath("/dinheiro/fixos");
 }
 
 export async function setMilestoneDone(projectId: string, milestoneId: string, done: boolean) {
-  await getStore().setMilestoneDone(uuid.parse(projectId), uuid.parse(milestoneId), done);
+  await (await getStore()).setMilestoneDone(uuid.parse(projectId), uuid.parse(milestoneId), done);
   revalidatePath("/projetos");
 }
 
 export async function addGoalProgress(id: string, delta: number) {
-  await getStore().addGoalProgress(uuid.parse(id), z.number().finite().parse(delta));
+  await (await getStore()).addGoalProgress(uuid.parse(id), z.number().finite().parse(delta));
   revalidatePath("/metas");
 }
 
@@ -35,24 +35,24 @@ const noteInput = z.object({
 export async function createNote(input: z.input<typeof noteInput>) {
   const parsed = noteInput.parse(input);
   if (!parsed.title && !parsed.body) throw new Error("Nota vazia");
-  const note = await getStore().createNote(parsed);
+  const note = await (await getStore()).createNote(parsed);
   revalidatePath("/notas");
   return note;
 }
 
 export async function updateNote(id: string, patch: { title?: string; body?: string; pinned?: boolean }) {
   const parsed = z.object({ title: z.string().trim().max(120).optional(), body: z.string().max(20_000).optional(), pinned: z.boolean().optional() }).parse(patch);
-  await getStore().updateNote(uuid.parse(id), parsed);
+  await (await getStore()).updateNote(uuid.parse(id), parsed);
   revalidatePath("/notas");
 }
 
 export async function setAutomationActive(id: string, active: boolean) {
-  await getStore().setAutomationActive(uuid.parse(id), active);
+  await (await getStore()).setAutomationActive(uuid.parse(id), active);
   revalidatePath("/automacoes");
 }
 
 export async function markNoticesRead(ids: string[] | "all") {
-  await getStore().markNoticesRead(ids === "all" ? "all" : z.array(uuid).parse(ids));
+  await (await getStore()).markNoticesRead(ids === "all" ? "all" : z.array(uuid).parse(ids));
   revalidatePath("/avisos");
 }
 
@@ -61,17 +61,17 @@ export async function saveFocusSession(input: { title: string; minutes: number; 
     title: z.string().trim().min(1).max(200), minutes: z.number().int().min(1).max(240),
     startedAt: z.iso.datetime(), finishedAt: z.iso.datetime().nullable(),
   }).parse(input);
-  await getStore().saveFocusSession(parsed);
+  await (await getStore()).saveFocusSession(parsed);
   revalidatePath("/foco");
 }
 
 export async function setWorkoutDone(workoutId: string, onDay: string, done: boolean) {
-  await getStore().setWorkoutDone(uuid.parse(workoutId), day.parse(onDay), done);
+  await (await getStore()).setWorkoutDone(uuid.parse(workoutId), day.parse(onDay), done);
   revalidatePath("/saude", "layout");
 }
 
 export async function setMealDone(mealId: string, onDay: string, done: boolean) {
-  await getStore().setMealDone(uuid.parse(mealId), day.parse(onDay), done);
+  await (await getStore()).setMealDone(uuid.parse(mealId), day.parse(onDay), done);
   revalidatePath("/saude", "layout");
 }
 
@@ -79,7 +79,7 @@ export async function addMeasurement(input: { day: string; weightKg: number | nu
   const n = (min: number, max: number) => z.number().min(min).max(max).nullable();
   const parsed = z.object({ day, weightKg: n(20, 400), waistCm: n(30, 250), hipCm: n(30, 250) }).parse(input);
   if (parsed.weightKg === null && parsed.waistCm === null && parsed.hipCm === null) throw new Error("Medida vazia");
-  await getStore().addMeasurement(parsed);
+  await (await getStore()).addMeasurement(parsed);
   revalidatePath("/saude", "layout");
 }
 
@@ -97,13 +97,13 @@ const settingsPatch = z.object({
 
 export async function updateSettings(patch: Partial<Settings>) {
   const parsed = settingsPatch.parse(patch);
-  const s = await getStore().updateSettings(parsed);
+  const s = await (await getStore()).updateSettings(parsed);
   revalidatePath("/", "layout");
   return s;
 }
 
 export async function setCalendarConnected(source: "google" | "outlook", connected: boolean) {
-  const store = getStore();
+  const store = await getStore();
   const { calendars } = await store.getSettings();
   await store.updateSettings({ calendars: { ...calendars, [z.enum(["google", "outlook"]).parse(source)]: connected } });
   revalidatePath("/", "layout");
@@ -112,13 +112,13 @@ export async function setCalendarConnected(source: "google" | "outlook", connect
 export async function setHabitDay(habitId: string, onDay: string, done: boolean) {
   const parsed = day.parse(onDay);
   if (parsed > new Date().toISOString().slice(0, 10) && done) throw new Error("Dia no futuro");
-  await getStore().setHabitDone(uuid.parse(habitId), parsed, done);
+  await (await getStore()).setHabitDone(uuid.parse(habitId), parsed, done);
   revalidatePath("/habitos", "layout");
 }
 
 // Portabilidade (LGPD): tudo do usuário num JSON
 export async function exportData() {
-  const s = getStore();
+  const s = await getStore();
   const [settings, tasks, reminders, habits, habitLogs, transactions, categories, accounts, cards, recurrences, installments,
     projects, goals, notes, automations, notices, focusSessions, workouts, workoutLogs, meals, mealLogs, measurements, messages] = await Promise.all([
     s.getSettings(), s.listTasks(), s.listReminders(), s.listHabits(), s.listHabitLogs(), s.listTransactions(), s.listCategories(),
@@ -135,7 +135,7 @@ export async function exportData() {
 
 export async function deleteAccount(confirmation: string) {
   if (confirmation.trim().toUpperCase() !== "EXCLUIR") throw new Error("Confirmação errada");
-  await getStore().deleteAllData();
+  await (await getStore()).deleteAllData();
   revalidatePath("/", "layout");
   return { ok: true as const };
 }

@@ -3,7 +3,7 @@ import { getStore } from "@/lib/data";
 import { localDate } from "@/lib/time";
 
 export async function GET() {
-  const store = getStore();
+  const store = await getStore();
   return Response.json({ tasks: await store.listTasks(), today: localDate(new Date(), store.timezone()) });
 }
 
@@ -16,5 +16,5 @@ const Body = z.object({
 export async function POST(request: Request) {
   const parsed = Body.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return Response.json({ error: parsed.error.issues[0]?.message ?? "Dados inválidos" }, { status: 400 });
-  return Response.json({ task: await getStore().createTask(parsed.data) }, { status: 201 });
+  return Response.json({ task: await (await getStore()).createTask(parsed.data) }, { status: 201 });
 }

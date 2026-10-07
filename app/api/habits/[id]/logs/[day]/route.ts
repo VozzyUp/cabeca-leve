@@ -6,7 +6,7 @@ const Day = z.iso.date();
 async function set(ctx: RouteContext<"/api/habits/[id]/logs/[day]">, done: boolean) {
   const { id, day } = await ctx.params;
   if (!Day.safeParse(day).success) return Response.json({ error: "Data inválida" }, { status: 400 });
-  const ok = await getStore().setHabitDone(id, day, done);
+  const ok = await (await getStore()).setHabitDone(id, day, done);
   if (!ok) return Response.json({ error: "Hábito não encontrado" }, { status: 404 });
   return Response.json({ ok: true });
 }

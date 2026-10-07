@@ -4,8 +4,19 @@ import type {
   Transaction, Workout, WorkoutLog,
 } from "./types";
 
-// Contrato da camada de dados. Hoje: fake-store (memória). No /replica-backend:
-// implementação Supabase com as mesmas assinaturas, sem mudar nenhuma tela.
+// Mensagem a gravar. `content` são os blocos exatos da API (reenviados byte a byte ao modelo);
+// `visible: false` guarda passos internos do agente (chamadas e resultados de ferramenta).
+export type AppendMessage = Omit<ChatMessage, "id" | "createdAt"> & {
+  content?: unknown;
+  visible?: boolean;
+  channel?: "web" | "whatsapp" | "telegram" | "voice" | "job";
+  clientMessageId?: string;
+  externalMessageId?: string;
+  usage?: { model: string; inputTokens: number; outputTokens: number; cacheReadTokens: number };
+};
+
+// Contrato da camada de dados. Duas implementações: supabase-store (produção) e
+// fake-store (modo de demonstração, sem Supabase). As telas não sabem qual está por trás.
 export interface DataStore {
   timezone(): string;
   listReminders(): Promise<Reminder[]>;
@@ -25,7 +36,7 @@ export interface DataStore {
   recordAction(entity: ActionRecord["entity"], entityId: string): Promise<ActionRecord>;
   undoAction(id: string): Promise<{ ok: true } | { ok: false; reason: "not_found" | "already_undone" }>;
   listMessages(): Promise<ChatMessage[]>;
-  appendMessage(msg: Omit<ChatMessage, "id" | "createdAt">): Promise<ChatMessage>;
+  appendMessage(msg: AppendMessage): Promise<ChatMessage>;
   markCardsUndone(actionId: string): Promise<void>;
 
   // finanças (M3)

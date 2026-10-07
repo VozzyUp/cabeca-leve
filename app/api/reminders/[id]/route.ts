@@ -12,7 +12,7 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/reminders/
   const { id } = await ctx.params;
   const parsed = Body.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return Response.json({ error: "Dados inválidos" }, { status: 400 });
-  const reminder = await getStore().updateReminder(id, parsed.data);
+  const reminder = await (await getStore()).updateReminder(id, parsed.data);
   if (!reminder) return Response.json({ error: "Lembrete não encontrado" }, { status: 404 });
   return Response.json({ reminder });
 }
