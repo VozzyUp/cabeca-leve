@@ -2,6 +2,7 @@ import type { DataStore } from "@/lib/data/store";
 import type { ActionCardData, ChatMessage } from "@/lib/data/types";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { agentEnabled, runAgent } from "./agent";
+import { siteUrl } from "@/lib/public-env";
 import { formatDue } from "@/lib/support";
 import { parseBudget, parseMessage, wantsHuman } from "./rule-parser";
 import { createHabit, createReminder, createTask, recordTransaction, setBudgetByName } from "./tools";
@@ -60,7 +61,7 @@ export async function respond(store: DataStore, text: string, opts: {
 }): Promise<{ user: ChatMessage | null; reply: AssistantReply; stored?: false }> {
   // teste grátis acabou e não há assinatura: guarda a mensagem e explica, sem rodar o assistente
   if (isSupabaseConfigured() && (await store.getSettings()).plan === "none") {
-    const site = process.env.NEXT_PUBLIC_SITE_URL ?? "";
+    const site = siteUrl();
     // mesmo sem plano, pedir uma pessoa sempre funciona (cobrança e acesso são os casos mais comuns)
     const reply = wantsHuman(text) ? { text: await callHuman(store, text, opts.channel), cards: [] } : { text: `Seu teste grátis terminou. Para continuar, escolha um plano em ${site}/planos. Tudo o que você anotou continua guardado.`, cards: [] };
     const user = await store.appendMessage({ role: "user", text, cards: [], channel: opts.channel, clientMessageId: opts.clientMessageId, externalMessageId: opts.externalMessageId });

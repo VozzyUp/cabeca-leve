@@ -1,8 +1,9 @@
+import { serverPublicEnv } from "@/lib/public-env";
+
 // O app tem dois modos: com Supabase (login e banco de verdade) e de demonstração
 // (sem variáveis: dados de exemplo num arquivo local e sem login).
 export function supabaseEnv() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  const { supabaseUrl: url, supabaseKey: publishableKey } = serverPublicEnv();
   return url && publishableKey ? { url, publishableKey } : null;
 }
 

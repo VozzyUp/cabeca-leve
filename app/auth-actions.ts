@@ -1,11 +1,12 @@
 "use server";
 import { z } from "zod";
 import { createSessionClient } from "@/lib/supabase/server";
+import { siteUrl } from "@/lib/public-env";
 
 // Login, cadastro e senha pelo Supabase Auth. Mensagens em pt-BR; nunca dizemos se um
 // e-mail tem conta (evita descobrir quem usa o app).
 
-const site = () => process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+const site = siteUrl;
 const email = z.email().max(254);
 const password = z.string().min(8).max(72);
 type Result = { ok: true } | { ok: false; error: string };

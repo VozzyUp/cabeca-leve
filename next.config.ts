@@ -10,6 +10,8 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // imagem Docker enxuta: só o servidor e o que ele usa (Dockerfile)
+  output: "standalone",
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

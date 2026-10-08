@@ -4,6 +4,7 @@ import { sendEmail } from "@/lib/email";
 import { newProtocol } from "@/lib/support";
 import { PLANS } from "@/lib/plans";
 import { getAdmin } from "@/lib/supabase/server";
+import { siteUrl } from "@/lib/public-env";
 
 // Cobrança pela Asaas (https://docs.asaas.com). Página de pagamento hospedada por eles:
 // nenhum dado de cartão passa pelo nosso servidor.
@@ -12,7 +13,7 @@ import { getAdmin } from "@/lib/supabase/server";
 // O estado da assinatura vive no banco e só muda pelo webhook (app/api/webhooks/asaas).
 
 const api = () => process.env.ASAAS_API_URL ?? "https://api-sandbox.asaas.com/v3";
-const site = () => process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+const site = siteUrl;
 export const billingEnabled = () => !!process.env.ASAAS_API_KEY;
 
 async function asaas(path: string, init: RequestInit = {}) {

@@ -53,3 +53,7 @@ npm run db:start   # Supabase local no Docker (copie as chaves que ele mostra pa
 npm run test:int   # testes de integração contra o Supabase local
 npx playwright test  # ponta a ponta: 48 casos, axe em todas as telas, computador e celular (plano em replica/test-plan.md)
 ```
+
+## Produção
+
+App na VPS pelo Portainer (imagem `ghcr.io/vozzyup/cabeca-leve`, montada pelo GitHub Actions) e banco no Supabase gerenciado: `replica/deploy-vps.md`.

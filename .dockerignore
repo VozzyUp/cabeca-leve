@@ -1,0 +1,16 @@
+node_modules
+.next
+.git
+.data
+.env
+.env.*
+!.env.example
+test-results
+playwright-report
+e2e
+supabase/.temp
+replica/screens
+replica/clone-screens
+replica/brand-screens
+replica/design/screens
+*.log

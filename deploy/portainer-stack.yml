@@ -1,0 +1,76 @@
+# Stack do Cabeça Leve para o Portainer em Docker Swarm com Traefik.
+# O banco, o login e o tempo real ficam no Supabase gerenciado; aqui roda só o app e a varredura.
+# Passo a passo: replica/deploy-vps.md. Variáveis: deploy/stack.env.example (cole no Portainer).
+version: "3.8"
+
+services:
+  app:
+    image: ${IMAGE:-ghcr.io/vozzyup/cabeca-leve:latest}
+    environment:
+      # Supabase (Project Settings > API)
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY}
+      SUPABASE_SECRET_KEY: ${SUPABASE_SECRET_KEY}
+      SITE_URL: https://${DOMAIN}
+      # Assistente e áudio
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      # WhatsApp: uazapi agora, meta depois
+      WHATSAPP_PROVIDER: ${WHATSAPP_PROVIDER:-uazapi}
+      WHATSAPP_BOT_NUMBER: ${WHATSAPP_BOT_NUMBER}
+      UAZAPI_BASE_URL: ${UAZAPI_BASE_URL}
+      UAZAPI_INSTANCE_TOKEN: ${UAZAPI_INSTANCE_TOKEN}
+      UAZAPI_WEBHOOK_SECRET: ${UAZAPI_WEBHOOK_SECRET}
+      META_WHATSAPP_TOKEN: ${META_WHATSAPP_TOKEN}
+      META_WHATSAPP_PHONE_NUMBER_ID: ${META_WHATSAPP_PHONE_NUMBER_ID}
+      META_APP_SECRET: ${META_APP_SECRET}
+      META_WEBHOOK_VERIFY_TOKEN: ${META_WEBHOOK_VERIFY_TOKEN}
+      META_TEMPLATE_LEMBRETE: ${META_TEMPLATE_LEMBRETE}
+      META_TEMPLATE_RESUMO: ${META_TEMPLATE_RESUMO}
+      META_TEMPLATE_AVISO: ${META_TEMPLATE_AVISO}
+      # Push no celular (npx web-push generate-vapid-keys)
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY}
+      VAPID_SUBJECT: ${VAPID_SUBJECT}
+      # Cobrança
+      ASAAS_API_URL: ${ASAAS_API_URL:-https://api-sandbox.asaas.com/v3}
+      ASAAS_API_KEY: ${ASAAS_API_KEY}
+      ASAAS_WEBHOOK_TOKEN: ${ASAAS_WEBHOOK_TOKEN}
+      # E-mail e suporte
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      EMAIL_FROM: ${EMAIL_FROM}
+      SUPPORT_EMAIL: ${SUPPORT_EMAIL}
+      SUPPORT_WHATSAPP: ${SUPPORT_WHATSAPP}
+      ADMIN_EMAILS: ${ADMIN_EMAILS}
+      # Varredura de lembretes (o serviço "varredura" abaixo manda o mesmo segredo)
+      CRON_SECRET: ${CRON_SECRET}
+    networks: [publica]
+    deploy:
+      replicas: 1
+      restart_policy: { condition: any }
+      update_config: { order: start-first, failure_action: rollback }
+      resources: { limits: { memory: 1024M } }
+      labels:
+        - traefik.enable=true
+        - traefik.docker.network=${TRAEFIK_NETWORK}
+        - traefik.http.routers.cabecaleve.rule=Host(`${DOMAIN}`)
+        - traefik.http.routers.cabecaleve.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}
+        - traefik.http.routers.cabecaleve.tls.certresolver=${TRAEFIK_CERTRESOLVER:-letsencryptresolver}
+        - traefik.http.services.cabecaleve.loadbalancer.server.port=3000
+
+  # Lembretes e resumo da manhã: chama a varredura a cada minuto (substitui o QStash na VPS)
+  varredura:
+    image: curlimages/curl:8.10.1
+    environment:
+      CRON_SECRET: ${CRON_SECRET}
+    command: ["sh", "-c", "sleep 20; while true; do curl -fsS -m 55 -H \"Authorization: Bearer $$CRON_SECRET\" http://app:3000/api/cron/sweep > /dev/null || echo 'varredura falhou'; sleep 60; done"]
+    networks: [publica]
+    deploy:
+      replicas: 1
+      restart_policy: { condition: any }
+      resources: { limits: { memory: 32M } }
+
+networks:
+  publica:
+    external: true
+    name: ${TRAEFIK_NETWORK}

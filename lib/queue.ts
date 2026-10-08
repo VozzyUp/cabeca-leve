@@ -1,9 +1,10 @@
 import { Client, Receiver } from "@upstash/qstash";
 import { after } from "next/server";
+import { siteUrl } from "@/lib/public-env";
 
 // Fila de trabalho: com QStash, entrega com novas tentativas (e o webhook responde na hora).
 // Sem QStash (desenvolvimento), roda logo depois de responder, no mesmo processo.
-const site = () => process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+const site = siteUrl;
 
 export async function enqueue(path: string, body: unknown, run: () => Promise<void>) {
   if (process.env.QSTASH_TOKEN) {

@@ -6,6 +6,7 @@ import { transcribe, transcriptionEnabled } from "@/lib/transcribe";
 import { findUserByNumber, tryVerify } from "./link";
 import { phoneVariants, toE164 } from "./phone";
 import { whatsapp, type Inbound } from "./provider";
+import { siteUrl } from "@/lib/public-env";
 
 const KIND: Record<ActionCardData["kind"], string> = { reminder: "Lembrete", transaction: "Lançamento", task: "Tarefa", habit: "Hábito" };
 
@@ -15,7 +16,7 @@ export function formatReply(text: string, cards: ActionCardData[]) {
   return [text, ...(lines.length ? ["", ...lines] : [])].join("\n");
 }
 
-const site = () => process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+const site = siteUrl;
 
 // Processa uma mensagem recebida (roda na fila, nunca dentro do webhook)
 export async function processInbound(msg: Inbound) {

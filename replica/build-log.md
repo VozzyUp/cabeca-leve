@@ -138,3 +138,21 @@ Paridade 63,2/100; **40 de 40 obrigatórias completas**.
   - a promessa aparece no cadastro, nos Ajustes e nas dúvidas dos planos;
   - na Meta, as mensagens que a pessoa não pediu (lembrete, resumo, aviso, resposta do suporte) saem por modelo aprovado fora da janela de 24 h e por texto livre dentro dela.
 - Paridade 65,2, com as 7 correções feitas. Do F7, falta só criar os modelos na Meta.
+
+## 2026-10-08: produção na VPS (Portainer) com o banco no Supabase
+
+- **Configuração lida na hora de rodar:** antes, a URL e a chave do Supabase, o endereço do site e a chave do push ficavam gravados no build (`NEXT_PUBLIC_*`). Agora o navegador recebe esses valores de `/env.js`, e uma única imagem serve para qualquer ambiente. Ficam em `lib/public-env.ts`.
+- **Arquivos novos:**
+  - `Dockerfile` (standalone, Node 22, sem root, checagem de saúde em `/api/health`);
+  - a Action `imagem`, que publica no GHCR;
+  - dois stacks do Portainer: Swarm com Traefik e um simples;
+  - `deploy/stack.env.example` e o passo a passo em `replica/deploy-vps.md`.
+- **O QStash saiu:** na VPS, o serviço `varredura` chama `/api/cron/sweep` a cada minuto.
+- **Testado aqui:**
+  - a imagem rodando só com variáveis de ambiente, saudável e sem root;
+  - login, conversa e tempo real entre dois aparelhos no navegador;
+  - o stack simples completo com `docker compose` (app e varredura).
+- **Bugs que o teste do container pegou antes da VPS:**
+  - o `.dockerignore` excluía `scripts/`, e o build falhava;
+  - a checagem de saúde tinha a porta fixa;
+  - o `<script>` da configuração estava fora do lugar, e o React reclamava. A bateria de 60 testes pegou esse.

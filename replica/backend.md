@@ -13,13 +13,15 @@ Sem as variáveis do Supabase, o app continua no modo de demonstração (dados d
 | 2 | **Anthropic** | criar a chave em console.anthropic.com | `ANTHROPIC_API_KEY` |
 | 3 | **Groq** | criar a chave em console.groq.com | `GROQ_API_KEY` |
 | 4 | **UAZAPI** | conectar a instância ao número do assistente; configurar o webhook da instância com `POST /webhook`: `url = https://seu-dominio/api/webhooks/whatsapp?secret=SEU_SEGREDO`, `events = ["messages"]`, `excludeMessages = ["wasSentByApi"]` | `UAZAPI_BASE_URL`, `UAZAPI_INSTANCE_TOKEN`, `UAZAPI_WEBHOOK_SECRET` (o SEU_SEGREDO acima), `WHATSAPP_BOT_NUMBER` |
-| 5 | **Upstash QStash** | copiar o token e as chaves de assinatura; criar um agendamento (Schedules) a cada minuto (`* * * * *`) chamando `POST https://seu-dominio/api/cron/sweep` | `QSTASH_TOKEN`, `QSTASH_CURRENT_SIGNING_KEY`, `QSTASH_NEXT_SIGNING_KEY` |
+| 5 | **Upstash QStash** (opcional) | **na VPS não precisa**: o serviço `varredura` do stack chama a varredura a cada minuto e a fila roda no próprio app. Só use o QStash em hospedagem sem servidor (ex.: Vercel): token, chaves de assinatura e um agendamento a cada minuto para `POST https://seu-dominio/api/cron/sweep` | `QSTASH_TOKEN`, `QSTASH_CURRENT_SIGNING_KEY`, `QSTASH_NEXT_SIGNING_KEY` |
 | 6 | **Web Push** | `npx web-push generate-vapid-keys` | `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` |
 | 7 | **Asaas** (sandbox) | criar a chave de API do sandbox; criar o webhook (Integrações > Webhooks) para `https://seu-dominio/api/webhooks/asaas` com os eventos `CHECKOUT_*`, `SUBSCRIPTION_*` e `PAYMENT_*` e um token de 32+ caracteres; ativar a emissão de nota fiscal para assinaturas no painel | `ASAAS_API_URL`, `ASAAS_API_KEY`, `ASAAS_WEBHOOK_TOKEN` |
 | 8 | **Resend** | verificar o domínio (SPF, DKIM, DMARC) e colocar o SMTP da Resend no Supabase (Authentication > SMTP Settings). Os e-mails de login passam a sair do seu domínio. A chave de API manda o comprovante de cancelamento e os e-mails do suporte | `RESEND_API_KEY`, `EMAIL_FROM` (e o SMTP no painel do Supabase) |
 | 9 | **Suporte humano** | criar sua conta no app com o e-mail do time; definir para onde vão os avisos de chamado novo. Responder em `https://seu-dominio/suporte/painel` | `ADMIN_EMAILS`, `SUPPORT_EMAIL`, `SUPPORT_WHATSAPP` |
 
 Depois de preencher: `npm run dev` e criar a primeira conta pelo `/entrar`.
+
+**Produção na VPS (Portainer) com o banco no Supabase:** passo a passo em `replica/deploy-vps.md`.
 
 ## O que foi construído
 

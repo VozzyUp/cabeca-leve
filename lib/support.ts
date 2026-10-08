@@ -3,11 +3,12 @@ import { BRAND } from "@/lib/brand";
 import { sendEmail } from "@/lib/email";
 import { getAdmin } from "@/lib/supabase/server";
 import { whatsapp } from "@/lib/whatsapp/provider";
+import { siteUrl } from "@/lib/public-env";
 
 // F3 do replica/fixes.md: falar com uma pessoa. O chamado tem protocolo e prazo visíveis,
 // avisa o dono do app na hora (e-mail e WhatsApp) e a resposta volta pelo app, WhatsApp e e-mail.
 
-const SITE = () => process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+const SITE = siteUrl;
 const ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";  // sem 0/O e 1/I/L, para ditar sem erro
 
 export function newProtocol() {

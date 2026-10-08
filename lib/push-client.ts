@@ -1,5 +1,6 @@
+import { clientPublicEnv } from "@/lib/public-env";
 // Inscrição deste navegador no Web Push (roda no cliente)
-const key = () => process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+const key = () => clientPublicEnv().vapidPublicKey;
 
 function toUint8(base64: string) {
   const pad = "=".repeat((4 - (base64.length % 4)) % 4);
