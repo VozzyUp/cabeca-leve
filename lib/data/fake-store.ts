@@ -23,7 +23,7 @@ type State = {
   categories: Category[];
   accounts: Account[];
   actions: ActionRecord[];
-  messages: ChatMessage[];
+  messages: Array<ChatMessage & { content?: unknown; visible?: boolean; system?: boolean }>;
   cards: CreditCard[];
   recurrences: Recurrence[];
   installments: InstallmentPurchase[];
@@ -267,12 +267,21 @@ export const fakeStore: DataStore = {
   },
 
   async listMessages() {
-    return load().messages;
+    return load().messages.filter((m) => m.visible !== false && !m.system)
+      .map(({ id: mid, role, text, cards, createdAt }) => ({ id: mid, role, text, cards, createdAt }));
   },
   async appendMessage(msg) {
-    const m: ChatMessage = { ...msg, id: id(), createdAt: new Date().toISOString() };
+    const m = {
+      id: id(), role: msg.role === "system" ? "user" as const : msg.role, system: msg.role === "system", text: msg.text, cards: msg.cards,
+      content: msg.content ?? [{ type: "text", text: msg.text }], visible: msg.visible ?? true, createdAt: new Date().toISOString(),
+    };
     mutate((s) => s.messages.push(m));
-    return m;
+    return { id: m.id, role: m.role, text: m.text, cards: m.cards, createdAt: m.createdAt };
+  },
+  async listTodayTranscript() {
+    const today = localDate(new Date(), DEFAULT_TZ);
+    return load().messages.filter((m) => localDate(new Date(m.createdAt), DEFAULT_TZ) === today)
+      .map((m) => ({ role: m.system ? "system" as const : m.role, content: m.content ?? [{ type: "text", text: m.text }] }));
   },
   async markCardsUndone(actionId) {
     mutate((s) => { for (const m of s.messages) for (const c of m.cards) if (c.actionId === actionId) c.undone = true; });

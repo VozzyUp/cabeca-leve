@@ -6,7 +6,8 @@ import type {
 
 // Mensagem a gravar. `content` são os blocos exatos da API (reenviados byte a byte ao modelo);
 // `visible: false` guarda passos internos do agente (chamadas e resultados de ferramenta).
-export type AppendMessage = Omit<ChatMessage, "id" | "createdAt"> & {
+export type AppendMessage = Omit<ChatMessage, "id" | "createdAt" | "role"> & {
+  role: "user" | "assistant" | "system";
   content?: unknown;
   visible?: boolean;
   channel?: "web" | "whatsapp" | "telegram" | "voice" | "job";
@@ -14,6 +15,8 @@ export type AppendMessage = Omit<ChatMessage, "id" | "createdAt"> & {
   externalMessageId?: string;
   usage?: { model: string; inputTokens: number; outputTokens: number; cacheReadTokens: number };
 };
+
+export type TranscriptEntry = { role: "user" | "assistant" | "system"; content: unknown };
 
 // Contrato da camada de dados. Duas implementações: supabase-store (produção) e
 // fake-store (modo de demonstração, sem Supabase). As telas não sabem qual está por trás.
@@ -38,6 +41,8 @@ export interface DataStore {
   listMessages(): Promise<ChatMessage[]>;
   appendMessage(msg: AppendMessage): Promise<ChatMessage>;
   markCardsUndone(actionId: string): Promise<void>;
+  // conversa de hoje como a API recebe (blocos exatos, em ordem, inclusive os passos internos)
+  listTodayTranscript(): Promise<TranscriptEntry[]>;
 
   // finanças (M3)
   listCards(): Promise<CreditCard[]>;

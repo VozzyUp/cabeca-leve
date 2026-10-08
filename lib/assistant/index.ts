@@ -1,12 +1,13 @@
 import type { DataStore } from "@/lib/data/store";
-import type { ActionCardData } from "@/lib/data/types";
+import type { ActionCardData, ChatMessage } from "@/lib/data/types";
+import { agentEnabled, runAgent } from "./agent";
 import { parseMessage } from "./rule-parser";
 import { createHabit, createReminder, createTask, recordTransaction } from "./tools";
 
 export type AssistantReply = { text: string; cards: ActionCardData[] };
 
-// Contrato do assistente. Hoje: regras simples. No /replica-backend: Claude Opus 5.5
-// com as mesmas ferramentas (tools.ts), sem mudar a rota nem as telas.
+// Intérprete de regras: reserva para quando não há chave da Anthropic (testes e demonstração).
+// O agente de verdade (agent.ts) usa as mesmas ferramentas (tools.ts).
 export async function handleMessage(store: DataStore, text: string, now = new Date()): Promise<AssistantReply> {
   const intents = parseMessage(text, now, store.timezone());
   if (intents.length === 0) {
@@ -34,4 +35,19 @@ export async function handleMessage(store: DataStore, text: string, now = new Da
   ].filter(Boolean);
   const list = parts.length > 1 ? `${parts.slice(0, -1).join(", ")} e ${parts.at(-1)}` : parts[0];
   return { cards, text: `Feito: salvei ${list}. Se algo saiu errado, é só desfazer no card.` };
+}
+
+// Ponto único de entrada da conversa (app, voz e WhatsApp). Com ANTHROPIC_API_KEY, o agente
+// Claude; sem ela, o intérprete de regras (só para testes e demonstração).
+export async function respond(store: DataStore, text: string, opts: {
+  channel: "web" | "whatsapp" | "voice"; clientMessageId?: string; externalMessageId?: string; now?: Date;
+}): Promise<{ user: ChatMessage | null; reply: AssistantReply }> {
+  if (agentEnabled()) {
+    const reply = await runAgent({ store, text, ...opts });
+    return { user: null, reply };
+  }
+  const user = await store.appendMessage({ role: "user", text, cards: [], channel: opts.channel, clientMessageId: opts.clientMessageId, externalMessageId: opts.externalMessageId });
+  const reply = await handleMessage(store, text, opts.now);
+  await store.appendMessage({ role: "assistant", text: reply.text, cards: reply.cards, channel: opts.channel });
+  return { user, reply };
 }

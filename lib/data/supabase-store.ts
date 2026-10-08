@@ -208,12 +208,18 @@ export async function createSupabaseStore(db: Admin, userId: string, email: stri
         }).select("id, created_at").single();
         if (r.error?.code === "23505" && r.error.message.includes("seq")) continue;
         const m = must(r);
-        return { id: m.id, role: msg.role, text: msg.text, cards: msg.cards, createdAt: m.created_at };
+        return { id: m.id, role: msg.role === "system" ? "user" : msg.role, text: msg.text, cards: msg.cards, createdAt: m.created_at };
       }
       throw new Error("Não deu para salvar a mensagem");
     },
     async markCardsUndone(actionId) {
       await markCards(actionId);
+    },
+    async listTodayTranscript() {
+      const conv = must(await db.from("conversations").select("id").eq("user_id", userId).eq("local_date", today()).maybeSingle() as Result<{ id: string } | null>);
+      if (!conv) return [];
+      const rows = must(await db.from("messages").select("role, content").eq("conversation_id", conv.id).eq("user_id", userId).order("seq"));
+      return rows.map((m) => ({ role: m.role as "user" | "assistant" | "system", content: m.content }));
     },
 
     async listCards() {
