@@ -19,15 +19,39 @@ export function Composer({ onSend, sending = false, offline = false, onAttach, o
   const [text, setText] = useState("");
   const [dictating, setDictating] = useState(false);
   const rec = useRef<Recognition | null>(null);
-  const canDictate = useSyncExternalStore(noSubscribe, speechSupported, () => false);
+  const canDictate = useSyncExternalStore(noSubscribe, () => speechSupported() || (typeof MediaRecorder !== "undefined" && !!navigator.mediaDevices), () => false);
   const blocked = sending || offline;
+
+  // Sem reconhecimento no navegador: grava e transcreve no servidor (Groq)
+  const recorder = useRef<MediaRecorder | null>(null);
+  async function recordForServer() {
+    if (recorder.current) { recorder.current.stop(); return; }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const rec = new MediaRecorder(stream);
+      const chunks: Blob[] = [];
+      rec.ondataavailable = (e) => chunks.push(e.data);
+      rec.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        recorder.current = null;
+        const blob = new Blob(chunks, { type: rec.mimeType || "audio/webm" });
+        try {
+          const res = await fetch("/api/transcribe", { method: "POST", headers: { "Content-Type": blob.type }, body: blob });
+          if (res.ok) { const { text: said } = (await res.json()) as { text: string }; if (said) setText((t) => (t ? `${t} ${said}` : said)); }
+        } finally { setDictating(false); }
+      };
+      recorder.current = rec;
+      setDictating(true);
+      rec.start();
+    } catch { setDictating(false); }
+  }
 
   // Ditado: o que for dito entra no campo, para revisar antes de enviar
   function dictate() {
     if (onDictate) return onDictate();
     if (dictating) { rec.current?.stop(); return; }
     const Ctor = getRecognitionCtor();
-    if (!Ctor) return;
+    if (!Ctor) return recordForServer();
     const r = new Ctor();
     r.lang = "pt-BR";
     r.interimResults = false;
