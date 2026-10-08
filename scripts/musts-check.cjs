@@ -1,5 +1,6 @@
 // As 8 obrigatórias que fecharam depois do backend, no navegador, contra o Supabase local.
 // Uso (com npm run db:start e npm run dev): node scripts/musts-check.cjs replica/clone-screens
+try { process.loadEnvFile('.env.local'); } catch {}  // chaves do Supabase local
 const { chromium } = require('playwright');
 const { createClient } = require(process.cwd() + '/node_modules/@supabase/supabase-js');
 const out = process.argv[2];

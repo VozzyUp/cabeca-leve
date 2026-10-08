@@ -1,4 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
+import fs from "node:fs";
+
+// chaves do Supabase local vêm do .env.local (nunca escritas no código)
+if (fs.existsSync(".env.local")) process.loadEnvFile(".env.local");
 
 // Ponta a ponta contra o dev server com o Supabase local (npm run db:start) e um servidor
 // falso para a UAZAPI e a Asaas (e2e/mock-server.mjs). Sem ANTHROPIC_API_KEY: a conversa usa
