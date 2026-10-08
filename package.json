@@ -16,7 +16,7 @@
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
     "db:types": "supabase gen types typescript --local > lib/supabase/database.types.ts",
-    "test:int": "SUPABASE_TEST=1 vitest run --no-file-parallelism lib/data/supabase-store.int.test.ts lib/assistant/agent.int.test.ts lib/whatsapp/whatsapp.int.test.ts"
+    "test:int": "SUPABASE_TEST=1 vitest run --no-file-parallelism lib/data/supabase-store.int.test.ts lib/assistant/agent.int.test.ts lib/whatsapp/whatsapp.int.test.ts lib/deliveries.int.test.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.132.0",

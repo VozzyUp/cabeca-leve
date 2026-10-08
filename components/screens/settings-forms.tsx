@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { deleteAccount, exportData, linkWhatsApp as startWhatsAppLink, updateSettings } from "@/app/actions";
 import { signOut } from "@/app/auth-actions";
+import { pushSupported, subscribePush, unsubscribePush } from "@/lib/push-client";
 import { Button } from "@/components/ui/button";
 import { Card, SectionLabel } from "@/components/ui/card";
 import { cn } from "@/components/ui/cn";
@@ -73,6 +74,7 @@ export function SettingsForm({ initial, canSignOut }: { initial: Settings; canSi
   const [exporting, startExport] = useTransition();
   const router = useRouter();
   const [linking, startLinking] = useTransition();
+  const [pushNote, setPushNote] = useState<string | null>(null);
   const [linkCode, setLinkCode] = useState<Awaited<ReturnType<typeof startWhatsAppLink>>>(null);
   const channels = settings.channels;
 
@@ -136,8 +138,18 @@ export function SettingsForm({ initial, canSignOut }: { initial: Settings; canSi
           )}
         </form>
         <Row title="Notificações no aparelho" hint="lembretes e avisos, mesmo com o app fechado">
-          <Switch label="Notificações no aparelho" checked={channels.push} onChange={(v) => save({ channels: { ...channels, push: v } })} />
+          <Switch label="Notificações no aparelho" checked={channels.push} onChange={async (v) => {
+            // ligar pede a permissão do navegador e inscreve este aparelho no push
+            if (v && pushSupported()) {
+              const r = await subscribePush();
+              if (r === "denied") { setPushNote("O navegador bloqueou as notificações. Libere nas permissões do site."); return; }
+            }
+            if (!v) await unsubscribePush().catch(() => {});
+            setPushNote(null);
+            save({ channels: { ...channels, push: v } });
+          }} />
         </Row>
+        {pushNote && <p role="alert" className="pb-2 text-xs text-danger">{pushNote}</p>}
         <Row title="E-mail" hint="resumos e recibos">
           <Switch label="E-mail" checked={channels.email} onChange={(v) => save({ channels: { ...channels, email: v } })} />
         </Row>

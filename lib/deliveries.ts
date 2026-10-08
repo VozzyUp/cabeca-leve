@@ -1,0 +1,95 @@
+import { storeForUser } from "@/lib/data";
+import { buildBriefing } from "@/lib/domain/briefing";
+import { dayItems } from "@/lib/domain/day";
+import { variableSpending } from "@/lib/domain/money";
+import { sendPush } from "@/lib/push";
+import { getAdmin } from "@/lib/supabase/server";
+import { formatTime, localDate, zonedParts } from "@/lib/time";
+import { whatsapp } from "@/lib/whatsapp/provider";
+
+// Entregas no horário (lembretes e resumo da manhã), chamadas pela varredura de cada minuto.
+// Cada envio reserva antes uma linha em scheduled_deliveries com chave única: se a varredura
+// rodar duas vezes ao mesmo tempo, só uma manda.
+
+type Channel = "push" | "whatsapp";
+
+async function claim(userId: string, source: "reminder" | "briefing", sourceId: string | null, channel: Channel, key: string, payload: Record<string, string>) {
+  const { error } = await getAdmin().from("scheduled_deliveries").insert({
+    user_id: userId, source_type: source, source_id: sourceId, channel, send_at: new Date().toISOString(), payload, dedupe_key: key, status: "scheduled",
+  });
+  return !error;  // conflito na chave = outra varredura já pegou
+}
+
+async function finish(key: string, error: string | null) {
+  await getAdmin().from("scheduled_deliveries").update({ status: error ? "failed" : "sent", sent_at: error ? null : new Date().toISOString(), error, attempts: 1 })
+    .eq("dedupe_key", key);
+}
+
+async function channelsFor(userId: string) {
+  const db = getAdmin();
+  const [{ data: profile }, { data: link }] = await Promise.all([
+    db.from("profiles").select("notify_push").eq("user_id", userId).single(),
+    db.from("channel_links").select("external_id").eq("user_id", userId).eq("channel", "whatsapp").not("verified_at", "is", null).maybeSingle(),
+  ]);
+  return { push: profile?.notify_push ?? true, whatsapp: link?.external_id ?? null };
+}
+
+async function send(userId: string, source: "reminder" | "briefing", sourceId: string | null, keyBase: string, msg: { title: string; body: string; url: string; whatsappText: string }) {
+  const ch = await channelsFor(userId);
+  const wa = whatsapp();
+  if (ch.push && (await claim(userId, source, sourceId, "push", `${keyBase}:push`, msg))) {
+    try { await sendPush(userId, msg); await finish(`${keyBase}:push`, null); } catch (e) { await finish(`${keyBase}:push`, String(e)); }
+  }
+  if (ch.whatsapp && wa && (await claim(userId, source, sourceId, "whatsapp", `${keyBase}:whatsapp`, msg))) {
+    try { await wa.sendText(ch.whatsapp, msg.whatsappText); await finish(`${keyBase}:whatsapp`, null); } catch (e) { await finish(`${keyBase}:whatsapp`, String(e)); }
+  }
+}
+
+export async function deliverDueReminders(now = new Date()) {
+  const db = getAdmin();
+  const { data } = await db.from("reminders").select("id, user_id, title, next_fire_at, last_fired_at, timezone")
+    .eq("status", "active").lte("next_fire_at", now.toISOString()).order("next_fire_at").limit(200);
+  let count = 0;
+  for (const r of data ?? []) {
+    if (r.last_fired_at && r.last_fired_at >= r.next_fire_at!) continue;  // já avisado nesta ocorrência
+    const time = formatTime(r.next_fire_at!, r.timezone);
+    await send(r.user_id, "reminder", r.id, `reminder:${r.id}:${r.next_fire_at}`, {
+      title: "Lembrete", body: `${r.title} · ${time}`, url: "/lembretes", whatsappText: `⏰ Lembrete: ${r.title} (${time})`,
+    });
+    await db.from("reminders").update({ last_fired_at: now.toISOString() }).eq("id", r.id).eq("user_id", r.user_id);
+    await db.from("notices").insert({ user_id: r.user_id, kind: "reminder", title: "Lembrete", body: r.title, href: "/lembretes" });
+    count++;
+  }
+  return count;
+}
+
+// Resumo da manhã: de quem tem o horário dentro da janela da varredura (até 10 min de atraso)
+export async function deliverBriefings(now = new Date()) {
+  const db = getAdmin();
+  const { data } = await db.from("profiles").select("user_id, timezone, briefing_time").eq("briefing_enabled", true);
+  let count = 0;
+  for (const p of data ?? []) {
+    const parts = zonedParts(now, p.timezone);
+    const minutesNow = parts.hour * 60 + parts.minute;
+    const [h, m] = p.briefing_time.split(":").map(Number);
+    if (minutesNow < h * 60 + m || minutesNow > h * 60 + m + 10) continue;
+    const day = localDate(now, p.timezone);
+    const key = `briefing:${p.user_id}:${day}`;
+    const { data: already } = await db.from("scheduled_deliveries").select("id").like("dedupe_key", `${key}:%`).limit(1);
+    if (already?.length) continue;
+    const store = await storeForUser(p.user_id);
+    const [settings, reminders, tasks, habits, logs, events, recurrences, transactions, categories] = await Promise.all([
+      store.getSettings(), store.listReminders(), store.listTasks(), store.listHabits(), store.listHabitLogs(), store.listEvents(),
+      store.listRecurrences(), store.listTransactions(), store.listCategories(),
+    ]);
+    const spending = variableSpending(transactions, categories, day.slice(0, 7), day);
+    const b = buildBriefing({ name: settings.name, hour: parts.hour, today: day, recurrences,
+      items: dayItems({ reminders, tasks, habits, logs, events, now, tz: p.timezone }),
+      monthSpentCents: spending.totalCents, lastMonthSamePeriodCents: spending.previousMonthCents });
+    const text = [b.greeting, b.summary, ...b.sections.map((s) => `*${s.title}*\n${s.lines.map((l) => `• ${l}`).join("\n")}`)].join("\n\n");
+    await send(p.user_id, "briefing", null, key, { title: "Seu dia", body: b.summary, url: "/briefing", whatsappText: text });
+    await db.from("notices").insert({ user_id: p.user_id, kind: "briefing", title: "Seu dia", body: b.summary, href: "/briefing" });
+    count++;
+  }
+  return count;
+}
