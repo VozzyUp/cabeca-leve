@@ -1,6 +1,7 @@
 import type { DataStore } from "@/lib/data/store";
 import type { ActionCardData, Task, Transaction } from "@/lib/data/types";
 import { formatDayLabel, formatMoney, formatTime, localDate } from "@/lib/time";
+import { describeRepeat } from "@/lib/domain/recurrence";
 import { describeWeekdays } from "./weekdays";
 
 // Ferramentas do assistente (ver architecture.md). Cada uma grava, registra a ação
@@ -12,31 +13,34 @@ const PAYMENT_LABEL: Record<NonNullable<Transaction["paymentMethod"]>, string> =
 };
 
 export async function createReminder(
-  store: DataStore, input: { title: string; at: Date }, now: Date,
+  store: DataStore, input: { title: string; at: Date; recurrenceRule?: string | null }, now: Date,
 ): Promise<ActionCardData> {
   const tz = store.timezone();
-  const r = await store.createReminder({ title: input.title, nextFireAt: input.at.toISOString() });
+  const r = await store.createReminder({ title: input.title, nextFireAt: input.at.toISOString(), recurrenceRule: input.recurrenceRule ?? null });
   const action = await store.recordAction("reminder", r.id);
   const day = formatDayLabel(localDate(input.at, tz), now, tz);
+  const repeats = describeRepeat(r.recurrenceRule);
   return {
     actionId: action.id, kind: "reminder", title: r.title,
     value: formatTime(r.nextFireAt!, tz), valueTone: "neutral",
-    meta: `${day[0].toUpperCase()}${day.slice(1)} · aviso no celular`, href: "/lembretes", undone: false,
+    meta: repeats ? `${repeats[0].toUpperCase()}${repeats.slice(1)} · começa ${day}` : `${day[0].toUpperCase()}${day.slice(1)} · aviso no celular`,
+    href: "/lembretes", undone: false,
   };
 }
 
 const PRIORITY_LABEL: Record<Task["priority"], string> = { low: "prioridade baixa", medium: "prioridade média", high: "prioridade alta" };
 
 export async function createTask(
-  store: DataStore, input: { title: string; dueOn: string | null; priority: Task["priority"] }, now: Date,
+  store: DataStore, input: { title: string; dueOn: string | null; priority: Task["priority"]; notes?: string | null; recurrenceRule?: string | null }, now: Date,
 ): Promise<ActionCardData> {
   const tz = store.timezone();
   const t = await store.createTask(input);
   const action = await store.recordAction("task", t.id);
   const due = t.dueOn ? formatDayLabel(t.dueOn, now, tz) : "sem prazo";
+  const repeats = describeRepeat(t.recurrenceRule);
   return {
     actionId: action.id, kind: "task", title: t.title, value: due[0].toUpperCase() + due.slice(1),
-    valueTone: "neutral", meta: PRIORITY_LABEL[t.priority], href: "/tarefas", undone: false,
+    valueTone: "neutral", meta: [PRIORITY_LABEL[t.priority], repeats && `repete ${repeats}`].filter(Boolean).join(" · "), href: "/tarefas", undone: false,
   };
 }
 

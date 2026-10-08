@@ -7,6 +7,7 @@ import type { ActionCardData } from "@/lib/data/types";
 import { dayItems } from "@/lib/domain/day";
 import { financeSummary } from "@/lib/domain/finance";
 import { habitStats } from "@/lib/domain/habits";
+import { describeRepeat, toRRule } from "@/lib/domain/recurrence";
 import { formatMoney, localDate, zonedParts, zonedToUtc } from "@/lib/time";
 import { createHabit, createReminder, createTask, recordTransaction } from "./tools";
 
@@ -20,6 +21,7 @@ export const MODEL = "claude-opus-5-5";
 const SYSTEM = `Você é um assistente pessoal brasileiro que organiza a vida da pessoa pela conversa, no app e no WhatsApp: tarefas, lembretes, dinheiro, hábitos e notas.
 
 Como trabalhar:
+- Para mudar ou apagar algo que já existe, primeiro consulte (query_*) para achar o id; se houver mais de um candidato, pergunte qual antes de apagar.
 - Quando o pedido é para guardar algo, use as ferramentas. Uma mensagem pode ter vários pedidos ("gastei 30 no almoço e me lembra do dentista amanhã às 10h"): chame uma ferramenta para cada um, em paralelo.
 - Para perguntas sobre os dados da pessoa (quanto gastou, o que tem hoje, quais tarefas estão atrasadas), consulte com as ferramentas de consulta antes de responder. Responda com os números, sem inventar.
 - Datas e horas relativas ("amanhã", "sexta", "daqui a 2 horas") são resolvidas no fuso e na data informados no início de cada mensagem da pessoa.
@@ -61,40 +63,80 @@ function stamp(now: Date, tz: string) {
   return `${wd} ${pad(p.day)}/${pad(p.month)}/${p.year} ${pad(p.hour)}:${pad(p.minute)} (${tz})`;
 }
 
+// Ferramentas estritas não aceitam limites de número, tamanho de texto ou de lista no esquema.
+// Tiramos esses limites do que vai para a API; o Zod continua conferindo tudo antes de rodar.
+const UNSUPPORTED = new Set(["$schema", "minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum", "multipleOf", "minLength", "maxLength", "maxItems"]);
+export function strictSchema(node: unknown): unknown {
+  if (Array.isArray(node)) return node.map(strictSchema);
+  if (!node || typeof node !== "object") return node;
+  const out: Record<string, unknown> = {};
+  const obj = node as Record<string, unknown>;
+  for (const [k, v] of Object.entries(obj)) {
+    if (UNSUPPORTED.has(k)) continue;
+    if (k === "minItems" && typeof v === "number" && v > 1) continue;
+    if (k === "pattern" && "format" in obj) continue;  // data e hora já têm formato próprio
+    out[k] = k === "properties" || k === "$defs"
+      ? Object.fromEntries(Object.entries(v as Record<string, unknown>).map(([pk, pv]) => [pk, strictSchema(pv)]))
+      : strictSchema(v);
+  }
+  return out;
+}
+
+// Repetição como o modelo descreve; vira RRULE em lib/domain/recurrence.ts
+const RepeatInput = z.object({
+  freq: z.enum(["daily", "weekly", "monthly"]),
+  interval: z.number().int().min(1).max(12).describe("1 = todo dia/semana/mês; 2 = a cada 2..."),
+  weekdays: z.array(z.number().int().min(0).max(6)).nullable().describe("Para weekly: dias da semana, 0 = domingo"),
+  month_day: z.number().int().min(1).max(31).nullable().describe("Para monthly: dia do mês"),
+}).nullable().describe("null se não repete");
+
+function toRule(r: z.infer<typeof RepeatInput>, firstDay: string): string | null {
+  if (!r) return null;
+  const d = new Date(`${firstDay}T12:00:00Z`);
+  if (r.freq === "daily") return toRRule({ freq: "daily", interval: r.interval });
+  if (r.freq === "weekly") return toRRule({ freq: "weekly", interval: r.interval, weekdays: r.weekdays?.length ? r.weekdays : [d.getUTCDay()] });
+  return toRRule({ freq: "monthly", interval: r.interval, monthDay: r.month_day ?? d.getUTCDate() });
+}
+
 function buildTools(store: DataStore, now: Date, cards: ActionCardData[]) {
   const tz = store.timezone();
   const today = localDate(now, tz);
-  const strict = <T extends object>(tool: T) => ({ ...tool, strict: true });
+  const strict = <T extends object>(tool: T): T =>
+    ({ ...tool, ...("input_schema" in tool ? { input_schema: strictSchema(tool.input_schema) } : {}), strict: true });
   const json = (v: unknown) => JSON.stringify(v);
 
   return [
     strict(betaZodTool({
       name: "create_reminder",
-      description: "Cria um lembrete que avisa a pessoa no dia e hora indicados.",
+      description: "Cria um lembrete que avisa a pessoa no dia e hora indicados, uma vez ou repetindo (todo dia, toda segunda, todo dia 5...).",
       inputSchema: z.object({
         title: z.string().min(1).max(300).describe("O que lembrar, curto, sem a data"),
-        when: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/).describe("Data e hora local, AAAA-MM-DDTHH:MM"),
+        when: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/).describe("Data e hora local do PRIMEIRO aviso, AAAA-MM-DDTHH:MM"),
+        repeat: RepeatInput,
       }),
-      run: async ({ title, when }) => {
+      run: async ({ title, when, repeat }) => {
         const [d, t] = when.split("T");
         const [y, m, day] = d.split("-").map(Number);
         const [h, min] = t.split(":").map(Number);
         const at = zonedToUtc(y, m, day, h, min, tz);
         if (at.getTime() < now.getTime() - 60_000) return "Erro: esse horário já passou. Confirme com a pessoa o dia certo.";
-        cards.push(await createReminder(store, { title, at }, now));
-        return json({ ok: true, title, when });
+        cards.push(await createReminder(store, { title, at, recurrenceRule: toRule(repeat, d) }, now));
+        return json({ ok: true, title, when, repeats: !!repeat });
       },
     })),
     strict(betaZodTool({
       name: "create_task",
-      description: "Cria uma tarefa (algo a fazer), com prazo opcional.",
+      description: "Cria uma tarefa (algo a fazer), com prazo, observações e repetição opcionais. Tarefa que se repete precisa de prazo.",
       inputSchema: z.object({
         title: z.string().min(1).max(300),
         due_on: z.iso.date().nullable().describe("Prazo AAAA-MM-DD, ou null se não houver"),
         priority: z.enum(["low", "medium", "high"]),
+        notes: z.string().max(5000).nullable().describe("Detalhes da tarefa, ou null"),
+        repeat: RepeatInput,
       }),
-      run: async ({ title, due_on, priority }) => {
-        cards.push(await createTask(store, { title, dueOn: due_on, priority }, now));
+      run: async ({ title, due_on, priority, notes, repeat }) => {
+        if (repeat && !due_on) return "Erro: tarefa que se repete precisa de prazo (a primeira data).";
+        cards.push(await createTask(store, { title, dueOn: due_on, priority, notes, recurrenceRule: repeat ? toRule(repeat, due_on!) : null }, now));
         return json({ ok: true });
       },
     })),
@@ -138,15 +180,16 @@ function buildTools(store: DataStore, now: Date, cards: ActionCardData[]) {
     })),
     strict(betaZodTool({
       name: "update_task",
-      description: "Conclui, reabre, muda o prazo ou renomeia uma tarefa. Use query_tasks antes para achar o id.",
+      description: "Conclui, reabre, muda o prazo, renomeia ou muda as observações de uma tarefa (null = não mexe). Use query_tasks antes para achar o id.",
       inputSchema: z.object({
         task_id: z.string(),
         status: z.enum(["todo", "doing", "done"]).nullable(),
         due_on: z.iso.date().nullable(),
         title: z.string().min(1).max(300).nullable(),
+        notes: z.string().max(5000).nullable(),
       }),
       run: async (i) => {
-        const patch = Object.fromEntries(Object.entries({ status: i.status, dueOn: i.due_on, title: i.title }).filter(([, v]) => v !== null));
+        const patch = Object.fromEntries(Object.entries({ status: i.status, dueOn: i.due_on, title: i.title, notes: i.notes }).filter(([, v]) => v !== null));
         const t = await store.updateTask(i.task_id, patch);
         return t ? json({ ok: true, task: t }) : "Erro: tarefa não encontrada.";
       },
@@ -186,7 +229,7 @@ function buildTools(store: DataStore, now: Date, cards: ActionCardData[]) {
           done: tasks.filter((t) => t.status === "done").slice(-20),
           all_open: open,
         }[which];
-        return json(pick.map((t) => ({ id: t.id, title: t.title, due_on: t.dueOn, priority: t.priority, status: t.status })));
+        return json(pick.map((t) => ({ id: t.id, title: t.title, due_on: t.dueOn, priority: t.priority, status: t.status, notes: t.notes, repeats: describeRepeat(t.recurrenceRule) })));
       },
     })),
     strict(betaZodTool({
@@ -197,7 +240,7 @@ function buildTools(store: DataStore, now: Date, cards: ActionCardData[]) {
         const list = (await store.listReminders()).filter((r) => r.status === "active");
         return json(list.map((r) => {
           const p = zonedParts(new Date(r.nextFireAt!), tz);
-          return { id: r.id, title: r.title, when: `${p.year}-${String(p.month).padStart(2, "0")}-${String(p.day).padStart(2, "0")} ${String(p.hour).padStart(2, "0")}:${String(p.minute).padStart(2, "0")}` };
+          return { id: r.id, title: r.title, repeats: describeRepeat(r.recurrenceRule), when: `${p.year}-${String(p.month).padStart(2, "0")}-${String(p.day).padStart(2, "0")} ${String(p.hour).padStart(2, "0")}:${String(p.minute).padStart(2, "0")}` };
         }));
       },
     })),
@@ -240,6 +283,67 @@ function buildTools(store: DataStore, now: Date, cards: ActionCardData[]) {
         return json(dayItems({ reminders, tasks, habits, logs, events, now, tz })
           .map((i) => ({ kind: i.kind, title: i.title, time: i.time, done: i.done, overdue: i.overdue })));
       },
+    })),
+    strict(betaZodTool({
+      name: "delete_task",
+      description: "Apaga uma tarefa de vez. Só use quando a pessoa pedir para apagar ou excluir; para 'feito', use update_task.",
+      inputSchema: z.object({ task_id: z.string() }),
+      run: async ({ task_id }) => ((await store.deleteTask(task_id)) ? json({ ok: true }) : "Erro: tarefa não encontrada."),
+    })),
+    strict(betaZodTool({
+      name: "delete_reminder",
+      description: "Apaga um lembrete (inclusive um que se repete). Use query_reminders antes para achar o id.",
+      inputSchema: z.object({ reminder_id: z.string() }),
+      run: async ({ reminder_id }) => ((await store.deleteReminder(reminder_id)) ? json({ ok: true }) : "Erro: lembrete não encontrado."),
+    })),
+    strict(betaZodTool({
+      name: "query_transactions",
+      description: "Busca lançamentos (gastos e entradas) com id, para corrigir ou apagar. Filtra por texto na descrição e por período.",
+      inputSchema: z.object({
+        text: z.string().max(100).nullable().describe("Parte da descrição, ex.: padaria; null para todos"),
+        from: z.iso.date().nullable(), to: z.iso.date().nullable(),
+      }),
+      run: async ({ text, from, to }) => {
+        const [list, categories] = await Promise.all([store.listTransactions(), store.listCategories()]);
+        const names = new Map(categories.map((c) => [c.id, c.name]));
+        const q = text?.toLocaleLowerCase("pt-BR");
+        return json(list.filter((t) => (!q || t.description.toLocaleLowerCase("pt-BR").includes(q)) && (!from || t.occurredOn >= from) && (!to || t.occurredOn <= to))
+          .slice(0, 30).map((t) => ({ id: t.id, day: t.occurredOn, description: t.description, amount: formatMoney(t.amountCents), type: t.type,
+            category: names.get(t.categoryId ?? "") ?? null, payment_method: t.paymentMethod })));
+      },
+    })),
+    strict(betaZodTool({
+      name: "update_transaction",
+      description: "Corrige um lançamento: valor, descrição, categoria, dia ou forma de pagamento (null = não mexe). Use query_transactions antes.",
+      inputSchema: z.object({
+        transaction_id: z.string(),
+        amount: z.number().positive().max(10_000_000).nullable(),
+        description: z.string().min(1).max(200).nullable(),
+        category: z.enum(CATEGORIES).nullable(),
+        occurred_on: z.iso.date().nullable(),
+        payment_method: z.enum(["pix", "debit", "credit", "cash", "other"]).nullable(),
+      }),
+      run: async (i) => {
+        const category = i.category ? (await store.listCategories()).find((c) => c.name === i.category)?.id : undefined;
+        const patch = Object.fromEntries(Object.entries({
+          amountCents: i.amount === null ? null : Math.round(i.amount * 100), description: i.description, categoryId: category ?? null,
+          occurredOn: i.occurred_on, paymentMethod: i.payment_method,
+        }).filter(([, v]) => v !== null));
+        const t = await store.updateTransaction(i.transaction_id, patch);
+        return t ? json({ ok: true, transaction: { description: t.description, amount: formatMoney(t.amountCents), day: t.occurredOn } }) : "Erro: lançamento não encontrado.";
+      },
+    })),
+    strict(betaZodTool({
+      name: "delete_transaction",
+      description: "Apaga um lançamento de vez. Use query_transactions antes para achar o id.",
+      inputSchema: z.object({ transaction_id: z.string() }),
+      run: async ({ transaction_id }) => ((await store.deleteTransaction(transaction_id)) ? json({ ok: true }) : "Erro: lançamento não encontrado."),
+    })),
+    strict(betaZodTool({
+      name: "archive_habit",
+      description: "Para de acompanhar um hábito (o histórico fica guardado). Use query_habits antes para achar o id.",
+      inputSchema: z.object({ habit_id: z.string() }),
+      run: async ({ habit_id }) => ((await store.archiveHabit(habit_id)) ? json({ ok: true }) : "Erro: hábito não encontrado."),
     })),
     strict(betaZodTool({
       name: "create_note",

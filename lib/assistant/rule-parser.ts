@@ -1,11 +1,12 @@
 import type { Transaction } from "@/lib/data/types";
+import { nextDate, toRRule } from "@/lib/domain/recurrence";
 import { addDays, localDate, zonedToUtc } from "@/lib/time";
 
 // Intérprete PROVISÓRIO de frases simples em português, só para a fatia vertical
 // funcionar sem chave de API. O /replica-backend troca por Claude com ferramentas.
 
 export type Intent =
-  | { kind: "reminder"; title: string; at: Date }
+  | { kind: "reminder"; title: string; at: Date; recurrenceRule: string | null }
   | { kind: "task"; title: string; dueOn: string | null; priority: "low" | "medium" | "high" }
   | { kind: "habit"; name: string; weekdays: number[]; time: string | null }
   | { kind: "transaction"; type: Transaction["type"]; amountCents: number; description: string;
@@ -42,6 +43,37 @@ function parseAmount(raw: string): number {
 const TIME = /(?<!\p{L})(?:[àa]s?|para as)\s*(\d{1,2})(?:(?::|h)(\d{2}))?\s*h?(?:oras)?(?!\p{L}|\d)/iu;
 const DAY = /(?<!\p{L})(depois de amanh[aã]|amanh[aã]|hoje)(?!\p{L})/iu;
 
+// Repetição de lembrete: "todo dia 5" (mensal), "todo dia", "toda segunda", "todas as sextas"
+const MONTHLY = /(?<!\p{L})todo (?:m[eê]s(?: no)? )?dia (\d{1,2})(?!\d)/iu;
+const DAILY = /(?<!\p{L})(?:todo dia|todos os dias|diariamente)(?!\p{L})/iu;
+const WEEKLY = /(?<!\p{L})(?:toda|todas as)\s+((?:domingo|segunda|ter[cç]a|quarta|quinta|sexta|s[aá]bado)s?(?:-feiras?)?(?:\s*(?:,|e)\s*(?:domingo|segunda|ter[cç]a|quarta|quinta|sexta|s[aá]bado)s?(?:-feiras?)?)*)/iu;
+
+function parseRepeat(clause: string, today: string): { rule: string; firstDay: string | null; strip: RegExp } | null {
+  const monthly = clause.match(MONTHLY);
+  if (monthly && Number(monthly[1]) >= 1 && Number(monthly[1]) <= 31) {
+    const day = Number(monthly[1]);
+    const [y, m] = today.split("-").map(Number);
+    const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    const thisMonth = `${today.slice(0, 8)}${String(Math.min(day, last)).padStart(2, "0")}`;
+    const nextM = new Date(Date.UTC(y, m, 1));
+    const lastNext = new Date(Date.UTC(nextM.getUTCFullYear(), nextM.getUTCMonth() + 1, 0)).getUTCDate();
+    const next = `${nextM.toISOString().slice(0, 8)}${String(Math.min(day, lastNext)).padStart(2, "0")}`;
+    return { rule: toRRule({ freq: "monthly", interval: 1, monthDay: day }), firstDay: thisMonth >= today ? thisMonth : next, strip: MONTHLY };
+  }
+  if (DAILY.test(clause)) return { rule: toRRule({ freq: "daily", interval: 1 }), firstDay: null, strip: DAILY };
+  const weekly = clause.match(WEEKLY);
+  if (weekly) {
+    const days = WEEKDAYS.filter(([re]) => re.test(weekly[1])).map(([, n]) => n);
+    const [y, m, d] = today.split("-").map(Number);
+    const wd = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+    const ahead = Math.min(...days.map((t) => (t - wd + 7) % 7));
+    return { rule: toRRule({ freq: "weekly", interval: 1, weekdays: days }), firstDay: addDays(today, ahead), strip: WEEKLY };
+  }
+  return null;
+}
+
+const nextAfter = (rule: string, day: string) => nextDate(rule, day, day) ?? addDays(day, 1);
+
 function parseReminder(clause: string, now: Date, tz: string): Intent | null {
   if (!/\b(me )?lembr[ae]r?\b|\bme avis[ae]\b/i.test(clause)) return null;
   const time = clause.match(TIME);
@@ -51,22 +83,23 @@ function parseReminder(clause: string, now: Date, tz: string): Intent | null {
   if (hour > 23 || minute > 59) return null;
   const dayWord = clause.match(DAY)?.[1]?.toLowerCase();
   const today = localDate(now, tz);
-  let day = dayWord?.startsWith("depois") ? addDays(today, 2) : dayWord?.startsWith("amanh") ? addDays(today, 1) : today;
+  const repeat = parseRepeat(clause, today);
+  let day = repeat?.firstDay ?? (dayWord?.startsWith("depois") ? addDays(today, 2) : dayWord?.startsWith("amanh") ? addDays(today, 1) : today);
   const [y, m, d] = day.split("-").map(Number);
   let at = zonedToUtc(y, m, d, hour, minute, tz);
   if (!dayWord && at <= now) {
-    // horário que já passou hoje, sem dia dito: vale para amanhã
-    day = addDays(today, 1);
+    // horário que já passou: vale para a próxima ocorrência (amanhã, ou a próxima da repetição)
+    day = repeat && repeat.firstDay ? nextAfter(repeat.rule, day) : addDays(day, 1);
     const [y2, m2, d2] = day.split("-").map(Number);
     at = zonedToUtc(y2, m2, d2, hour, minute, tz);
   }
   let title = clause
-    .replace(TIME, " ").replace(DAY, " ")
+    .replace(TIME, " ").replace(DAY, " ").replace(repeat?.strip ?? /$^/, " ")
     .replace(/\b(e\s+)?(me\s+)?(lembr[ae]r?|avis[ae])\s*(de|do|da|dos|das)?\b/i, " ")
     .replace(/\s+/g, " ").trim().replace(/^(de|do|da|que|para)\s+/i, "").replace(/[.,!]+$/, "");
   if (!title) return null;
   title = title[0].toUpperCase() + title.slice(1);
-  return { kind: "reminder", title, at };
+  return { kind: "reminder", title, at, recurrenceRule: repeat?.rule ?? null };
 }
 
 const WEEKDAYS: Array<[RegExp, number]> = [

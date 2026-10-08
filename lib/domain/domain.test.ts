@@ -47,7 +47,7 @@ describe("dayItems", () => {
     const items = dayItems({
       now, tz: "America/Sao_Paulo",
       reminders: [{ id: "r", title: "Remédio", nextFireAt: "2026-10-07T12:00:00Z", recurrenceRule: null, channels: ["push"], status: "active", lastFiredAt: null, createdAt: "" }],
-      tasks: [{ id: "t", title: "Atrasada", dueOn: "2026-10-05", priority: "high", status: "todo", completedAt: null, createdAt: "" }],
+      tasks: [{ id: "t", title: "Atrasada", dueOn: "2026-10-05", priority: "high", status: "todo", notes: null, recurrenceRule: null, completedAt: null, createdAt: "" }],
       habits: [habit()], logs: [],
     });
     expect(items.map((i) => [i.title, i.time, i.overdue])).toEqual([["Remédio", "09:00", true], ["Ler", "21:00", false], ["Atrasada", null, true]]);

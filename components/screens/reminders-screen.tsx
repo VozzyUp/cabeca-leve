@@ -1,16 +1,19 @@
 "use client";
-import { Bell } from "lucide-react";
+import { Bell, Plus, Repeat, Trash2 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { useState, type FormEvent } from "react";
+import { Button, IconButton } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { CheckItem, EmptyState } from "@/components/ui/data";
+import { Field } from "@/components/ui/field";
+import { RepeatSelect } from "@/components/ui/repeat-select";
 import { Segmented } from "@/components/ui/segmented";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api";
 import { useResource } from "@/lib/hooks";
 import type { Reminder } from "@/lib/data/types";
-import { formatDayLabel, formatTime, localDate } from "@/lib/time";
+import { describeRepeat } from "@/lib/domain/recurrence";
+import { formatDayLabel, formatTime, localDate, zonedToUtc } from "@/lib/time";
 
 // S11: lembretes por dia; concluir e reabrir
 export function RemindersScreen() {
@@ -18,6 +21,30 @@ export function RemindersScreen() {
   const [saveError, setSaveError] = useState(false);
   const [view, setView] = useState<"next" | "done">("next");
   const error = loadError || saveError;
+  const [form, setForm] = useState({ title: "", day: "", time: "", repeat: "" });
+  const [formError, setFormError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  async function add(e: FormEvent) {
+    e.preventDefault();
+    if (!form.title.trim()) { setFormError("Escreva do que lembrar."); return; }
+    if (!form.day || !form.time || !data) { setFormError("Escolha o dia e a hora."); return; }
+    const [y, m, d] = form.day.split("-").map(Number);
+    const [h, min] = form.time.split(":").map(Number);
+    const at = zonedToUtc(y, m, d, h, min, data.timezone);
+    if (at.getTime() < Date.now()) { setFormError("Esse horário já passou."); return; }
+    setSaving(true); setFormError(null);
+    try {
+      const { reminder } = await api.createReminder({ title: form.title.trim(), nextFireAt: at.toISOString(), recurrenceRule: form.repeat || null });
+      setData((dd) => dd && { ...dd, reminders: [...dd.reminders, reminder].sort((a, b) => (a.nextFireAt ?? "9").localeCompare(b.nextFireAt ?? "9")) });
+      setForm({ title: "", day: "", time: "", repeat: "" });
+    } catch (err) { setFormError((err as Error).message); } finally { setSaving(false); }
+  }
+
+  async function remove(r: Reminder) {
+    setData((d) => d && { ...d, reminders: d.reminders.filter((x) => x.id !== r.id) });
+    try { await api.deleteReminder(r.id); } catch { setSaveError(true); load(); }
+  }
 
   // muda na hora; volta ao estado anterior se o servidor recusar
   async function toggle(r: Reminder) {
@@ -48,6 +75,17 @@ export function RemindersScreen() {
           options={[{ value: "next", label: "Próximos" }, { value: "done", label: "Concluídos" }]} />
       </header>
 
+      <Card>
+        <form onSubmit={add} className="grid gap-3 sm:grid-cols-[1fr_auto_auto_auto_auto] sm:items-end">
+          <Field label="Novo lembrete" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })}
+            placeholder="Ex.: tomar o remédio" maxLength={300} error={formError ?? undefined} />
+          <Field label="Dia" type="date" value={form.day} onChange={(e) => setForm({ ...form, day: e.target.value })} />
+          <Field label="Hora" type="time" value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} />
+          <RepeatSelect id="repetir-lembrete" value={form.repeat} onChange={(repeat) => setForm({ ...form, repeat })} baseDay={form.day || null} />
+          <Button type="submit" loading={saving} icon={<Plus className="size-4" />}>Criar</Button>
+        </form>
+      </Card>
+
       {error && (
         <div role="alert" className="flex items-center justify-between gap-4 rounded-md border border-danger px-4 py-3 text-sm">
           Não deu para carregar os lembretes.
@@ -71,8 +109,15 @@ export function RemindersScreen() {
           <Card className="p-2">
             {items.map((r) => {
               const overdue = r.status === "active" && !!r.nextFireAt && new Date(r.nextFireAt) < now;
-              const meta = r.nextFireAt ? formatTime(r.nextFireAt, data.timezone) : "concluído";
-              return <CheckItem key={r.id} title={r.title} meta={meta} done={r.status === "done"} overdue={overdue} onToggle={() => toggle(r)} />;
+              const repeats = describeRepeat(r.recurrenceRule);
+              const meta = [r.nextFireAt ? formatTime(r.nextFireAt, data.timezone) : "concluído", repeats && `repete ${repeats}`].filter(Boolean).join(" · ");
+              return (
+                <div key={r.id} className="flex items-center gap-1">
+                  <div className="min-w-0 flex-1"><CheckItem title={r.title} meta={meta} done={r.status === "done"} overdue={overdue} onToggle={() => toggle(r)} /></div>
+                  {repeats && <Repeat aria-hidden className="size-4 shrink-0 text-muted" />}
+                  <IconButton size="sm" label={`Apagar ${r.title}`} onClick={() => remove(r)}><Trash2 className="size-4" /></IconButton>
+                </div>
+              );
             })}
           </Card>
         </section>

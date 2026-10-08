@@ -1,6 +1,7 @@
 import { storeForUser } from "@/lib/data";
 import { buildBriefing } from "@/lib/domain/briefing";
 import { dayItems } from "@/lib/domain/day";
+import { nextFireAt } from "@/lib/domain/recurrence";
 import { variableSpending } from "@/lib/domain/money";
 import { sendPush } from "@/lib/push";
 import { getAdmin } from "@/lib/supabase/server";
@@ -47,7 +48,7 @@ async function send(userId: string, source: "reminder" | "briefing", sourceId: s
 
 export async function deliverDueReminders(now = new Date()) {
   const db = getAdmin();
-  const { data } = await db.from("reminders").select("id, user_id, title, next_fire_at, last_fired_at, timezone")
+  const { data } = await db.from("reminders").select("id, user_id, title, next_fire_at, last_fired_at, timezone, recurrence_rule")
     .eq("status", "active").lte("next_fire_at", now.toISOString()).order("next_fire_at").limit(200);
   let count = 0;
   for (const r of data ?? []) {
@@ -56,7 +57,9 @@ export async function deliverDueReminders(now = new Date()) {
     await send(r.user_id, "reminder", r.id, `reminder:${r.id}:${r.next_fire_at}`, {
       title: "Lembrete", body: `${r.title} · ${time}`, url: "/lembretes", whatsappText: `⏰ Lembrete: ${r.title} (${time})`,
     });
-    await db.from("reminders").update({ last_fired_at: now.toISOString() }).eq("id", r.id).eq("user_id", r.user_id);
+    // recorrente: já fica marcado para a próxima ocorrência
+    const next = r.recurrence_rule ? nextFireAt(r.recurrence_rule, r.next_fire_at!, r.timezone, now) : null;
+    await db.from("reminders").update({ last_fired_at: now.toISOString(), ...(next ? { next_fire_at: next } : {}) }).eq("id", r.id).eq("user_id", r.user_id);
     await db.from("notices").insert({ user_id: r.user_id, kind: "reminder", title: "Lembrete", body: r.title, href: "/lembretes" });
     count++;
   }

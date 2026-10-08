@@ -23,18 +23,28 @@ export type TranscriptEntry = { role: "user" | "assistant" | "system"; content: 
 export interface DataStore {
   timezone(): string;
   listReminders(): Promise<Reminder[]>;
-  createReminder(input: { title: string; nextFireAt: string; channels?: Reminder["channels"] }): Promise<Reminder>;
-  updateReminder(id: string, patch: Partial<Pick<Reminder, "status" | "lastFiredAt" | "nextFireAt" | "title">>): Promise<Reminder | null>;
+  createReminder(input: { title: string; nextFireAt: string; channels?: Reminder["channels"]; recurrenceRule?: string | null }): Promise<Reminder>;
+  // lastFiredAt num lembrete recorrente avança nextFireAt para a próxima ocorrência
+  updateReminder(id: string, patch: Partial<Pick<Reminder, "status" | "lastFiredAt" | "nextFireAt" | "title" | "recurrenceRule">>): Promise<Reminder | null>;
+  deleteReminder(id: string): Promise<boolean>;
   listTasks(): Promise<Task[]>;
-  createTask(input: { title: string; dueOn: string | null; priority?: Task["priority"] }): Promise<Task>;
-  updateTask(id: string, patch: Partial<Pick<Task, "title" | "dueOn" | "priority" | "status">>): Promise<Task | null>;
+  createTask(input: { title: string; dueOn: string | null; priority?: Task["priority"]; notes?: string | null; recurrenceRule?: string | null }): Promise<Task>;
+  // concluir uma tarefa recorrente cria a próxima ocorrência
+  updateTask(id: string, patch: Partial<Pick<Task, "title" | "dueOn" | "priority" | "status" | "notes" | "recurrenceRule">>): Promise<Task | null>;
+  deleteTask(id: string): Promise<boolean>;
   listHabits(): Promise<Habit[]>;
   createHabit(input: { name: string; weekdays?: number[]; time?: string | null }): Promise<Habit>;
+  archiveHabit(id: string): Promise<boolean>;
   listHabitLogs(): Promise<HabitLog[]>;
   setHabitDone(habitId: string, day: string, done: boolean): Promise<boolean>;
   listTransactions(): Promise<Transaction[]>;
   createTransaction(input: Omit<Transaction, "id" | "createdAt">): Promise<Transaction>;
+  updateTransaction(id: string, patch: Partial<Pick<Transaction, "description" | "amountCents" | "categoryId" | "occurredOn" | "paymentMethod" | "type">>): Promise<Transaction | null>;
+  deleteTransaction(id: string): Promise<boolean>;
   listCategories(): Promise<Category[]>;
+  createCategory(input: { name: string; kind: Category["kind"]; parentId: string | null }): Promise<Category>;
+  updateCategory(id: string, patch: { name: string }): Promise<Category | null>;
+  archiveCategory(id: string): Promise<boolean>;
   listAccounts(): Promise<Array<Account & { balanceCents: number }>>;
   recordAction(entity: ActionRecord["entity"], entityId: string): Promise<ActionRecord>;
   undoAction(id: string): Promise<{ ok: true } | { ok: false; reason: "not_found" | "already_undone" }>;

@@ -52,6 +52,22 @@ describe.skipIf(!run)("entregas", () => {
     expect(notices!.length).toBeGreaterThanOrEqual(1);
   });
 
+  it("lembrete que se repete é reagendado para a próxima ocorrência", async () => {
+    const { deliverDueReminders } = await import("./deliveries");
+    const due = new Date(Date.now() - 60_000);
+    const { data: r } = await admin.from("reminders").insert({ user_id: userId, title: "Beber água", next_fire_at: due.toISOString(),
+      timezone: "America/Sao_Paulo", recurrence_rule: "FREQ=DAILY;INTERVAL=1" }).select("id").single();
+    await deliverDueReminders();
+    expect(sent.filter((s) => s.text.includes("Beber água"))).toHaveLength(1);
+    const { data } = await admin.from("reminders").select("next_fire_at, status").eq("id", r!.id).single();
+    expect(data!.status).toBe("active");
+    // amanhã, mesma hora e minuto (os segundos não contam)
+    const sameMinute = Math.floor(due.getTime() / 60_000) * 60_000;
+    expect(new Date(data!.next_fire_at!).getTime()).toBe(sameMinute + 86_400_000);
+    await deliverDueReminders();
+    expect(sent.filter((s) => s.text.includes("Beber água"))).toHaveLength(1);
+  });
+
   it("resumo da manhã sai no horário escolhido e uma vez por dia", async () => {
     const { deliverBriefings } = await import("./deliveries");
     const p = zonedParts(new Date(), "America/Sao_Paulo");

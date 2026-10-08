@@ -83,3 +83,29 @@ describe("tarefas e hábitos", () => {
     expect(r.map((x) => x.kind)).toEqual(["transaction", "task", "habit"]);
   });
 });
+
+describe("lembretes que se repetem", () => {
+  const now = new Date("2026-10-08T13:00:00Z");  // quinta, 10:00 em São Paulo
+  const one = (text: string) => parseMessage(text, now, "America/Sao_Paulo")[0] as Extract<ReturnType<typeof parseMessage>[number], { kind: "reminder" }>;
+  it("todo dia às 8h começa amanhã, porque 8h de hoje já passou", () => {
+    const r = one("me lembra de tomar o remédio todo dia às 8h");
+    expect(r.title).toBe("Tomar o remédio");
+    expect(r.recurrenceRule).toBe("FREQ=DAILY;INTERVAL=1");
+    expect(r.at.toISOString()).toBe("2026-10-09T11:00:00.000Z");
+  });
+  it("toda segunda e quarta", () => {
+    const r = one("me lembra de levar o lixo toda segunda e quarta às 20h");
+    expect(r.recurrenceRule).toBe("FREQ=WEEKLY;INTERVAL=1;BYDAY=MO,WE");
+    expect(r.at.toISOString()).toBe("2026-10-12T23:00:00.000Z");
+    expect(r.title).toBe("Levar o lixo");
+  });
+  it("todo dia 5 é mensal", () => {
+    const r = one("me lembra de pagar o aluguel todo dia 5 às 9h");
+    expect(r.recurrenceRule).toBe("FREQ=MONTHLY;INTERVAL=1;BYMONTHDAY=5");
+    expect(r.at.toISOString()).toBe("2026-11-05T12:00:00.000Z");
+    expect(r.title).toBe("Pagar o aluguel");
+  });
+  it("sem repetição continua igual", () => {
+    expect(one("me lembra de ligar pro banco amanhã às 9h").recurrenceRule).toBeNull();
+  });
+});

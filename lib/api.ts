@@ -17,16 +17,20 @@ export const api = {
     call<{ messages: ChatMessage[] }>("/api/chat", { method: "POST", body: JSON.stringify({ clientMessageId, text }) }),
   undo: (actionId: string) => call<{ ok: true }>(`/api/actions/${actionId}/undo`, { method: "POST" }),
   reminders: () => call<{ reminders: Reminder[]; timezone: string }>("/api/reminders"),
-  updateReminder: (id: string, patch: Partial<Pick<Reminder, "status" | "lastFiredAt">>) =>
+  createReminder: (input: { title: string; nextFireAt: string; recurrenceRule: string | null }) =>
+    call<{ reminder: Reminder }>("/api/reminders", { method: "POST", body: JSON.stringify(input) }),
+  updateReminder: (id: string, patch: Partial<Pick<Reminder, "status" | "lastFiredAt" | "nextFireAt" | "title" | "recurrenceRule">>) =>
     call<{ reminder: Reminder }>(`/api/reminders/${id}`, { method: "PATCH", body: JSON.stringify(patch) }),
+  deleteReminder: (id: string) => call<{ ok: true }>(`/api/reminders/${id}`, { method: "DELETE" }),
   transactions: () => call<{
     transactions: Transaction[]; categories: Category[]; accounts: Array<Account & { balanceCents: number }>; timezone: string;
   }>("/api/transactions"),
   tasks: () => call<{ tasks: Task[]; today: string }>("/api/tasks"),
-  createTask: (input: { title: string; dueOn: string | null; priority: Task["priority"] }) =>
+  createTask: (input: { title: string; dueOn: string | null; priority: Task["priority"]; notes?: string | null; recurrenceRule?: string | null }) =>
     call<{ task: Task }>("/api/tasks", { method: "POST", body: JSON.stringify(input) }),
-  updateTask: (id: string, patch: Partial<Pick<Task, "status" | "title" | "dueOn" | "priority">>) =>
+  updateTask: (id: string, patch: Partial<Pick<Task, "status" | "title" | "dueOn" | "priority" | "notes" | "recurrenceRule">>) =>
     call<{ task: Task }>(`/api/tasks/${id}`, { method: "PATCH", body: JSON.stringify(patch) }),
+  deleteTask: (id: string) => call<{ ok: true }>(`/api/tasks/${id}`, { method: "DELETE" }),
   habits: () => call<{ today: string; habits: Array<Habit & { stats: HabitStats }> }>("/api/habits"),
   createHabit: (input: { name: string; weekdays: number[]; time: string | null }) =>
     call<{ habit: Habit }>("/api/habits", { method: "POST", body: JSON.stringify(input) }),

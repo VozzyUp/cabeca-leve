@@ -1,5 +1,6 @@
 import type { Admin } from "@/lib/supabase/server";
 import type { Json, TablesUpdate } from "@/lib/supabase/database.types";
+import { nextDate, nextFireAt } from "@/lib/domain/recurrence";
 import { addDays, localDate, zonedToUtc } from "@/lib/time";
 import type { DataStore } from "./store";
 import type {
@@ -37,9 +38,9 @@ export async function createSupabaseStore(db: Admin, userId: string, email: stri
     id: r.id, title: r.title, nextFireAt: r.next_fire_at, recurrenceRule: r.recurrence_rule,
     channels: r.channels as Reminder["channels"], status: r.status as Reminder["status"], lastFiredAt: r.last_fired_at, createdAt: r.created_at,
   });
-  const mapTask = (t: { id: string; title: string; due_on: string | null; priority: string; status: string; completed_at: string | null; created_at: string }): Task => ({
+  const mapTask = (t: { id: string; title: string; due_on: string | null; priority: string; status: string; notes: string | null; recurrence_rule: string | null; recurrence_source_id: string | null; completed_at: string | null; created_at: string }): Task => ({
     id: t.id, title: t.title, dueOn: t.due_on, priority: t.priority as Task["priority"], status: t.status as Task["status"],
-    completedAt: t.completed_at, createdAt: t.created_at,
+    notes: t.notes, recurrenceRule: t.recurrence_rule, recurrenceSourceId: t.recurrence_source_id, completedAt: t.completed_at, createdAt: t.created_at,
   });
 
   async function defaultAccountId() {
@@ -75,32 +76,46 @@ export async function createSupabaseStore(db: Admin, userId: string, email: stri
       const rows = must(await db.from("reminders").select("*").eq("user_id", userId).order("next_fire_at", { nullsFirst: false }));
       return rows.map(mapReminder);
     },
-    async createReminder({ title, nextFireAt, channels = ["push"] }) {
-      return mapReminder(must(await db.from("reminders").insert({ user_id: userId, title, next_fire_at: nextFireAt, channels, timezone: tz }).select("*").single()));
+    async createReminder({ title, nextFireAt: at, channels = ["push"], recurrenceRule = null }) {
+      return mapReminder(must(await db.from("reminders").insert({ user_id: userId, title, next_fire_at: at, channels, timezone: tz, recurrence_rule: recurrenceRule }).select("*").single()));
     },
     async updateReminder(id, patch) {
       const row: TablesUpdate<"reminders"> = {};
       if (patch.title !== undefined) row.title = patch.title;
       if (patch.nextFireAt !== undefined) row.next_fire_at = patch.nextFireAt;
       if (patch.lastFiredAt !== undefined) row.last_fired_at = patch.lastFiredAt;
+      if (patch.recurrenceRule !== undefined) row.recurrence_rule = patch.recurrenceRule;
       if (patch.status !== undefined) { row.status = patch.status; if (patch.status !== "active") row.next_fire_at = null; }
+      // avisou um recorrente: já fica marcado para a próxima vez
+      if (patch.lastFiredAt) {
+        const cur = must(await db.from("reminders").select("recurrence_rule, next_fire_at, status").eq("id", id).eq("user_id", userId).maybeSingle() as Result<{ recurrence_rule: string | null; next_fire_at: string | null; status: string } | null>);
+        const rule = patch.recurrenceRule ?? cur?.recurrence_rule;
+        if (rule && cur?.next_fire_at && cur.status === "active") row.next_fire_at = nextFireAt(rule, cur.next_fire_at, tz, new Date(patch.lastFiredAt)) ?? cur.next_fire_at;
+      }
       const r = await db.from("reminders").update(row).eq("id", id).eq("user_id", userId).select("*").maybeSingle();
       const data = must(r as Result<Parameters<typeof mapReminder>[0] | null>);
       return data ? mapReminder(data) : null;
+    },
+    async deleteReminder(id) {
+      return must(await db.from("reminders").delete().eq("id", id).eq("user_id", userId).select("id")).length > 0;
     },
 
     async listTasks() {
       const rows = must(await db.from("tasks").select("*").eq("user_id", userId).is("archived_at", null).is("parent_task_id", null).order("created_at"));
       return rows.map(mapTask);
     },
-    async createTask({ title, dueOn, priority = "medium" }) {
-      return mapTask(must(await db.from("tasks").insert({ user_id: userId, title, due_on: dueOn, priority }).select("*").single()));
+    async createTask({ title, dueOn, priority = "medium", notes = null, recurrenceRule = null }) {
+      return mapTask(must(await db.from("tasks").insert({ user_id: userId, title, due_on: dueOn, priority, notes, recurrence_rule: recurrenceRule }).select("*").single()));
     },
     async updateTask(id, patch) {
       const row: TablesUpdate<"tasks"> = {};
       if (patch.title !== undefined) row.title = patch.title;
       if (patch.dueOn !== undefined) row.due_on = patch.dueOn;
       if (patch.priority !== undefined) row.priority = patch.priority;
+      if (patch.notes !== undefined) row.notes = patch.notes;
+      if (patch.recurrenceRule !== undefined) row.recurrence_rule = patch.recurrenceRule;
+      const before = must(await db.from("tasks").select("*").eq("id", id).eq("user_id", userId).maybeSingle() as Result<Parameters<typeof mapTask>[0] | null>);
+      if (!before) return null;
       if (patch.status !== undefined) {
         row.status = patch.status;
         if (patch.status !== "done") row.completed_at = null;
@@ -110,7 +125,21 @@ export async function createSupabaseStore(db: Admin, userId: string, email: stri
         }
       }
       const data = must(await db.from("tasks").update(row).eq("id", id).eq("user_id", userId).select("*").maybeSingle() as Result<Parameters<typeof mapTask>[0] | null>);
-      return data ? mapTask(data) : null;
+      if (!data) return null;
+      // concluiu uma recorrente: cria a próxima ocorrência (uma vez só)
+      if (patch.status === "done" && before.status !== "done" && data.recurrence_rule) {
+        const spawned = must(await db.from("tasks").select("id").eq("user_id", userId).eq("recurrence_source_id", id).limit(1));
+        const base = data.due_on ?? today();
+        const due = nextDate(data.recurrence_rule, base, base);
+        if (!spawned.length && due) {
+          must(await db.from("tasks").insert({ user_id: userId, title: data.title, notes: data.notes, priority: data.priority, due_on: due,
+            recurrence_rule: data.recurrence_rule, recurrence_source_id: id }));
+        }
+      }
+      return mapTask(data);
+    },
+    async deleteTask(id) {
+      return must(await db.from("tasks").delete().eq("id", id).eq("user_id", userId).select("id")).length > 0;
     },
 
     async listHabits() {
@@ -120,6 +149,9 @@ export async function createSupabaseStore(db: Admin, userId: string, email: stri
     async createHabit({ name, weekdays = [0, 1, 2, 3, 4, 5, 6], time = null }) {
       const h = must(await db.from("habits").insert({ user_id: userId, name, weekdays, times: time ? [time] : [] }).select("*").single());
       return { id: h.id, name: h.name, weekdays: h.weekdays, time: hm(h.times[0]), active: h.active, createdAt: h.created_at };
+    },
+    async archiveHabit(id) {
+      return must(await db.from("habits").update({ active: false, archived_at: new Date().toISOString() }).eq("id", id).eq("user_id", userId).select("id")).length > 0;
     },
     async listHabitLogs() {
       const rows = must(await db.from("habit_logs").select("habit_id, day").eq("user_id", userId));
@@ -157,9 +189,41 @@ export async function createSupabaseStore(db: Admin, userId: string, email: stri
       }).select("*").single());
       return { ...input, id: t.id, accountId: t.account_id ?? "", cardId: t.card_id, createdAt: t.created_at };
     },
+    async updateTransaction(id, patch) {
+      const row: TablesUpdate<"transactions"> = {};
+      if (patch.description !== undefined) row.description = patch.description;
+      if (patch.amountCents !== undefined) row.amount_cents = patch.amountCents;
+      if (patch.categoryId !== undefined) row.category_id = patch.categoryId;
+      if (patch.occurredOn !== undefined) row.occurred_on = patch.occurredOn;
+      if (patch.paymentMethod !== undefined) row.payment_method = patch.paymentMethod;
+      if (patch.type !== undefined) row.type = patch.type;
+      const t = must(await db.from("transactions").update(row).eq("id", id).eq("user_id", userId).in("type", ["income", "expense"]).select("id").maybeSingle() as Result<{ id: string } | null>);
+      return t ? (await store.listTransactions()).find((x) => x.id === id) ?? null : null;
+    },
+    async deleteTransaction(id) {
+      return must(await db.from("transactions").delete().eq("id", id).eq("user_id", userId).in("type", ["income", "expense"]).select("id")).length > 0;
+    },
     async listCategories() {
-      const rows = must(await db.from("categories").select("id, name, kind").eq("user_id", userId).is("archived_at", null).order("name"));
-      return rows.map((c) => ({ id: c.id, name: c.name, kind: c.kind as "expense" | "income" }));
+      const rows = must(await db.from("categories").select("id, name, kind, parent_id").eq("user_id", userId).is("archived_at", null).order("name"));
+      return rows.map((c) => ({ id: c.id, name: c.name, kind: c.kind as "expense" | "income", parentId: c.parent_id }));
+    },
+    async createCategory({ name, kind, parentId }) {
+      // subcategoria herda o tipo da categoria de cima
+      const parent = parentId ? must(await db.from("categories").select("id, kind").eq("id", parentId).eq("user_id", userId).maybeSingle() as Result<{ id: string; kind: string } | null>) : null;
+      if (parentId && !parent) throw new Error("Categoria não encontrada");
+      const c = must(await db.from("categories").insert({ user_id: userId, name, kind: parent?.kind ?? kind, parent_id: parent?.id ?? null }).select("id, name, kind, parent_id").single());
+      return { id: c.id, name: c.name, kind: c.kind as "expense" | "income", parentId: c.parent_id };
+    },
+    async updateCategory(id, { name }) {
+      const c = must(await db.from("categories").update({ name }).eq("id", id).eq("user_id", userId).select("id, name, kind, parent_id").maybeSingle() as Result<{ id: string; name: string; kind: string; parent_id: string | null } | null>);
+      return c ? { id: c.id, name: c.name, kind: c.kind as "expense" | "income", parentId: c.parent_id } : null;
+    },
+    async archiveCategory(id) {
+      // arquivar mantém os lançamentos antigos com a categoria; some só das listas
+      if (!/^[0-9a-f-]{36}$/i.test(id)) return false;  // o id vai dentro do filtro "or"
+      const at = new Date().toISOString();
+      const r = must(await db.from("categories").update({ archived_at: at }).eq("user_id", userId).or(`id.eq.${id},parent_id.eq.${id}`).select("id"));
+      return r.length > 0;
     },
     async listAccounts() {
       const [accounts, balances] = await Promise.all([

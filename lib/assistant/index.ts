@@ -21,7 +21,7 @@ export async function handleMessage(store: DataStore, text: string, now = new Da
   }
   const cards: ActionCardData[] = [];
   for (const it of intents) {
-    if (it.kind === "reminder") cards.push(await createReminder(store, { title: it.title, at: it.at }, now));
+    if (it.kind === "reminder") cards.push(await createReminder(store, { title: it.title, at: it.at, recurrenceRule: it.recurrenceRule }, now));
     else if (it.kind === "task") cards.push(await createTask(store, it, now));
     else if (it.kind === "habit") cards.push(await createHabit(store, it));
     else cards.push(await recordTransaction(store, it, now));

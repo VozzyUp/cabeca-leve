@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { addDays, DEFAULT_TZ, localDate, zonedToUtc } from "@/lib/time";
 import type { DataStore } from "./store";
+import { nextDate, nextFireAt } from "@/lib/domain/recurrence";
 import { seedFinance, seedHealth, seedOrganization, seedSettings } from "./seed-extra";
 import type {
   Account, ActionRecord, Automation, BodyMeasurement, CalendarEvent, Category, ChatMessage, CreditCard, FocusSession, Goal,
@@ -71,7 +72,7 @@ export function seedState(now = new Date(), tz = DEFAULT_TZ): State {
     channels: ["push"], status, lastFiredAt: null, createdAt: now.toISOString(),
   });
   const task = (title: string, dueIn: number | null, priority: Task["priority"], done = false): Task => ({
-    id: id(), title, dueOn: dueIn === null ? null : addDays(today, dueIn), priority,
+    id: id(), title, dueOn: dueIn === null ? null : addDays(today, dueIn), priority, notes: null, recurrenceRule: null,
     status: done ? "done" : "todo", completedAt: done ? now.toISOString() : null, createdAt: now.toISOString(),
   });
   const habit = (name: string, time: string | null, weekdays = [0, 1, 2, 3, 4, 5, 6]): Habit => ({
@@ -167,8 +168,8 @@ export const fakeStore: DataStore = {
   async listReminders() {
     return load().reminders.sort((a, b) => (a.nextFireAt ?? "9").localeCompare(b.nextFireAt ?? "9"));
   },
-  async createReminder({ title, nextFireAt, channels = ["push"] }) {
-    const r: Reminder = { id: id(), title, nextFireAt, recurrenceRule: null, channels, status: "active",
+  async createReminder({ title, nextFireAt: at, channels = ["push"], recurrenceRule = null }) {
+    const r: Reminder = { id: id(), title, nextFireAt: at, recurrenceRule, channels, status: "active",
       lastFiredAt: null, createdAt: new Date().toISOString() };
     mutate((s) => s.reminders.push(r));
     return r;
@@ -179,15 +180,26 @@ export const fakeStore: DataStore = {
       if (!r) return null;
       Object.assign(r, patch);
       if (patch.status && patch.status !== "active") r.nextFireAt = null;
+      // avisou um recorrente: já fica marcado para a próxima vez
+      if (patch.lastFiredAt && r.recurrenceRule && r.nextFireAt && r.status === "active") {
+        r.nextFireAt = nextFireAt(r.recurrenceRule, r.nextFireAt, DEFAULT_TZ, new Date(patch.lastFiredAt)) ?? r.nextFireAt;
+      }
       return r;
+    });
+  },
+  async deleteReminder(rid) {
+    return mutate((s) => {
+      const before = s.reminders.length;
+      s.reminders = s.reminders.filter((r) => r.id !== rid);
+      return s.reminders.length < before;
     });
   },
 
   async listTasks() {
     return load().tasks;
   },
-  async createTask({ title, dueOn, priority = "medium" }) {
-    const t: Task = { id: id(), title, dueOn, priority, status: "todo", completedAt: null, createdAt: new Date().toISOString() };
+  async createTask({ title, dueOn, priority = "medium", notes = null, recurrenceRule = null }) {
+    const t: Task = { id: id(), title, dueOn, priority, notes, recurrenceRule, status: "todo", completedAt: null, createdAt: new Date().toISOString() };
     mutate((s) => s.tasks.push(t));
     return t;
   },
@@ -195,9 +207,23 @@ export const fakeStore: DataStore = {
     return mutate((s) => {
       const t = s.tasks.find((x) => x.id === tid);
       if (!t) return null;
+      const wasDone = t.status === "done";
       Object.assign(t, patch);
       if (patch.status) t.completedAt = patch.status === "done" ? (t.completedAt ?? new Date().toISOString()) : null;
+      // concluiu uma recorrente: cria a próxima (uma vez só)
+      if (patch.status === "done" && !wasDone && t.recurrenceRule && !s.tasks.some((x) => x.recurrenceSourceId === t.id)) {
+        const base = t.dueOn ?? localDate(new Date(), DEFAULT_TZ);
+        const due = nextDate(t.recurrenceRule, base, base);
+        if (due) s.tasks.push({ ...t, id: id(), dueOn: due, status: "todo", completedAt: null, recurrenceSourceId: t.id, createdAt: new Date().toISOString() });
+      }
       return t;
+    });
+  },
+  async deleteTask(tid) {
+    return mutate((s) => {
+      const before = s.tasks.length;
+      s.tasks = s.tasks.filter((t) => t.id !== tid);
+      return s.tasks.length < before;
     });
   },
   async listHabits() {
@@ -207,6 +233,13 @@ export const fakeStore: DataStore = {
     const h: Habit = { id: id(), name, weekdays, time, active: true, createdAt: new Date().toISOString() };
     mutate((s) => s.habits.push(h));
     return h;
+  },
+  async archiveHabit(hid) {
+    return mutate((s) => {
+      const h = s.habits.find((x) => x.id === hid);
+      if (h) h.active = false;
+      return !!h;
+    });
   },
   async listHabitLogs() {
     return load().habitLogs;
@@ -230,8 +263,45 @@ export const fakeStore: DataStore = {
     mutate((s) => s.transactions.push(t));
     return t;
   },
+  async updateTransaction(tid, patch) {
+    return mutate((s) => {
+      const t = s.transactions.find((x) => x.id === tid);
+      if (!t) return null;
+      Object.assign(t, patch);
+      return t;
+    });
+  },
+  async deleteTransaction(tid) {
+    return mutate((s) => {
+      const before = s.transactions.length;
+      s.transactions = s.transactions.filter((t) => t.id !== tid);
+      return s.transactions.length < before;
+    });
+  },
   async listCategories() {
-    return load().categories;
+    return load().categories.filter((c) => !(c as { archived?: boolean }).archived);
+  },
+  async createCategory({ name, kind, parentId }) {
+    return mutate((s) => {
+      const parent = parentId ? s.categories.find((c) => c.id === parentId) : null;
+      const c: Category = { id: id(), name, kind: parent?.kind ?? kind, parentId: parent?.id ?? null };
+      s.categories.push(c);
+      return c;
+    });
+  },
+  async updateCategory(cid, { name }) {
+    return mutate((s) => {
+      const c = s.categories.find((x) => x.id === cid);
+      if (c) c.name = name;
+      return c ?? null;
+    });
+  },
+  async archiveCategory(cid) {
+    return mutate((s) => {
+      let found = false;
+      for (const c of s.categories) if (c.id === cid || c.parentId === cid) { Object.assign(c, { archived: true }); found = true; }
+      return found;
+    });
   },
   async listAccounts() {
     const s = load();

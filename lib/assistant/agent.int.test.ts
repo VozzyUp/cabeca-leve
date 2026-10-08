@@ -66,6 +66,8 @@ describe.skipIf(!run)("agente", () => {
     expect(first.body.fallbacks).toBe("default");
     expect(first.body.output_config).toEqual({ effort: "low" });
     expect((first.body.tools as Array<{ strict?: boolean }>).every((t) => t.strict)).toBe(true);
+    // nenhum limite que as ferramentas estritas não aceitam vai no esquema
+    expect(JSON.stringify(first.body.tools)).not.toMatch(/"(minimum|maximum|minLength|maxLength|maxItems)"/);
     // 1ª mensagem do dia: usuário com data e hora, depois o contexto como mensagem de sistema
     expect(first.body.messages.map((m) => m.role)).toEqual(["user", "system"]);
     expect(JSON.stringify(first.body.messages[0].content)).toContain("08/10/2026 12:00");
@@ -92,6 +94,22 @@ describe.skipIf(!run)("agente", () => {
     expect(body.messages.slice(0, prev.length)).toEqual(prev);
     expect(body.messages[prev.length]).toEqual({ role: "assistant", content: [{ type: "text", text: "Anotado!" }] });
     expect(body.messages.filter((m) => m.role === "system")).toHaveLength(1);
+  });
+
+  it("apaga um lançamento pela conversa: consulta o id e apaga", async () => {
+    const { runAgent } = await import("./agent");
+    const tx = (await store.listTransactions())[0];
+    replies.push(
+      msg([{ type: "tool_use", id: "toolu_q", name: "query_transactions", input: { text: "padaria", from: null, to: null } }], "tool_use"),
+      msg([{ type: "tool_use", id: "toolu_d", name: "delete_transaction", input: { transaction_id: tx.id } }], "tool_use"),
+      msg([{ type: "text", text: "Apaguei o gasto da padaria." }], "end_turn"),
+    );
+    const before = requests.length;
+    const r = await runAgent({ store, text: "apaga o gasto da padaria", channel: "web" });
+    expect(r.text).toBe("Apaguei o gasto da padaria.");
+    // o resultado da consulta levou o id para o modelo
+    expect(JSON.stringify(requests[before + 1].body.messages.at(-1))).toContain(tx.id);
+    expect(await store.listTransactions()).toEqual([]);
   });
 
   it("se a API falhar, fecha o turno com uma resposta e o histórico segue válido", async () => {

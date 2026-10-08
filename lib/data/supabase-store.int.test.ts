@@ -62,6 +62,35 @@ describe.skipIf(!run)("SupabaseStore", () => {
     expect((await a.listMessages()).at(-1)?.cards[0].undone).toBe(true);
   });
 
+  it("tarefa recorrente: concluir cria a próxima, uma vez só", async () => {
+    const t = await a.createTask({ title: "Pagar a diarista", dueOn: "2026-10-09", recurrenceRule: "FREQ=WEEKLY;INTERVAL=1;BYDAY=FR", notes: "R$ 150 no Pix" });
+    await a.updateTask(t.id, { status: "done" });
+    await a.updateTask(t.id, { status: "todo" });
+    await a.updateTask(t.id, { status: "done" });  // concluir de novo não duplica
+    const next = (await a.listTasks()).filter((x) => x.recurrenceSourceId === t.id);
+    expect(next).toHaveLength(1);
+    expect(next[0]).toMatchObject({ dueOn: "2026-10-16", status: "todo", notes: "R$ 150 no Pix", recurrenceRule: "FREQ=WEEKLY;INTERVAL=1;BYDAY=FR" });
+  });
+
+  it("editar e apagar tarefa, lembrete e lançamento; subcategorias", async () => {
+    const t = await a.createTask({ title: "Rascunho", dueOn: null });
+    expect((await a.updateTask(t.id, { notes: "detalhe" }))?.notes).toBe("detalhe");
+    expect(await a.deleteTask(t.id)).toBe(true);
+    expect(await a.deleteTask(t.id)).toBe(false);
+    const r = await a.createReminder({ title: "Apagar", nextFireAt: "2026-12-01T12:00:00Z" });
+    expect(await a.deleteReminder(r.id)).toBe(true);
+    const tx = (await a.listTransactions())[0];
+    expect((await a.updateTransaction(tx.id, { amountCents: 4200, description: "Padaria do bairro" }))?.amountCents).toBe(4200);
+    const parent = (await a.listCategories()).find((c) => c.name === "Alimentação")!;
+    const sub = await a.createCategory({ name: "Padaria", kind: "income", parentId: parent.id });
+    expect(sub).toMatchObject({ kind: "expense", parentId: parent.id });  // herda o tipo da de cima
+    expect((await a.updateCategory(sub.id, { name: "Padarias" }))?.name).toBe("Padarias");
+    expect(await a.archiveCategory(parent.id)).toBe(true);  // arquiva junto as de baixo
+    expect((await a.listCategories()).some((c) => c.id === parent.id || c.id === sub.id)).toBe(false);
+    expect((await a.listTransactions()).find((x) => x.id === tx.id)?.categoryId).toBe(parent.id);  // lançamento antigo mantém
+    expect(await a.deleteTransaction(tx.id)).toBe(true);
+  });
+
   it("um segundo usuário não vê nem altera nada do primeiro", async () => {
     expect(await b.listTasks()).toEqual([]);
     expect(await b.listHabitLogs()).toEqual([]);
@@ -70,6 +99,11 @@ describe.skipIf(!run)("SupabaseStore", () => {
     expect(await b.updateTask(task.id, { title: "invadido" })).toBeNull();
     const habit = (await a.listHabits())[0];
     expect(await b.setHabitDone(habit.id, "2026-10-08", true)).toBe(false);
+    expect(await b.deleteTask(task.id)).toBe(false);
+    expect(await b.archiveHabit(habit.id)).toBe(false);
+    const cat = (await a.listCategories())[0];
+    expect(await b.archiveCategory(cat.id)).toBe(false);
+    await expect(b.createCategory({ name: "Invasora", kind: "expense", parentId: cat.id })).rejects.toThrow();
     // e pelo navegador (chave pública + sessão de B), o RLS só devolve as linhas de B
     const browser = createClient<Database>(URL, PUBLISHABLE, { auth: { persistSession: false } });
     await browser.auth.signInWithPassword({ email: `b-${stamp}@teste.local`, password });

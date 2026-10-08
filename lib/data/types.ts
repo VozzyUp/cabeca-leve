@@ -18,6 +18,9 @@ export type Task = {
   dueOn: string | null;       // dia local AAAA-MM-DD
   priority: "low" | "medium" | "high";
   status: "todo" | "doing" | "done";
+  notes: string | null;
+  recurrenceRule: string | null;    // RRULE (lib/domain/recurrence.ts)
+  recurrenceSourceId?: string | null; // tarefa recorrente que gerou esta
   completedAt: string | null;
   createdAt: string;
 };
@@ -33,7 +36,7 @@ export type Habit = {
 
 export type HabitLog = { habitId: string; day: string };
 
-export type Category = { id: string; name: string; kind: "expense" | "income" };
+export type Category = { id: string; name: string; kind: "expense" | "income"; parentId?: string | null };
 export type Account = { id: string; name: string; openingBalanceCents: number };
 
 export type Transaction = {
