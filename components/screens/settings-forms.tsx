@@ -2,7 +2,7 @@
 import { Download, Play, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { deleteAccount, exportData, updateSettings } from "@/app/actions";
+import { deleteAccount, exportData, linkWhatsApp as startWhatsAppLink, updateSettings } from "@/app/actions";
 import { signOut } from "@/app/auth-actions";
 import { Button } from "@/components/ui/button";
 import { Card, SectionLabel } from "@/components/ui/card";
@@ -72,6 +72,8 @@ export function SettingsForm({ initial, canSignOut }: { initial: Settings; canSi
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [exporting, startExport] = useTransition();
   const router = useRouter();
+  const [linking, startLinking] = useTransition();
+  const [linkCode, setLinkCode] = useState<Awaited<ReturnType<typeof startWhatsAppLink>>>(null);
   const channels = settings.channels;
 
   function linkWhatsApp(e: React.FormEvent) {
@@ -79,7 +81,10 @@ export function SettingsForm({ initial, canSignOut }: { initial: Settings; canSi
     const n = toE164(phone);
     if (!n) { setPhoneError("Use o número com DDD, como 11 99999-0000."); return; }
     setPhoneError(null);
-    save({ channels: { ...channels, whatsapp: n } });
+    startLinking(async () => {
+      try { setLinkCode(await startWhatsAppLink(n)); router.refresh(); }
+      catch { setPhoneError("Não deu para vincular agora. Tente de novo."); }
+    });
   }
   function download() {
     startExport(async () => {
@@ -114,10 +119,21 @@ export function SettingsForm({ initial, canSignOut }: { initial: Settings; canSi
         <form onSubmit={linkWhatsApp} className="flex flex-col gap-2 border-b border-border py-3">
           <div className="flex items-end gap-3">
             <Field label="WhatsApp" type="tel" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="11 99999-0000"
-              error={phoneError ?? undefined} hint={channels.whatsapp ? `Vinculado: ${channels.whatsapp}` : "Mande e receba tudo pelo WhatsApp"} className="flex-1" />
-            <Button type="submit" variant="secondary" className="mb-6">{channels.whatsapp ? "Trocar" : "Vincular"}</Button>
+              error={phoneError ?? undefined} className="flex-1"
+              hint={!channels.whatsapp ? "Mande e receba tudo pelo WhatsApp"
+                : channels.whatsappVerified === false ? `Aguardando confirmação: ${channels.whatsapp}` : `Vinculado: ${channels.whatsapp}`} />
+            <Button type="submit" variant="secondary" className="mb-6" loading={linking}>{channels.whatsapp ? "Trocar" : "Vincular"}</Button>
           </div>
-          {channels.whatsapp && <p className="text-xs text-muted">A mensagem de boas-vindas chega quando a integração com a Meta estiver ligada.</p>}
+          {linkCode && (
+            <div role="status" className="flex flex-col gap-2 rounded-md bg-surface-2 p-3 text-sm text-body">
+              <p>Para confirmar que o número é seu, mande este código do seu WhatsApp para o assistente (vale por 30 minutos):</p>
+              <p className="font-mono text-2xl font-semibold tracking-widest text-text">{linkCode.code}</p>
+              {linkCode.link && (
+                <a href={linkCode.link} target="_blank" rel="noopener noreferrer"
+                  className="inline-flex h-10 w-fit items-center rounded-md bg-accent px-4 text-sm font-semibold text-on-accent">Abrir o WhatsApp com o código</a>
+              )}
+            </div>
+          )}
         </form>
         <Row title="Notificações no aparelho" hint="lembretes e avisos, mesmo com o app fechado">
           <Switch label="Notificações no aparelho" checked={channels.push} onChange={(v) => save({ channels: { ...channels, push: v } })} />

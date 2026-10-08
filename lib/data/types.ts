@@ -201,6 +201,6 @@ export type Settings = {
   memoryEnabled: boolean;
   theme: "dark" | "light" | "system";
   briefingTime: string | null;
-  channels: { whatsapp: string | null; telegram: boolean; email: boolean; push: boolean };
+  channels: { whatsapp: string | null; whatsappVerified?: boolean; telegram: boolean; email: boolean; push: boolean };
   calendars: { google: boolean; outlook: boolean };
 };

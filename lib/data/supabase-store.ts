@@ -428,7 +428,7 @@ export async function createSupabaseStore(db: Admin, userId: string, email: stri
         tone: (prof.assistant_tone === "custom" ? "warm" : prof.assistant_tone) as Settings["tone"], answerLength: prof.answer_length as Settings["answerLength"],
         voice: (prof.assistant_voice === "male" ? "male" : "female"), memoryEnabled: prof.memory_enabled, theme: prof.theme as Settings["theme"],
         briefingTime: prof.briefing_enabled ? hm(prof.briefing_time) : null,
-        channels: { whatsapp: waRow?.external_id ?? null, telegram: prof.notify_telegram, email: prof.notify_email, push: prof.notify_push },
+        channels: { whatsapp: waRow?.external_id ?? null, whatsappVerified: !!waRow?.verified_at, telegram: prof.notify_telegram, email: prof.notify_email, push: prof.notify_push },
         calendars: { google: providers.has("google"), outlook: providers.has("microsoft") },
       };
     },

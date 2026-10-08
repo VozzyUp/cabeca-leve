@@ -2,6 +2,9 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getStore } from "@/lib/data";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { currentUser } from "@/lib/supabase/server";
+import { startLink } from "@/lib/whatsapp/link";
 import type { Settings } from "@/lib/data/types";
 
 // Ações de servidor das telas do M3 e M4. Cada uma valida a entrada, grava pelo DataStore
@@ -138,4 +141,22 @@ export async function deleteAccount(confirmation: string) {
   await (await getStore()).deleteAllData();
   revalidatePath("/", "layout");
   return { ok: true as const };
+}
+
+// Vincular o WhatsApp: com Supabase, gera o código que a pessoa manda do próprio celular;
+// no modo de demonstração, só guarda o número.
+export async function linkWhatsApp(number: string) {
+  const n = z.string().regex(/^\+\d{12,13}$/).parse(number);
+  if (!isSupabaseConfigured()) {
+    const store = await getStore();
+    const { channels } = await store.getSettings();
+    await store.updateSettings({ channels: { ...channels, whatsapp: n } });
+    revalidatePath("/ajustes");
+    return null;
+  }
+  const user = await currentUser();
+  if (!user) throw new Error("Sessão expirada");
+  const result = await startLink(user.id, n);
+  revalidatePath("/ajustes");
+  return result;
 }
