@@ -1,3 +1,5 @@
+import { budgetAlert, budgetStatus } from "@/lib/domain/finance";
+import { categoryFromWords } from "./rule-parser";
 import type { DataStore } from "@/lib/data/store";
 import type { ActionCardData, Task, Transaction } from "@/lib/data/types";
 import { formatDayLabel, formatMoney, formatTime, localDate } from "@/lib/time";
@@ -79,9 +81,39 @@ export async function recordTransaction(
   const parts = [`${day[0].toUpperCase()}${day.slice(1)}`, category.name];
   if (t.paymentMethod) parts.push(PAYMENT_LABEL[t.paymentMethod]);
   const sign = t.type === "income" ? "+" : "−";
+  // F5: este gasto fez algum teto (da categoria ou da de cima) cruzar 80% ou 100%?
+  let alert: string | undefined;
+  if (t.type === "expense") {
+    const budgets = (await store.listBudgets()).filter((b) => b.categoryId === category.id || b.categoryId === category.parentId);
+    if (budgets.length) {
+      const all = await store.listTransactions();
+      for (const s of budgetStatus(all, categories, budgets, occurredOn.slice(0, 7))) {
+        const a = budgetAlert(s, t.amountCents);
+        if (a) { alert = a; await store.addNotice({ kind: "bill", title: s.level === "over" ? `Teto estourado: ${s.name}` : `Perto do teto: ${s.name}`, body: a, href: "/dinheiro" }); break; }
+      }
+    }
+  }
   return {
     actionId: action.id, kind: "transaction", title: t.description,
     value: `${sign}${formatMoney(t.amountCents)}`, valueTone: t.type === "income" ? "income" : "expense",
-    meta: parts.join(" · "), href: "/dinheiro/extrato", undone: false,
+    meta: parts.join(" · "), href: "/dinheiro/extrato", undone: false, ...(alert ? { alert } : {}),
+  };
+}
+
+// F5: define ou tira o teto do mês de uma categoria de gasto pelo nome ("Alimentação", "ifood", "padaria")
+export async function setBudgetByName(store: DataStore, categoryName: string, amountCents: number | null): Promise<{ ok: boolean; text: string }> {
+  const norm = (x: string) => x.normalize("NFD").replace(/\p{M}/gu, "").toLocaleLowerCase("pt-BR").trim();
+  const expense = (await store.listCategories()).filter((c) => c.kind === "expense");
+  const byWord = categoryFromWords(categoryName);
+  const cat = expense.find((c) => norm(c.name) === norm(categoryName)) ?? (byWord ? expense.find((c) => c.name === byWord) : undefined);
+  if (!cat) {
+    return { ok: false, text: `Não achei a categoria “${categoryName}”. As de gasto são: ${expense.filter((c) => !c.parentId).map((c) => c.name).join(", ")}.` };
+  }
+  await store.setBudget(cat.id, amountCents);
+  return {
+    ok: true,
+    text: amountCents === null
+      ? `Pronto, tirei o teto de ${cat.name}.`
+      : `Pronto: teto de ${formatMoney(amountCents)} por mês em ${cat.name}. Aviso quando passar de 80% e de 100%.`,
   };
 }

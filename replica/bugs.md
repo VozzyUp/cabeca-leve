@@ -14,6 +14,7 @@ Só entra aqui o que foi reproduzido. Cada correção tem um teste que falhava a
 | BUG-004 | S3 | mensagens duplicadas quando o tempo real recarrega no meio de um envio | corrigido |
 | BUG-003 | S3 | dias fora do mês no calendário sem contraste suficiente | corrigido |
 | BUG-006 | S3 | sessão vencida com a tela aberta: a pessoa fica presa vendo "Sessão expirada" | corrigido |
+| BUG-010 | S4 | mudar dois ajustes seguidos desfaz o primeiro na tela | corrigido |
 | BUG-005 | S4 | criar lembrete antes de a lista carregar diz "Escolha o dia e a hora" com tudo preenchido | corrigido |
 
 ### BUG-002: o login leva para um site de fora (redirecionamento aberto)
@@ -182,6 +183,23 @@ Atual: o recarregamento troca a lista pela do servidor. Some a mensagem provisó
 Evidência: retrato do F01-N1 (repetição 2), com o campo vazio e sem a mensagem "gastei 7 no chiclete" nem o aviso. A mesma chamada direto na API respondeu em 0,5 s com o aviso.
 Correção: `useResource` aceita um `combine`. A conversa mantém as mensagens só da tela (enviando, com erro ou aviso de limite). A provisória sai quando a gravada, com o mesmo `clientId`, chega do servidor.
 Status: corrigido em 5df5ca0
+
+### BUG-010: mudar dois ajustes seguidos desfaz o primeiro na tela
+
+- Severidade: S4 (o banco grava certo; só a tela mostra o valor antigo até recarregar)
+- Fluxo / caso: F19 / F19-H1
+- Tela: S30 (/ajustes/assistente)
+- Build: a1cc3ef. Navegador: Chromium, 1440 px, bateria completa
+
+Passos
+1. Escolher o tom "Divertido".
+2. Logo em seguida, escolher o tema "Claro".
+
+Esperado: os dois marcados.
+Atual: "Divertido" volta para o tom anterior na tela, porque cada mudança partia de uma cópia antiga dos ajustes. O teste também recarregava antes da segunda gravação, assim que aparecia o primeiro "Salvo".
+Evidência: F19-H1 falhou na bateria completa (`toBeChecked` em "Claro" depois de recarregar).
+Correção: o estado é atualizado a partir do mais novo, e reverter um erro volta só os campos daquela mudança. O teste agora confere os dois marcados na hora e espera as duas gravações no banco.
+Status: corrigido no commit das correções F5 a F7
 
 ## Para conferir (não reproduzido como falha visível)
 

@@ -5,12 +5,12 @@ import { z } from "zod";
 import type { DataStore } from "@/lib/data/store";
 import type { ActionCardData } from "@/lib/data/types";
 import { dayItems } from "@/lib/domain/day";
-import { financeSummary } from "@/lib/domain/finance";
+import { budgetStatus, financeSummary } from "@/lib/domain/finance";
 import { habitStats } from "@/lib/domain/habits";
 import { describeRepeat, toRRule } from "@/lib/domain/recurrence";
 import { formatDue } from "@/lib/support";
 import { formatMoney, localDate, zonedParts, zonedToUtc } from "@/lib/time";
-import { createHabit, createReminder, createTask, recordTransaction } from "./tools";
+import { createHabit, createReminder, createTask, recordTransaction, setBudgetByName } from "./tools";
 
 // Agente do assistente: Claude Opus 5.5 com o Tool Runner do SDK oficial.
 // - Prompt de sistema e ferramentas são iguais para todos e nunca mudam: ficam em cache.
@@ -252,12 +252,15 @@ function buildTools(store: DataStore, now: Date, cards: ActionCardData[], channe
       inputSchema: z.object({ month: z.string().regex(/^\d{4}-\d{2}$/).nullable().describe("AAAA-MM, ou null para o mês atual") }),
       run: async ({ month }) => {
         const m = month ?? today.slice(0, 7);
-        const [transactions, categories, accounts] = await Promise.all([store.listTransactions(), store.listCategories(), store.listAccounts()]);
+        const [transactions, categories, accounts, budgets] = await Promise.all([store.listTransactions(), store.listCategories(), store.listAccounts(), store.listBudgets()]);
         const s = financeSummary(transactions, categories, m, today);
         return json({
           month: m, income: formatMoney(s.incomeCents), expense: formatMoney(s.expenseCents), leftover: formatMoney(s.leftoverCents),
           daily_average: formatMoney(s.dailyAverageCents), balance: formatMoney(accounts.reduce((a, x) => a + x.balanceCents, 0)),
           by_category: s.byCategory.map((c) => ({ name: c.name, total: formatMoney(c.cents) })),
+          budgets: budgetStatus(transactions, categories, budgets, m).map((b) => ({
+            category: b.name, limit: formatMoney(b.limitCents), spent: formatMoney(b.spentCents), percent: Math.round(b.ratio * 100), status: b.level,
+          })),
           latest: transactions.filter((t) => t.occurredOn.startsWith(m)).slice(0, 15)
             .map((t) => ({ day: t.occurredOn, description: t.description, amount: formatMoney(t.amountCents), type: t.type })),
         });
@@ -371,6 +374,15 @@ function buildTools(store: DataStore, now: Date, cards: ActionCardData[], channe
         await store.createNote({ title: i.title, body: i.body, notebook: i.notebook, kind });
         return json({ ok: true });
       },
+    })),
+    strict(betaZodTool({
+      name: "set_budget",
+      description: "Define o teto de gastos do mês de uma categoria (vale para as subcategorias), ou tira o teto com amount null. Avisamos ao passar de 80% e 100%.",
+      inputSchema: z.object({
+        category: z.string().max(60).describe("Nome da categoria de gasto, ex.: Alimentação, Transporte"),
+        amount: z.number().positive().max(1_000_000).nullable().describe("Teto em reais por mês; null tira o teto"),
+      }),
+      run: async (i) => json(await setBudgetByName(store, i.category, i.amount === null ? null : Math.round(i.amount * 100))),
     })),
     strict(betaZodTool({
       name: "open_support_ticket",

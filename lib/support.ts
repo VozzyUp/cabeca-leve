@@ -35,7 +35,7 @@ export async function notifyOwner(t: { protocol: string; message: string; channe
   const jobs: Promise<unknown>[] = [];
   if (process.env.SUPPORT_EMAIL) jobs.push(sendEmail(process.env.SUPPORT_EMAIL, `[${BRAND.name}] Chamado ${t.protocol}`, text));
   const wa = whatsapp();
-  if (wa && process.env.SUPPORT_WHATSAPP) jobs.push(wa.sendText(process.env.SUPPORT_WHATSAPP, text));
+  if (wa && process.env.SUPPORT_WHATSAPP) jobs.push(wa.sendProactive(process.env.SUPPORT_WHATSAPP, { template: "aviso", params: [`novo chamado ${t.protocol}, prazo ${formatDue(t.dueAt)}`], text }, null));
   await Promise.allSettled(jobs);
 }
 
@@ -48,13 +48,15 @@ export async function answerTicket(ticketId: string, reply: string, by: string) 
   if (!t) return false;  // já respondido
   await db.from("notices").insert({ user_id: t.user_id, kind: "support", title: `Resposta do suporte (${t.protocol})`, body: reply, href: "/ajustes/suporte" });
   const [{ data: link }, { data: user }] = await Promise.all([
-    db.from("channel_links").select("external_id").eq("user_id", t.user_id).eq("channel", "whatsapp").not("verified_at", "is", null).maybeSingle(),
+    db.from("channel_links").select("external_id, last_inbound_at").eq("user_id", t.user_id).eq("channel", "whatsapp").not("verified_at", "is", null).maybeSingle(),
     db.auth.admin.getUserById(t.user_id),
   ]);
   const text = `Resposta do suporte do ${BRAND.name} (protocolo ${t.protocol}):\n\n${reply}`;
   const wa = whatsapp();
   await Promise.allSettled([
-    wa && link?.external_id ? wa.sendText(link.external_id, text) : Promise.resolve(),
+    wa && link?.external_id
+      ? wa.sendProactive(link.external_id, { template: "aviso", params: [`resposta do suporte ao chamado ${t.protocol}: ${reply}`], text }, link.last_inbound_at ? new Date(link.last_inbound_at) : null)
+      : Promise.resolve(),
     sendEmail(user.user?.email ?? "", `${BRAND.name}: resposta ao chamado ${t.protocol}`, text),
   ]);
   return true;

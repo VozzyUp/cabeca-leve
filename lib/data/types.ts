@@ -38,6 +38,8 @@ export type HabitLog = { habitId: string; day: string };
 
 export type Category = { id: string; name: string; kind: "expense" | "income"; parentId?: string | null };
 export type Account = { id: string; name: string; openingBalanceCents: number };
+// Teto de gastos do mês numa categoria (vale para as subcategorias dela)
+export type Budget = { categoryId: string; amountCents: number };
 
 export type Transaction = {
   id: string;
@@ -64,6 +66,7 @@ export type ActionCardData = {
   meta: string;
   href: string;
   undone: boolean;
+  alert?: string;  // ex.: teto da categoria passou de 80% com este gasto
 };
 
 export type ChatMessage = {

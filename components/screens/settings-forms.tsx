@@ -2,10 +2,11 @@
 import { Download, Play, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { deleteAccount, exportData, linkWhatsApp as startWhatsAppLink, updateSettings } from "@/app/actions";
+import { deleteAccount, exportData, linkWhatsApp as startWhatsAppLink, testNotice, updateSettings } from "@/app/actions";
 import { signOut } from "@/app/auth-actions";
 import { pushSupported, subscribePush, unsubscribePush } from "@/lib/push-client";
 import { Button } from "@/components/ui/button";
+import { WHATSAPP_PROMISE } from "@/lib/whatsapp/promise";
 import { Card, SectionLabel } from "@/components/ui/card";
 import { cn } from "@/components/ui/cn";
 import { Field } from "@/components/ui/field";
@@ -18,12 +19,14 @@ function useSaver(initial: Settings) {
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [, start] = useTransition();
   function save(patch: Partial<Settings>) {
-    const before = settings;
-    setSettings({ ...settings, ...patch });
+    // mudanças seguidas (tom e logo depois tema) partem do estado mais novo, não de uma cópia antiga
+    const keys = Object.keys(patch) as Array<keyof Settings>;
+    const before = Object.fromEntries(keys.map((k) => [k, settings[k]])) as Partial<Settings>;
+    setSettings((s) => ({ ...s, ...patch }));
     setStatus("saving");
     start(async () => {
       try { await updateSettings(patch); setStatus("saved"); }
-      catch { setSettings(before); setStatus("error"); }
+      catch { setSettings((s) => ({ ...s, ...before })); setStatus("error"); }
     });
   }
   return { settings, save, status };
@@ -122,7 +125,7 @@ export function SettingsForm({ initial, canSignOut }: { initial: Settings; canSi
           <div className="flex items-end gap-3">
             <Field label="WhatsApp" type="tel" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="11 99999-0000"
               error={phoneError ?? undefined} className="flex-1"
-              hint={!channels.whatsapp ? "Mande e receba tudo pelo WhatsApp"
+              hint={!channels.whatsapp ? `Mande e receba tudo pelo WhatsApp. ${WHATSAPP_PROMISE}`
                 : channels.whatsappVerified === false ? `Aguardando confirmação: ${channels.whatsapp}` : `Vinculado: ${channels.whatsapp}`} />
             <Button type="submit" variant="secondary" className="mb-6" loading={linking}>{channels.whatsapp ? "Trocar" : "Vincular"}</Button>
           </div>
@@ -150,6 +153,7 @@ export function SettingsForm({ initial, canSignOut }: { initial: Settings; canSi
           }} />
         </Row>
         {pushNote && <p role="alert" className="pb-2 text-xs text-danger">{pushNote}</p>}
+        {canSignOut && <TestNotice />}
         <Row title="E-mail" hint="resumos e recibos">
           <Switch label="E-mail" checked={channels.email} onChange={(v) => save({ channels: { ...channels, email: v } })} />
         </Row>
@@ -252,6 +256,46 @@ export function AssistantForm({ initial }: { initial: Settings }) {
         <Segmented label="Tema" value={settings.theme} onChange={(theme) => save({ theme })}
           options={[{ value: "dark", label: "Escuro" }, { value: "light", label: "Claro" }, { value: "system", label: "Do aparelho" }]} />
       </Card>
+    </div>
+  );
+}
+
+const PUSH_TEXT = {
+  sent: (n: number) => `Notificação enviada para ${n} aparelho${n === 1 ? "" : "s"}. Se não apareceu, confira se o navegador ou o celular está silenciando o site.`,
+  "no-device": () => "Nenhum aparelho com notificação ligada. Ligue acima neste aparelho.",
+  off: () => "Notificações no aparelho estão desligadas.",
+  "not-configured": () => "Notificações no aparelho ainda não estão ligadas neste app.",
+} as const;
+const WA_TEXT = {
+  sent: (n: string | null) => `Mensagem enviada para ${n} no WhatsApp.`,
+  "not-linked": () => "WhatsApp não vinculado: vincule acima para receber os lembretes por lá também.",
+  error: () => "Não deu para mandar pelo WhatsApp agora. Tente de novo em instantes.",
+  "not-configured": () => "WhatsApp ainda não está ligado neste app.",
+} as const;
+
+// F6: descobrir hoje, e não na hora do remédio, que um canal não está chegando
+function TestNotice() {
+  const [result, setResult] = useState<Awaited<ReturnType<typeof testNotice>> | null>(null);
+  const [error, setError] = useState(false);
+  const [pending, start] = useTransition();
+  return (
+    <div className="flex flex-col gap-2 border-b border-border py-3">
+      <div className="flex items-center justify-between gap-3">
+        <span className="flex flex-col"><span className="text-sm text-text">Testar aviso agora</span>
+          <span className="text-xs text-muted">manda um aviso de teste em cada canal ligado</span></span>
+        <Button variant="secondary" size="sm" loading={pending} onClick={() => start(async () => {
+          setError(false);
+          try { setResult(await testNotice()); } catch { setError(true); }
+        })}>Testar</Button>
+      </div>
+      {error && <p role="alert" className="text-xs text-danger">Não deu para testar agora. Tente de novo.</p>}
+      {result && (
+        <ul role="status" className="flex flex-col gap-1 text-xs text-body">
+          <li><span className="font-medium text-text">Aparelho:</span> {PUSH_TEXT[result.push](result.devices)}</li>
+          <li><span className="font-medium text-text">WhatsApp:</span> {WA_TEXT[result.whatsapp](result.number)}</li>
+          <li><span className="font-medium text-text">No app:</span> está em Avisos.</li>
+        </ul>
+      )}
     </div>
   );
 }

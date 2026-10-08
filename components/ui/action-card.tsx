@@ -10,6 +10,7 @@ type ActionCardProps = {
   value?: ReactNode;       // horário ou valor, em destaque
   valueTone?: "neutral" | "income" | "expense";
   meta?: string;           // linha de detalhes: data, categoria, meio de pagamento
+  alert?: string;          // aviso (teto da categoria perto ou estourado)
   state?: ActionCardState;
   openLabel?: string;      // "Ver nos lembretes"
   onOpen?: () => void;
@@ -20,7 +21,7 @@ const tones = { neutral: "text-text", income: "text-income", expense: "text-expe
 
 // Card que o assistente devolve no chat para cada item que criou ou mudou
 export function ActionCard({
-  kind, title, value, valueTone = "neutral", meta, state = "created", openLabel, onOpen, onUndo,
+  kind, title, value, valueTone = "neutral", meta, alert, state = "created", openLabel, onOpen, onUndo,
 }: ActionCardProps) {
   const status =
     state === "created" ? `${kind} salvo` : state === "undone" ? `${kind} desfeito` : `Não deu para salvar`;
@@ -40,6 +41,7 @@ export function ActionCard({
       <p className={cn("mt-2 text-sm font-medium text-text", state === "undone" && "line-through")}>{title}</p>
       {value != null && <p className={cn("mt-1 text-metric", tones[valueTone])}>{value}</p>}
       {meta && <p className="mt-1 text-xs text-muted">{meta}</p>}
+      {alert && state === "created" && <p className="mt-2 rounded-sm bg-surface-2 px-2 py-1.5 text-xs font-medium text-warning">{alert}</p>}
       {state === "created" && (onUndo || onOpen) && (
         <footer className="mt-3 flex items-center justify-between border-t border-border pt-3">
           {onUndo ? (

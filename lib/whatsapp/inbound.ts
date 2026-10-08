@@ -11,7 +11,7 @@ const KIND: Record<ActionCardData["kind"], string> = { reminder: "Lembrete", tra
 
 // No WhatsApp não há card: a resposta leva uma linha por item salvo
 export function formatReply(text: string, cards: ActionCardData[]) {
-  const lines = cards.map((c) => `✅ ${KIND[c.kind]}: ${c.title} · ${c.value}${c.meta ? ` · ${c.meta}` : ""}`);
+  const lines = cards.flatMap((c) => [`✅ ${KIND[c.kind]}: ${c.title} · ${c.value}${c.meta ? ` · ${c.meta}` : ""}`, ...(c.alert ? [`⚠️ ${c.alert}`] : [])]);
   return [text, ...(lines.length ? ["", ...lines] : [])].join("\n");
 }
 

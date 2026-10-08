@@ -99,7 +99,7 @@ Transferência entre contas e ajuste de saldo fora de gasto e receita,finanças,
 Importar fatura ou comprovante por foto sem duplicar,finanças,could,yes,no,site [conferir]
 Análises de vários meses,finanças,could,yes,yes,"S23: médias de 5 meses, entrou × saiu por mês e categorias contra a média"
 Valores a receber de terceiros,finanças,could,yes,no,site [conferir]
-Teto de gastos por categoria,finanças,should,yes,no,fixes.md F5: teto ruim no original (Néctar 4 avaliações de finanças em 2 fontes)
+Teto de gastos por categoria,finanças,should,yes,yes,"F5: tela em Dinheiro (barra, quanto falta), pela conversa ('teto de 500 em alimentação', apelidos como ifood), aviso no card, no WhatsApp e em Avisos ao cruzar 80% e 100%; soma inclui subcategorias (correcoes.spec.ts F5-*)"
 Metas financeiras com aportes e previsão de conclusão,metas,should,yes,yes,"S25: registrar aporte, quanto falta por mês até o prazo"
 Metas ligadas a hábitos ou projetos que avançam sozinhas,metas,should,yes,no,site [conferir]
 Ritmo da meta (no ritmo atrás à frente) e pausar,metas,could,yes,partial,"à frente, no ritmo ou atrás pelo tempo decorrido; pausar depois"
@@ -145,6 +145,6 @@ Cancelar com comprovante e conferência de cobrança depois do cancelamento,cont
 Pagamento em confirmação sem bloquear o acesso (nunca 'assinatura inválida'),conta e assinatura,should,no,yes,"F2: volta do checkout libera 2 h; tela de obrigado acompanha ao vivo; sem 'assinatura inválida' (F15-E4, F15-N5)"
 Falar com uma pessoa: suporte humano com protocolo e prazo,conta e assinatura,should,no,yes,"F3: chamado com protocolo e prazo pela tela, pela conversa e pelo WhatsApp; time avisado; painel /suporte/painel responde (F3-H1, F3-E1, F3-N1)"
 "Bateria de testes do assistente com pedidos reais (finanças, busca, lembretes)",assistente,must,no,no,fixes.md F4: falhas e erros (Néctar 7 em 2 fontes) | /replica-test
-Testar aviso agora (push e WhatsApp) e reserva pelo WhatsApp quando o push falha,lembretes,should,no,no,"fixes.md F6: lembretes não chegam (Néctar 2, fino)"
-Nunca pedir acesso ao WhatsApp da pessoa e dizer isso no cadastro,privacidade,should,no,no,"fixes.md F7: banimento e golpes na categoria (Zapia 5+4, fino: 1 fonte)"
-Migrar o número do assistente para a API oficial da Meta (modelos aprovados),whatsapp,should,no,no,fixes.md F7: risco de bloqueio da UAZAPI; ver backend.md
+Testar aviso agora (push e WhatsApp) e reserva pelo WhatsApp quando o push falha,lembretes,should,no,yes,"F6: botão Testar em Ajustes, resultado por canal (aparelho, WhatsApp, app) (F6-H1, F6-E1)"
+Nunca pedir acesso ao WhatsApp da pessoa e dizer isso no cadastro,privacidade,should,no,yes,"F7: promessa no cadastro, nos Ajustes e nas dúvidas dos planos (F7-H1); o assistente não tem ferramenta para escrever a terceiros"
+Migrar o número do assistente para a API oficial da Meta (modelos aprovados),whatsapp,should,no,partial,envio por modelo aprovado fora da janela de 24 h pronto e testado (provider.test.ts); falta criar os modelos na Meta e ligar WHATSAPP_PROVIDER=meta

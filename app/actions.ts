@@ -8,6 +8,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { currentUser } from "@/lib/supabase/server";
 import { startLink } from "@/lib/whatsapp/link";
 import { answerTicket, isSupportAdmin } from "@/lib/support";
+import { sendTestNotice } from "@/lib/deliveries";
 import type { Settings } from "@/lib/data/types";
 
 // Ações de servidor das telas do M3 e M4. Cada uma valida a entrada, grava pelo DataStore
@@ -222,4 +223,11 @@ export async function answerSupport(ticketId: string, reply: string) {
   const ok = await answerTicket(uuid.parse(ticketId), z.string().trim().min(1).max(4000).parse(reply), user.email!);
   revalidatePath("/suporte/painel");
   return ok;
+}
+
+// F6: testar os avisos agora (push e WhatsApp), com o resultado de cada canal
+export async function testNotice() {
+  const user = await currentUser();
+  if (!user) throw new Error("Sessão expirada");
+  return sendTestNotice(user.id);
 }

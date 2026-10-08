@@ -7,6 +7,7 @@ import type { DataStore } from "./store";
 import type {
   ActionCardData, ActionRecord, BodyMeasurement, CalendarEvent, ChatMessage, Note, Reminder, Settings, Task, Transaction,
   SupportTicket,
+  Budget,
 } from "./types";
 
 // DataStore sobre o Supabase. Usa o cliente de serviço e filtra TODA consulta por user_id:
@@ -415,6 +416,25 @@ export async function createSupabaseStore(db: Admin, userId: string, email: stri
     },
     async setAutomationActive(id, active) {
       return must(await db.from("automations").update({ active }).eq("id", id).eq("user_id", userId).select("id")).length > 0;
+    },
+    async addNotice(n) {
+      must(await db.from("notices").insert({ user_id: userId, kind: n.kind, title: n.title.slice(0, 120), body: n.body, href: n.href }));
+    },
+    async listBudgets() {
+      const rows = must(await db.from("budgets").select("category_id, amount_cents").eq("user_id", userId).eq("period", "monthly"));
+      return rows.map((b): Budget => ({ categoryId: b.category_id, amountCents: b.amount_cents }));
+    },
+    async setBudget(categoryId, amountCents) {
+      // a categoria precisa ser desta pessoa e de gasto (a FK composta também barra outra conta)
+      if (!/^[0-9a-f-]{36}$/i.test(categoryId)) return false;
+      const cat = must(await db.from("categories").select("id").eq("id", categoryId).eq("user_id", userId).eq("kind", "expense").is("archived_at", null).maybeSingle() as Result<{ id: string } | null>);
+      if (!cat) return false;
+      if (amountCents === null) {
+        must(await db.from("budgets").delete().eq("user_id", userId).eq("category_id", categoryId));
+        return true;
+      }
+      must(await db.from("budgets").upsert({ user_id: userId, category_id: categoryId, amount_cents: amountCents, period: "monthly" }, { onConflict: "category_id,period" }));
+      return true;
     },
     async listNotices() {
       const rows = must(await db.from("notices").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(100));

@@ -2,6 +2,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { requestPasswordReset, signIn, signUp, updatePassword } from "@/app/auth-actions";
+import { WHATSAPP_PROMISE } from "@/lib/whatsapp/promise";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Field } from "@/components/ui/field";
@@ -76,7 +77,7 @@ export function SignIn({ initialMode, notice, demo, next, plan }: {
           {mode === "signup" && <Field label="Seu nome" autoComplete="given-name" value={form.name} onChange={change("name")} error={errors.name} />}
           {mode !== "newPassword" && (
             <Field label="E-mail" type="email" autoComplete="email" value={form.email} onChange={change("email")} error={errors.email}
-              hint={mode === "signup" ? "Use o mesmo e-mail do pagamento." : undefined} />
+              hint={mode === "signup" ? "Para entrar e receber comprovantes." : undefined} />
           )}
           {mode !== "reset" && (
             <Field label={mode === "newPassword" ? "Senha nova" : "Senha"} type="password" autoComplete={mode === "signin" ? "current-password" : "new-password"}
@@ -84,6 +85,7 @@ export function SignIn({ initialMode, notice, demo, next, plan }: {
           )}
           {serverError && <p role="alert" className="text-sm text-danger">{serverError}</p>}
           <Button type="submit" size="lg" loading={pending}>{SUBMIT[mode]}</Button>
+          {mode === "signup" && <p className="text-xs text-muted">{WHATSAPP_PROMISE}</p>}
           {mode === "signin" && <button type="button" onClick={() => go("reset")} className="text-sm font-medium text-accent hover:underline">Esqueci a senha</button>}
           {mode === "reset" && <button type="button" onClick={() => go("signin")} className="text-sm font-medium text-accent hover:underline">Lembrei a senha</button>}
         </form>

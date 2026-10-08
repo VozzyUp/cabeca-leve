@@ -66,7 +66,18 @@ node scripts/musts-check.cjs replica/clone-screens  # repetição, edição, cat
 
 ## Pendências e riscos
 
-- **UAZAPI não é a API oficial do WhatsApp.** O número pode ser bloqueado pelo WhatsApp, sobretudo com muitas mensagens proativas (lembretes, resumos). Use um número dedicado. Para migrar: preencher as variáveis `META_*`, mudar `WHATSAPP_PROVIDER=meta` e apontar o webhook da Meta para `/api/webhooks/whatsapp`. Na Meta, mensagens fora da janela de 24 h exigem **modelos aprovados** (lembrete, resumo, aviso): o envio por modelo ainda não está implementado e é o próximo passo dessa migração.
+- **UAZAPI não é a API oficial do WhatsApp.** O número pode ser bloqueado pelo WhatsApp, sobretudo com muitas mensagens proativas (lembretes, resumos). Use um número dedicado.
+  - **Para migrar:** preencher as variáveis `META_*`, mudar `WHATSAPP_PROVIDER=meta` e apontar o webhook da Meta para `/api/webhooks/whatsapp`.
+  - **O envio por modelo já está pronto.** Dentro de 24 h desde a última mensagem da pessoa, sai texto livre; fora disso, sai o modelo aprovado. O teste fica em `lib/whatsapp/provider.test.ts`.
+  - **Falta você criar os três modelos** na categoria "Utilidade", em pt_BR, e pôr os nomes nas variáveis `META_TEMPLATE_*`. Textos sugeridos:
+
+    | variável | variáveis do modelo | texto sugerido |
+    | --- | --- | --- |
+    | `META_TEMPLATE_LEMBRETE` | {{1}} o que lembrar, {{2}} horário | "Olá! Seu lembrete do Cabeça Leve: {{1}}, às {{2}}. Responda por aqui se quiser adiar ou marcar como feito." |
+    | `META_TEMPLATE_RESUMO` | {{1}} resumo do dia numa linha | "Bom dia! Seu dia no Cabeça Leve: {{1}} Responda por aqui para ver os detalhes." |
+    | `META_TEMPLATE_AVISO` | {{1}} o aviso | "Aviso do Cabeça Leve: {{1}}. Responda por aqui se precisar de algo." |
+
+  - Sem o modelo configurado, a entrega fica marcada como falha em `scheduled_deliveries`. O push e o aviso no app continuam.
 - **Agendas (Google e Outlook):** a tela está pronta e desconectar funciona; conectar exige criar os apps OAuth e passar pela verificação do Google (semanas). Não implementado.
 - **Revisões agendadas (S27):** a lista e o pausar funcionam; gerar a revisão com o Claude no horário ainda não.
 - **Streaming da resposta:** o agente responde de uma vez (alguns segundos); mostrar o texto chegando aos poucos fica para depois.

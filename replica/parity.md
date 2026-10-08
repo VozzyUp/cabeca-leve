@@ -8,8 +8,8 @@ Rodada de 2026-10-08, depois do /replica-test (commit 000a3e2).
 | --- | --- |
 | obrigatórias (must) | **40 de 40** |
 | bugs S1 ou S2 abertos | **nenhum** (9 achados no /replica-test, todos corrigidos) |
-| pontuação de funções | **64,5** (precisa de 80 para "pronto para vender") |
-| correções do /replica-entrepreneur | 1 de 7 (F4, a bateria de testes) |
+| pontuação de funções | **65,2** (precisa de 80 para "pronto para vender") |
+| correções do /replica-entrepreneur | **7 de 7** (do F7, falta ligar a Meta, que depende de você) |
 
 Para chegar a 80 faltam cerca de 41 pontos de peso, o equivalente a umas 21 funções "should" completas. Com todas as "should" prontas, a nota vai a 86,3.
 
@@ -36,6 +36,8 @@ Para chegar a 80 faltam cerca de 41 pontos de peso, o equivalente a umas 21 fun�
 
 ## Os 5 próximos a construir
 
+**Atualização:** o item 1 (F1 a F3) e o teto de gastos do item 3 já estão feitos. Seguem: avisos proativos, a lista "a resolver" e a transferência entre contas, foto no chat e no WhatsApp, e memória.
+
 Ordem: o que vende (correções das avaliações) primeiro, depois o que mais sobe a nota por esforço.
 
 1. **F1 a F3 do `fixes.md`: cancelar com comprovante, pagamento em confirmação e falar com uma pessoa.** Não entram na nota, porque o original não tem, mas são o posicionamento recomendado e o que torna o clone "melhor que o original". Tamanho: S + S + M.
@@ -48,9 +50,9 @@ Com os itens 2 a 5, a nota vai a cerca de 72. Os 8 pontos que faltam para 80 sae
 
 ---
 
-## Parity: 64.5 / 100
+## Parity: 65.2 / 100
 
-features 64.5  (136 counted, must-haves 40 of 40 done)
+features 65.2  (136 counted, must-haves 40 of 40 done)
 
 ## By area, weakest first
 - telegram                       0.0  (1 features)
@@ -64,10 +66,10 @@ features 64.5  (136 counted, must-haves 40 of 40 done)
 - metas                         50.0  (3 features)
 - saúde                         56.2  (8 features)
 - notificações                  62.5  (4 features)
-- finanças                      63.9  (17 features)
 - tarefas                       64.3  (6 features)
 - privacidade                   66.7  (4 features)
 - hábitos                       67.6  (8 features)
+- finanças                      69.4  (17 features)
 - lembretes                     72.7  (5 features)
 - personalização                75.0  (2 features)
 - assistente                    79.8  (17 features)
@@ -88,7 +90,6 @@ features 64.5  (136 counted, must-haves 40 of 40 done)
 - [should] conhecimento: Busca por sentido nas notas e conversas, no  (exclusão: índices de busca semântica)
 - [should] finanças: Lista 'a resolver' com contas atrasadas e próximas e botão confirmar, no  (S18)
 - [should] finanças: Previsão do mês (realizado mais previsto) e projeção do saldo, no  (S18)
-- [should] finanças: Teto de gastos por categoria, no  (fixes.md F5: teto ruim no original (Néctar 4 avaliações de finanças em 2 fontes))
 - [should] finanças: Transferência entre contas e ajuste de saldo fora de gasto e receita, no  (site [conferir])
 - [should] hábitos: Cobrança quando o hábito passa do horário, no  (App Store 3.0: avisos proativos)
 - [should] hábitos: Meta por tempo quantidade ou ação simples, no  (site [conferir])

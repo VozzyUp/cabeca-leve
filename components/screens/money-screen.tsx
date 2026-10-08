@@ -9,6 +9,7 @@ import { LoadError, PageHeader } from "@/components/ui/load-error";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api";
 import { useResource } from "@/lib/hooks";
+import { BudgetsCard } from "./budgets-card";
 import { FinanceNav } from "./finance-nav";
 import { capitalizeFirst, formatMoney } from "@/lib/time";
 
@@ -56,6 +57,8 @@ export function MoneyScreen() {
           <Metric label="Saldo em conta" value={formatMoney(data.balanceCents)} hint="hoje" />
         </Card>
       )}
+
+      {data && <BudgetsCard budgets={data.budgets} categories={data.expenseCategories} onChange={reload} />}
 
       {data && data.byCategory.length === 0 && (
         <EmptyState icon={<Wallet className="size-8" />} title="Nenhum gasto neste mês"

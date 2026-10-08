@@ -3,8 +3,8 @@ import type { ActionCardData, ChatMessage } from "@/lib/data/types";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { agentEnabled, runAgent } from "./agent";
 import { formatDue } from "@/lib/support";
-import { parseMessage, wantsHuman } from "./rule-parser";
-import { createHabit, createReminder, createTask, recordTransaction } from "./tools";
+import { parseBudget, parseMessage, wantsHuman } from "./rule-parser";
+import { createHabit, createReminder, createTask, recordTransaction, setBudgetByName } from "./tools";
 
 export type AssistantReply = { text: string; cards: ActionCardData[] };
 
@@ -12,6 +12,8 @@ export type AssistantReply = { text: string; cards: ActionCardData[] };
 // O agente de verdade (agent.ts) usa as mesmas ferramentas (tools.ts).
 export async function handleMessage(store: DataStore, text: string, now = new Date(), channel: "web" | "whatsapp" | "voice" = "web"): Promise<AssistantReply> {
   if (wantsHuman(text)) return { cards: [], text: await callHuman(store, text, channel) };
+  const budget = parseBudget(text);
+  if (budget) return { cards: [], text: (await setBudgetByName(store, budget.categoryName, budget.amountCents)).text };
   const intents = parseMessage(text, now, store.timezone());
   if (intents.length === 0) {
     return {

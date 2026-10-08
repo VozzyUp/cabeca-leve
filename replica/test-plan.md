@@ -139,6 +139,19 @@ Coluna "auto":
 | F3-N1 | negativo: segurança | conta comum abre /suporte/painel | página não encontrada | e2e | passou |
 | F3-U1 | unidade | jeitos de pedir uma pessoa, e frases parecidas que não são pedido | reconhece só os pedidos | unid | passou |
 
+## Correções F5 a F7
+
+| caso | tipo | passos | esperado | auto | resultado |
+| --- | --- | --- | --- | --- | --- |
+| F5-H1 | feliz | teto de 100 em Alimentação pela tela → gastos de 85, 20 e 5 pela conversa | aviso no card ao cruzar 80% e ao passar de 100%, uma vez cada; Avisos; barra com 110% e "passou R$ 10,00"; tirar o teto | e2e | passou |
+| F5-H2 | feliz | "teto de 300 no transporte", "teto de 400 no ifood", categoria inexistente | grava 300 em Transporte e 400 em Alimentação; explica quando não acha | e2e | passou |
+| F5-N1 | negativo: segurança | teto em categoria de entrada, de outra conta ou com valor negativo | 404, 404, 400 | e2e | passou |
+| F5-U1 | unidade | soma com subcategorias, só do mês e só gastos; níveis; aviso só ao cruzar | correto | unid | passou |
+| F6-H1 | feliz | Ajustes → Testar, com WhatsApp vinculado | resultado por canal; mensagem no WhatsApp; aviso em Avisos | e2e | passou |
+| F6-E1 | borda | Testar sem WhatsApp | explica como vincular | e2e | passou |
+| F7-H1 | feliz | cadastro, planos (dúvidas) e Ajustes | a promessa sobre o WhatsApp aparece nos três | e2e | passou |
+| F7-U1 | unidade | Meta: mensagem que a pessoa não pediu, dentro e fora da janela de 24 h | texto livre dentro; modelo aprovado fora, com variáveis numa linha; erro claro sem modelo | unid | passou |
+
 ## F18 Excluir · F19 Personalizar
 
 | caso | tipo | passos | esperado | auto | resultado |

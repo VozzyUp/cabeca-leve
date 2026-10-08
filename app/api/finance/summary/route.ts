@@ -1,5 +1,5 @@
 import { getStore } from "@/lib/data";
-import { financeSummary } from "@/lib/domain/finance";
+import { budgetStatus, financeSummary } from "@/lib/domain/finance";
 import { localDate } from "@/lib/time";
 
 // GET /api/finance/summary?month=AAAA-MM (padrão: mês atual)
@@ -8,9 +8,11 @@ export async function GET(request: Request) {
   const today = localDate(new Date(), store.timezone());
   const month = new URL(request.url).searchParams.get("month") ?? today.slice(0, 7);
   if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) return Response.json({ error: "Mês inválido" }, { status: 400 });
-  const [transactions, categories, accounts] = await Promise.all([store.listTransactions(), store.listCategories(), store.listAccounts()]);
+  const [transactions, categories, accounts, budgets] = await Promise.all([store.listTransactions(), store.listCategories(), store.listAccounts(), store.listBudgets()]);
   return Response.json({
     ...financeSummary(transactions, categories, month, today),
+    budgets: budgetStatus(transactions, categories, budgets, month),
+    expenseCategories: categories.filter((c) => c.kind === "expense").map((c) => ({ id: c.id, name: c.name, parentId: c.parentId ?? null })),
     balanceCents: accounts.reduce((s, a) => s + a.balanceCents, 0),
     today,
   });

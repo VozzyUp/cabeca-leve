@@ -1,7 +1,7 @@
 import type {
   Account, ActionRecord, Automation, BodyMeasurement, CalendarEvent, Category, ChatMessage, CreditCard, FocusSession, Goal,
   Habit, HabitLog, InstallmentPurchase, Meal, MealLog, Note, Notice, Project, Recurrence, Reminder, Settings, Task,
-  SupportTicket, Transaction, Workout, WorkoutLog,
+  Budget, SupportTicket, Transaction, Workout, WorkoutLog,
 } from "./types";
 
 // Mensagem a gravar. `content` são os blocos exatos da API (reenviados byte a byte ao modelo);
@@ -78,6 +78,10 @@ export interface DataStore {
   listAutomations(): Promise<Automation[]>;
   setAutomationActive(id: string, active: boolean): Promise<boolean>;
   listNotices(): Promise<Notice[]>;
+  addNotice(n: { kind: Notice["kind"]; title: string; body: string; href: string | null }): Promise<void>;
+  // tetos de gastos (F5): null tira o teto
+  listBudgets(): Promise<Budget[]>;
+  setBudget(categoryId: string, amountCents: number | null): Promise<boolean>;
   markNoticesRead(ids: string[] | "all"): Promise<void>;
   listEvents(): Promise<CalendarEvent[]>;
   listFocusSessions(): Promise<FocusSession[]>;

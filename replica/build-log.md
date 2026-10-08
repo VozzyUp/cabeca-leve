@@ -125,3 +125,16 @@ Paridade 63,2/100; **40 de 40 obrigatórias completas**.
   - o agente ganhou a ferramenta `open_support_ticket` e nunca finge ser o suporte.
 - Migração `20261008000700_confianca.sql`. `npm run db:types` agora só troca o arquivo de tipos se a geração der certo: um reinício do ambiente tinha zerado o arquivo.
 - Testes: `e2e/confianca.spec.ts` (6) e um teste de unidade dos pedidos por uma pessoa. Bateria completa: 54 de ponta a ponta, 25 de integração e 47 de unidade.
+
+## 2026-10-08: F5 a F7 do fixes.md
+
+- **F5, teto de gastos:**
+  - card "Tetos do mês" em Dinheiro, com barra acessível, quanto foi e quanto falta;
+  - definir pela tela ou pela conversa ("teto de 500 em alimentação", "teto de 400 no ifood"), e o agente ganhou `set_budget`;
+  - o gasto que cruza 80% ou 100% avisa no card, no WhatsApp e em Avisos, uma vez cada;
+  - a soma inclui as subcategorias e vem sempre do banco.
+- **F6, testar aviso:** botão Testar em Ajustes, que mostra o resultado no aparelho, no WhatsApp e no app.
+- **F7, seu WhatsApp fica intacto:**
+  - a promessa aparece no cadastro, nos Ajustes e nas dúvidas dos planos;
+  - na Meta, as mensagens que a pessoa não pediu (lembrete, resumo, aviso, resposta do suporte) saem por modelo aprovado fora da janela de 24 h e por texto livre dentro dela.
+- Paridade 65,2, com as 7 correções feitas. Do F7, falta só criar os modelos na Meta.

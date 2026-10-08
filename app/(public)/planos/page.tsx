@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/components/ui/cn";
 import { startCheckout } from "@/app/actions";
+import { WHATSAPP_PROMISE } from "@/lib/whatsapp/promise";
 import { PLANS, TRIAL_DAYS, yearlySaving } from "@/lib/plans";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { currentUser } from "@/lib/supabase/server";
@@ -16,8 +17,10 @@ const INCLUDED = [
   "Sem limite de mensagens",
 ];
 const FAQ = [
-  ["Posso cancelar quando quiser?", "Pode, em Ajustes, com um toque. O acesso continua até o fim do período já pago."],
+  ["Posso cancelar quando quiser?", "Pode, em Ajustes, com um toque. Você recebe um comprovante com protocolo, nenhuma cobrança nova é feita e o acesso continua até o fim do período já pago."],
   ["Preciso instalar alguma coisa?", "Não. Funciona no navegador do celular e do computador, e pelo WhatsApp."],
+  ["Vocês acessam o meu WhatsApp?", WHATSAPP_PROMISE],
+  ["E se eu precisar de ajuda?", "Em Ajustes ou na conversa, peça para falar com uma pessoa: o chamado tem protocolo e alguém do time responde em até 1 dia útil."],
   ["Meus dados ficam com quem?", "Só com você. Dá para baixar tudo ou excluir a conta a qualquer momento, em Ajustes."],
 ];
 

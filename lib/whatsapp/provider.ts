@@ -12,12 +12,25 @@ export type Inbound = {
   at: Date;
 };
 
+export type Proactive = {
+  template: "lembrete" | "resumo" | "aviso";
+  params: string[];  // variáveis do modelo, na ordem ({{1}}, {{2}}…), cada uma numa linha só
+  text: string;      // o mesmo conteúdo em texto livre, para dentro da janela e para a UAZAPI
+};
+
+// Nomes dos modelos aprovados no Gerenciador do WhatsApp (textos sugeridos em replica/backend.md)
+const TEMPLATE_ENV = { lembrete: "META_TEMPLATE_LEMBRETE", resumo: "META_TEMPLATE_RESUMO", aviso: "META_TEMPLATE_AVISO" } as const;
+const WINDOW_MS = 24 * 3_600_000;
+
 export interface WhatsAppProvider {
   name: "uazapi" | "meta";
   // confere se o pedido veio mesmo do provedor (segredo, token ou assinatura)
   verifyWebhook(req: { url: string; headers: Headers; rawBody: string }): boolean;
   parseWebhook(body: unknown): Inbound[];
   sendText(to: string, text: string): Promise<void>;
+  // mensagem que a pessoa não pediu agora (lembrete, resumo, aviso). Na Meta, fora da janela de
+  // 24 h desde a última mensagem dela, só sai por modelo aprovado; dentro da janela, texto livre.
+  sendProactive(to: string, msg: Proactive, lastInboundAt: Date | null): Promise<void>;
   downloadAudio(ref: string): Promise<{ data: ArrayBuffer; mimeType: string }>;
 }
 
@@ -65,6 +78,9 @@ function uazapi(): WhatsAppProvider {
     async sendText(to, text) {
       await ok(await fetch(`${base}/send/text`, { method: "POST", headers, body: JSON.stringify({ number: digitsOnly(to), text, linkPreview: false }) }), "uazapi send/text");
     },
+    async sendProactive(to, msg) {
+      await this.sendText(to, msg.text);  // a UAZAPI não tem janela nem modelos
+    },
     async downloadAudio(ref) {
       const res = await ok(await fetch(`${base}/message/download`, { method: "POST", headers, body: JSON.stringify({ id: ref, generate_mp3: true }) }), "uazapi download");
       const { fileURL, mimetype } = (await res.json()) as { fileURL: string; mimetype?: string };
@@ -79,7 +95,7 @@ function meta(): WhatsAppProvider {
   const token = process.env.META_WHATSAPP_TOKEN ?? "";
   const phoneId = process.env.META_WHATSAPP_PHONE_NUMBER_ID ?? "";
   const appSecret = process.env.META_APP_SECRET ?? "";
-  const graph = "https://graph.facebook.com/v24.0";
+  const graph = (process.env.META_GRAPH_URL ?? "https://graph.facebook.com/v24.0").replace(/\/$/, "");
   const auth = { Authorization: `Bearer ${token}` };
   return {
     name: "meta",
@@ -108,6 +124,21 @@ function meta(): WhatsAppProvider {
         method: "POST", headers: { ...auth, "Content-Type": "application/json" },
         body: JSON.stringify({ messaging_product: "whatsapp", to: digitsOnly(to), type: "text", text: { body: text, preview_url: false } }),
       }), "meta messages");
+    },
+    async sendProactive(to, msg, lastInboundAt) {
+      if (lastInboundAt && Date.now() - lastInboundAt.getTime() < WINDOW_MS) return this.sendText(to, msg.text);
+      const name = process.env[TEMPLATE_ENV[msg.template]];
+      if (!name) throw new Error(`modelo da Meta não configurado: ${TEMPLATE_ENV[msg.template]}`);
+      // a Meta recusa variável com quebra de linha, tabulação ou mais de 4 espaços seguidos
+      const clean = (p: string) => p.replace(/[\n\t]+/g, " · ").replace(/ {2,}/g, " ").trim().slice(0, 1000);
+      await ok(await fetch(`${graph}/${phoneId}/messages`, {
+        method: "POST", headers: { ...auth, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messaging_product: "whatsapp", to: digitsOnly(to), type: "template",
+          template: { name, language: { code: process.env.META_TEMPLATE_LANG ?? "pt_BR" },
+            components: [{ type: "body", parameters: msg.params.map((p) => ({ type: "text", text: clean(p) })) }] },
+        }),
+      }), "meta template");
     },
     async downloadAudio(ref) {
       const info = (await (await ok(await fetch(`${graph}/${ref}`, { headers: auth }), "meta media")).json()) as { url: string; mime_type: string };

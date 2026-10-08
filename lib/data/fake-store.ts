@@ -11,6 +11,7 @@ import type {
   Account, ActionRecord, Automation, BodyMeasurement, CalendarEvent, Category, ChatMessage, CreditCard, FocusSession, Goal,
   Habit, HabitLog, InstallmentPurchase, Meal, MealLog, Note, Notice, Project, Recurrence, Reminder, Settings, Task,
   Transaction, Workout, WorkoutLog,
+  Budget,
 } from "./types";
 
 // Banco provisório com dados de exemplo, só até o /replica-backend ligar o Supabase.
@@ -36,6 +37,7 @@ type State = {
   notes: Note[];
   automations: Automation[];
   notices: Notice[];
+  budgets?: Budget[];
   events: CalendarEvent[];
   focusSessions: FocusSession[];
   workouts: Workout[];
@@ -434,6 +436,22 @@ export const fakeStore: DataStore = {
       if (a) a.active = active;
       return !!a;
     });
+  },
+  async addNotice(n) {
+    mutate((s) => s.notices.push({ id: id(), ...n, createdAt: new Date().toISOString(), readAt: null }));
+  },
+  async listBudgets() {
+    return load().budgets ?? [];
+  },
+  async setBudget(categoryId, amountCents) {
+    let ok = false;
+    mutate((s) => {
+      if (!s.categories.some((c) => c.id === categoryId && c.kind === "expense")) return;
+      ok = true;
+      s.budgets = (s.budgets ?? []).filter((b) => b.categoryId !== categoryId);
+      if (amountCents !== null) s.budgets.push({ categoryId, amountCents });
+    });
+    return ok;
   },
   async listNotices() {
     return load().notices.sort((a, b) => b.createdAt.localeCompare(a.createdAt));

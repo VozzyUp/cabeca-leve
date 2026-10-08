@@ -121,3 +121,13 @@ describe("pedir uma pessoa", () => {
     }
   });
 });
+
+describe("teto de gastos", () => {
+  it("entende definir e tirar o teto", async () => {
+    const { parseBudget } = await import("./rule-parser");
+    expect(parseBudget("teto de 500 em alimentação")).toEqual({ categoryName: "alimentação", amountCents: 50000 });
+    expect(parseBudget("coloca um teto de R$ 1.200,50 por mês no transporte")).toEqual({ categoryName: "transporte", amountCents: 120050 });
+    expect(parseBudget("tira o teto de lazer")).toEqual({ categoryName: "lazer", amountCents: null });
+    expect(parseBudget("gastei 500 em alimentação")).toBeNull();
+  });
+});

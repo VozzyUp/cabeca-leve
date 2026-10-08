@@ -189,3 +189,17 @@ export function parseMessage(text: string, now: Date, tz: string): Intent[] {
 // "quero falar com uma pessoa", "me passa pro suporte", "atendimento humano"
 const HUMAN = /\b(falar|conversar)\s+com\s+(uma\s+pessoa|um\s+humano|uma\s+humana|algu[eé]m\s+d[oe]\s+(time|suporte|voc[eê]s)|um\s+atendente|o\s+suporte)\b|\bpassa\s+(pro|para\s+o)\s+suporte\b|\b(suporte|atendimento)\s+humano\b|\bquero\s+(um\s+)?(humano|atendente)\b/i;
 export const wantsHuman = (text: string) => HUMAN.test(text);
+
+// F5: "teto de 500 em alimentação", "coloca um teto de R$ 300 no ifood", "tira o teto de lazer"
+export const categoryFromWords = (text: string) => CATEGORY_WORDS.find(([re]) => re.test(text))?.[1] ?? null;
+
+export function parseBudget(text: string): { categoryName: string; amountCents: number | null } | null {
+  const off = text.match(/\b(tira|remove|apaga|cancela)r?\s+o\s+teto\s+(?:de|do|da|em|no|na)\s+(.+?)[.!?]*$/i);
+  if (off) return { categoryName: off[2].trim(), amountCents: null };
+  const m = text.match(/\bteto\s+(?:de\s+gastos?\s+)?(?:de\s+)?(?:r\$\s*)?(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?)\s*(?:reais)?\s*(?:por\s+m[eê]s\s+)?(?:para|pra|em|no|na|de|com)\s+(.+?)[.!?]*$/i);
+  if (!m) return null;
+  const amountCents = parseAmount(m[1]);
+  if (!amountCents) return null;
+  const name = m[2].trim();
+  return { categoryName: name, amountCents };
+}

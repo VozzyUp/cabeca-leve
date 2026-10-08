@@ -138,7 +138,11 @@ test.describe("F18 e F19 conta", () => {
     await login(page, user, "/ajustes/assistente");
     await page.getByRole("radiogroup", { name: "Tom da conversa" }).getByRole("radio", { name: "Divertido" }).click();
     await page.getByRole("radiogroup", { name: "Tema" }).getByRole("radio", { name: "Claro" }).click();
-    await expect(page.getByText(/Salvo/i).first()).toBeVisible();
+    // a tela não pode desfazer a primeira mudança ao fazer a segunda
+    await expect(page.getByRole("radio", { name: "Divertido" })).toBeChecked();
+    // espera as duas gravações (o "Salvo" aparece já depois da primeira)
+    await expect.poll(async () => (await admin.from("profiles").select("assistant_tone, theme").eq("user_id", user.id).single()).data)
+      .toEqual({ assistant_tone: "playful", theme: "light" });
     await page.reload();
     await expect(page.getByRole("radio", { name: "Divertido" })).toBeChecked();
     await expect(page.getByRole("radio", { name: "Claro" })).toBeChecked();

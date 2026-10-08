@@ -156,7 +156,7 @@ export function ChatScreen() {
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     {m.cards.map((c) => (
                       <ActionCard key={c.actionId} kind={CARD[c.kind].kind} title={c.title}
-                        value={c.value} valueTone={c.valueTone} meta={c.meta} state={c.undone ? "undone" : "created"}
+                        value={c.value} valueTone={c.valueTone} meta={c.meta} alert={c.alert} state={c.undone ? "undone" : "created"}
                         openLabel={CARD[c.kind].open}
                         onOpen={() => router.push(c.href)} onUndo={() => undo(c.actionId)} />
                     ))}
