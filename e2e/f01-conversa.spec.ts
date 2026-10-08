@@ -91,9 +91,9 @@ test.describe("F01 conversa", () => {
   });
 
   test("F01-N1 mais de 12 mensagens por minuto: o assistente pede para esperar e a mensagem não some", async ({ page }) => {
-    for (let i = 0; i < 12; i++) {
-      await page.request.post("/api/chat", { data: { clientMessageId: crypto.randomUUID(), text: `oi ${i}` } });
-    }
+    // em paralelo: em sequência, com o dev server lento, as primeiras saíam da janela de 1 minuto
+    await Promise.all(Array.from({ length: 12 }, (_, i) =>
+      page.request.post("/api/chat", { data: { clientMessageId: crypto.randomUUID(), text: `oi ${i}` } })));
     await box(page).fill("gastei 7 no chiclete");
     await box(page).press("Enter");
     await expect(page.getByText(/Muitas mensagens em pouco tempo/)).toBeVisible();

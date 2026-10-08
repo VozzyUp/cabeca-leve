@@ -3,17 +3,18 @@ import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 
 // Carrega um recurso da API. O setState só acontece no retorno da promessa
 // (regra do React 19: nada de setState síncrono dentro de efeito).
-export function useResource<T>(fetcher: () => Promise<T>) {
+// combine: junta o que chegou do servidor com o que está na tela (ex.: mensagens ainda saindo)
+export function useResource<T>(fetcher: () => Promise<T>, combine?: (fresh: T, current: T | null) => T) {
   const [state, setState] = useState<{ data: T | null; error: boolean }>({ data: null, error: false });
   const [version, setVersion] = useState(0);
   useEffect(() => {
     let alive = true;
     fetcher().then(
-      (data) => { if (alive) setState({ data, error: false }); },
+      (data) => { if (alive) setState((s) => ({ data: combine ? combine(data, s.data) : data, error: false })); },
       () => { if (alive) setState((s) => ({ ...s, error: true })); },
     );
     return () => { alive = false; };
-  }, [fetcher, version]);
+  }, [fetcher, version]);  // eslint-disable-line react-hooks/exhaustive-deps -- combine é fixo por tela
   const reload = useCallback(() => { setState((s) => ({ ...s, error: false })); setVersion((v) => v + 1); }, []);
   // mudou em outro aparelho (components/realtime-sync.tsx): busca de novo, sem piscar a tela
   useEffect(() => {

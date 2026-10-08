@@ -22,7 +22,7 @@ export const E2E_ENV = {
 export default defineConfig({
   testDir: "e2e",
   timeout: 60_000,
-  expect: { timeout: 10_000 },
+  expect: { timeout: 20_000 },  // o dev server compila cada página na primeira visita
   fullyParallel: true,
   workers: 3,
   retries: 0,

@@ -55,6 +55,8 @@ export interface DataStore {
   listTodayTranscript(): Promise<TranscriptEntry[]>;
   // mensagens que a pessoa mandou desde um instante (limite de uso)
   countUserMessagesSince(iso: string): Promise<number>;
+  // um turno do assistente por vez na conversa de hoje (mensagens que chegam juntas esperam a vez)
+  withTurn<T>(fn: () => Promise<T>): Promise<T>;
 
   // finanças (M3)
   listCards(): Promise<CreditCard[]>;

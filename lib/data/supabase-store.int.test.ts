@@ -113,6 +113,40 @@ describe.skipIf(!run)("SupabaseStore", () => {
     expect(error).not.toBeNull();  // escrita só pelo servidor
   });
 
+  it("mensagens que chegam juntas: todas gravadas com posições seguidas, e um turno por vez", async () => {
+    await Promise.all(Array.from({ length: 15 }, (_, i) => a.appendMessage({ role: "user", text: `rajada ${i}`, cards: [] })));
+    const { data } = await admin.from("messages").select("seq, text_preview").eq("user_id", users[0]).order("seq");
+    expect(data!.filter((m) => m.text_preview?.startsWith("rajada"))).toHaveLength(15);
+    expect(data!.map((m) => m.seq)).toEqual(data!.map((_, i) => i));
+    const order: string[] = [];
+    await Promise.all([1, 2, 3].map((n) => a.withTurn(async () => {
+      order.push(`entra ${n}`);
+      await new Promise((r) => setTimeout(r, 150));
+      order.push(`sai ${n}`);
+    })));
+    for (let i = 0; i < order.length; i += 2) expect(order[i + 1]).toBe(order[i].replace("entra", "sai"));
+    // um turno que falha solta a vez
+    await expect(a.withTurn(async () => { throw new Error("falhou"); })).rejects.toThrow("falhou");
+    expect(await a.withTurn(async () => "livre")).toBe("livre");
+  });
+
+  it("a conversa mostra as 500 mensagens mais recentes, não as mais antigas", async () => {
+    const { data: conv } = await admin.from("conversations").select("id").eq("user_id", users[1]).order("local_date").limit(1).maybeSingle();
+    const conversationId = conv?.id ?? (await admin.from("conversations").insert({ user_id: users[1], local_date: "2026-01-01" }).select("id").single()).data!.id;
+    const { data: last } = await admin.from("messages").select("seq").eq("conversation_id", conversationId).order("seq", { ascending: false }).limit(1);
+    const start = (last?.[0]?.seq ?? -1) + 1;
+    const base = Date.parse("2026-01-01T12:00:00Z");
+    const rows = Array.from({ length: 520 }, (_, i) => ({
+      user_id: users[1], conversation_id: conversationId, seq: start + i, role: "user", channel: "web", content: [{ type: "text", text: `antiga ${i}` }],
+      text_preview: `antiga ${i}`, created_at: new Date(base + i * 1000).toISOString(),
+    }));
+    expect((await admin.from("messages").insert(rows)).error).toBeNull();
+    await b.appendMessage({ role: "user", text: "a mais nova", cards: [] });
+    const list = await b.listMessages();
+    expect(list.at(-1)!.text).toBe("a mais nova");
+    expect(list.length).toBeLessThanOrEqual(500);
+  });
+
   it("excluir a conta apaga tudo em cascata, inclusive conversa e notas", async () => {
     await b.createTask({ title: "Temporária", dueOn: null });
     await b.appendMessage({ role: "user", text: "oi", cards: [] });

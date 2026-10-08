@@ -21,8 +21,8 @@ export async function POST(request: Request) {
       // limite de uso: nada foi gravado, mas a pessoa precisa ver a mensagem e o motivo
       const createdAt = new Date().toISOString();
       return Response.json({ messages: [
-        { id: parsed.data.clientMessageId, role: "user", text: parsed.data.text, cards: [], createdAt },
-        { id: crypto.randomUUID(), role: "assistant", text: result.reply.text, cards: [], createdAt },
+        { id: parsed.data.clientMessageId, role: "user", text: parsed.data.text, cards: [], createdAt, local: true },
+        { id: crypto.randomUUID(), role: "assistant", text: result.reply.text, cards: [], createdAt, local: true },
       ] });
     }
   } catch (error) {

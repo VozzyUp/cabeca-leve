@@ -12,6 +12,8 @@ import type {
 // registro de outro usuário). As telas não sabem qual implementação está por trás.
 
 type Result<T> = { data: T; error: { message: string } | null };
+// campos opcionais das funções do banco: o gerador de tipos não marca como anuláveis
+const opt = <T,>(v: T | null | undefined) => (v ?? null) as T;
 function must<T>(r: Result<T>): NonNullable<T> {
   if (r.error) throw new Error(r.error.message);
   return r.data as NonNullable<T>;
@@ -253,31 +255,42 @@ export async function createSupabaseStore(db: Admin, userId: string, email: stri
     },
 
     async listMessages() {
-      const rows = must(await db.from("messages").select("id, role, text_preview, cards, created_at").eq("user_id", userId).eq("visible", true)
-        .in("role", ["user", "assistant"]).order("created_at").order("seq").limit(500));
-      return rows.map((m): ChatMessage => ({ id: m.id, role: m.role as ChatMessage["role"], text: m.text_preview ?? "", cards: m.cards as ActionCardData[], createdAt: m.created_at }));
+      // as 500 mais recentes, em ordem de chegada
+      const rows = must(await db.from("messages").select("id, role, text_preview, cards, created_at, client_message_id").eq("user_id", userId).eq("visible", true)
+        .in("role", ["user", "assistant"]).order("created_at", { ascending: false }).order("seq", { ascending: false }).limit(500));
+      return rows.reverse().map((m): ChatMessage => ({
+        id: m.id, role: m.role as ChatMessage["role"], text: m.text_preview ?? "", cards: m.cards as ActionCardData[], createdAt: m.created_at,
+        ...(m.client_message_id ? { clientId: m.client_message_id } : {}),
+      }));
     },
     async appendMessage(msg) {
       const conversationId = await todayConversation();
-      // seq sequencial por conversa; numa corrida (dois envios juntos), tenta de novo
-      for (let attempt = 0; attempt < 3; attempt++) {
-        const last = must(await db.from("messages").select("seq").eq("conversation_id", conversationId).order("seq", { ascending: false }).limit(1));
-        const seq = (last[0]?.seq ?? -1) + 1;
-        const r = await db.from("messages").insert({
-          user_id: userId, conversation_id: conversationId, seq, role: msg.role, channel: msg.channel ?? "web",
-          content: (msg.content ?? [{ type: "text", text: msg.text }]) as Json[], text_preview: msg.text, cards: msg.cards as unknown as Json[],
-          visible: msg.visible ?? true, client_message_id: msg.clientMessageId ?? null, external_message_id: msg.externalMessageId ?? null,
-          model: msg.usage?.model ?? null, input_tokens: msg.usage?.inputTokens ?? null, output_tokens: msg.usage?.outputTokens ?? null,
-          cache_read_tokens: msg.usage?.cacheReadTokens ?? null,
-        }).select("id, created_at").single();
-        if (r.error?.code === "23505" && r.error.message.includes("seq")) continue;
-        const m = must(r);
-        return { id: m.id, role: msg.role === "system" ? "user" : msg.role, text: msg.text, cards: msg.cards, createdAt: m.created_at };
-      }
-      throw new Error("Não deu para salvar a mensagem");
+      // a posição (seq) sai do banco com a conversa travada: mensagens juntas não disputam o mesmo número
+      const r = await db.rpc("append_message", {
+        p_user: userId, p_conversation: conversationId, p_role: msg.role, p_channel: msg.channel ?? "web",
+        p_content: (msg.content ?? [{ type: "text", text: msg.text }]) as Json, p_text_preview: msg.text, p_cards: msg.cards as unknown as Json,
+        p_visible: msg.visible ?? true, p_client_message_id: opt(msg.clientMessageId), p_external_message_id: opt(msg.externalMessageId),
+        p_model: opt(msg.usage?.model), p_input_tokens: opt(msg.usage?.inputTokens), p_output_tokens: opt(msg.usage?.outputTokens),
+        p_cache_read_tokens: opt(msg.usage?.cacheReadTokens),
+      }).single();
+      const m = must(r as Result<{ id: string; created_at: string }>);
+      return { id: m.id, role: msg.role === "system" ? "user" : msg.role, text: msg.text, cards: msg.cards, createdAt: m.created_at };
     },
     async markCardsUndone(actionId) {
       await markCards(actionId);
+    },
+    async withTurn(fn) {
+      const conversationId = await todayConversation();
+      // espera a vez por até 45 s; o prazo de 120 s solta a conversa se um servidor cair no meio
+      const until = Date.now() + 45_000;
+      for (;;) {
+        const got = must(await db.rpc("acquire_turn", { p_user: userId, p_conversation: conversationId, p_seconds: 120 }) as Result<boolean>);
+        if (got) break;
+        if (Date.now() > until) throw new Error("turno ocupado");
+        await new Promise((r) => setTimeout(r, 200 + Math.random() * 200));
+      }
+      try { return await fn(); }
+      finally { await db.rpc("release_turn", { p_user: userId, p_conversation: conversationId }); }
     },
     async countUserMessagesSince(iso) {
       const r = await db.from("messages").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("role", "user").gte("created_at", iso);

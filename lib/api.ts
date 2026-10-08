@@ -7,6 +7,12 @@ import type { HabitStats } from "@/lib/domain/habits";
 async function call<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, { ...init, headers: { "Content-Type": "application/json", ...init?.headers } });
   const body = await res.json().catch(() => ({}));
+  // sessão vencida com a tela aberta: leva para o login e volta para cá depois
+  if (res.status === 401 && typeof window !== "undefined" && !window.location.pathname.startsWith("/entrar")) {
+    // recarga inteira de propósito: limpa o estado da tela da sessão que acabou
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+    window.location.assign(`/entrar?voltar=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+  }
   if (!res.ok) throw new Error(body.error ?? "Algo deu errado. Tente de novo.");
   return body as T;
 }

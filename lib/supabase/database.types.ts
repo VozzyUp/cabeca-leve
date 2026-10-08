@@ -335,14 +335,14 @@ isOneToOne: false
                   ]
                 },"conversations": {
                   Row: {
-                    "compacted_at": string | null,"created_at": string,"id": string,"local_date": string,"updated_at": string,"user_id": string
+                    "compacted_at": string | null,"created_at": string,"id": string,"local_date": string,"turn_lease_until": string | null,"updated_at": string,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "compacted_at"?: string | null,"created_at"?: string,"id"?: string,"local_date": string,"updated_at"?: string,"user_id": string
+                    "compacted_at"?: string | null,"created_at"?: string,"id"?: string,"local_date": string,"turn_lease_until"?: string | null,"updated_at"?: string,"user_id": string
                   }
                   Update: {
-                    "compacted_at"?: string | null,"created_at"?: string,"id"?: string,"local_date"?: string,"updated_at"?: string,"user_id"?: string
+                    "compacted_at"?: string | null,"created_at"?: string,"id"?: string,"local_date"?: string,"turn_lease_until"?: string | null,"updated_at"?: string,"user_id"?: string
                   }
                   Relationships: [
                     
@@ -1199,7 +1199,18 @@ isOneToOne: false
                 }
           }
           Functions: {
-            "unaccent":
+            "acquire_turn":
+{ Args: { "p_conversation": string,"p_seconds": number,"p_user": string }; Returns: boolean
+                           },
+"append_message":
+{ Args: { "p_cache_read_tokens": number,"p_cards": Json,"p_channel": string,"p_client_message_id": string,"p_content": Json,"p_conversation": string,"p_external_message_id": string,"p_input_tokens": number,"p_model": string,"p_output_tokens": number,"p_role": string,"p_text_preview": string,"p_user": string,"p_visible": boolean }; Returns: {
+              "created_at": string,"id": string
+            }[]
+                           },
+"release_turn":
+{ Args: { "p_conversation": string,"p_user": string }; Returns: undefined
+                           },
+"unaccent":
 { Args: { "": string }; Returns: string
                            }
           }

@@ -34,6 +34,15 @@ const merge = (list: Local[], add: Local[]) => {
   return [...list.filter((x) => !ids.has(x.id)), ...add];
 };
 
+// recarregar (tempo real) não pode apagar o que só existe na tela: mensagem saindo, com erro
+// ou o aviso de limite. A provisória sai quando a gravada (mesmo clientId) já veio do servidor.
+const keepLocal = (server: Local[], current: Local[] | null): Local[] => {
+  const sent = new Set(server.map((m) => m.clientId).filter(Boolean));
+  const ids = new Set(server.map((m) => m.id));
+  const local = (current ?? []).filter((m) => (m.status || m.local) && !ids.has(m.id) && !(m.status === "sending" && sent.has(m.id)));
+  return [...server, ...local];
+};
+
 const loadHistory = async (): Promise<Local[]> => (await api.chatHistory()).messages;
 
 function greeting(now = new Date()) {
@@ -44,7 +53,7 @@ function greeting(now = new Date()) {
 // S01 + S02: início da conversa e a conversa em si
 export function ChatScreen() {
   const router = useRouter();
-  const history = useResource(loadHistory);
+  const history = useResource(loadHistory, keepLocal);
   const messages = history.data;
   const setMessages = (fn: (m: Local[] | null) => Local[]) => history.setData(fn);
   const loadError = history.error;

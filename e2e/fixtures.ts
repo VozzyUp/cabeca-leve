@@ -46,12 +46,12 @@ type Fixtures = { user: TestUser; allowConsole: RegExp[]; guard: void };
 
 export const test = base.extend<Fixtures>({
   allowConsole: [[], { option: true }],
-  user: async ({}, use) => {
+  user: async ({}, provide) => {
     const u = await createUser();
-    await use(u);
+    await provide(u);
     await admin.auth.admin.deleteUser(u.id).catch(() => {});
   },
-  guard: [async ({ page, allowConsole }, use) => {
+  guard: [async ({ page, allowConsole }, provide) => {
     const problems: string[] = [];
     page.on("console", (m) => {
       if (m.type() !== "error") return;
@@ -61,7 +61,7 @@ export const test = base.extend<Fixtures>({
     });
     page.on("pageerror", (e) => problems.push(`pageerror: ${e.message}`));
     page.on("response", (r) => { if (r.status() >= 500) problems.push(`${r.status()} em ${r.url()}`); });
-    await use();
+    await provide();
     expect(problems, "erros de console ou respostas 5xx").toEqual([]);
   }, { auto: true }],
 });

@@ -4,6 +4,9 @@ import { addDays, DEFAULT_TZ, localDate, zonedToUtc } from "@/lib/time";
 import type { DataStore } from "./store";
 import { nextDate, nextFireAt } from "@/lib/domain/recurrence";
 import { seedFinance, seedHealth, seedOrganization, seedSettings } from "./seed-extra";
+
+// demonstração: um turno por vez no mesmo processo
+let turnQueue: Promise<unknown> = Promise.resolve();
 import type {
   Account, ActionRecord, Automation, BodyMeasurement, CalendarEvent, Category, ChatMessage, CreditCard, FocusSession, Goal,
   Habit, HabitLog, InstallmentPurchase, Meal, MealLog, Note, Notice, Project, Recurrence, Reminder, Settings, Task,
@@ -347,6 +350,11 @@ export const fakeStore: DataStore = {
     };
     mutate((s) => s.messages.push(m));
     return { id: m.id, role: m.role, text: m.text, cards: m.cards, createdAt: m.createdAt };
+  },
+  withTurn(fn) {
+    const run = turnQueue.then(fn, fn);
+    turnQueue = run.then(() => undefined, () => undefined);
+    return run;
   },
   async countUserMessagesSince(iso) {
     return load().messages.filter((m) => m.role === "user" && !m.system && m.createdAt >= iso).length;

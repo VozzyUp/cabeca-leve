@@ -46,6 +46,20 @@ test.describe("F02 e F16 WhatsApp", () => {
     expect(data).toHaveLength(1);
   });
 
+  test("F02-E5 cinco mensagens de uma vez (encaminhadas juntas): nenhuma se perde", async ({ user }) => {
+    const number = phone();
+    await admin.from("channel_links").insert({ user_id: user.id, channel: "whatsapp", external_id: `+${number}`, verified_at: new Date().toISOString() });
+    const texts = [11, 12, 13, 14, 15].map((v) => `gastei ${v} no lanche`);
+    const statuses = await Promise.all(texts.map((t, i) => hook(inbound(`B${i}-${number}`, number, t)).then((r) => r.status)));
+    expect(statuses).toEqual([200, 200, 200, 200, 200]);
+    await expect.poll(async () => (await admin.from("transactions").select("id").eq("user_id", user.id)).data?.length, { timeout: 20_000 }).toBe(5);
+    await expect.poll(async () => (await sentTo(number)).filter((t) => /Lançamento/.test(t)).length, { timeout: 20_000 }).toBe(5);
+    // cada pergunta seguida da própria resposta, sem intercalar
+    const { data } = await admin.from("messages").select("role, text_preview").eq("user_id", user.id).order("seq");
+    const roles = data!.filter((m) => m.role !== "system").map((m) => m.role);
+    expect(roles).toEqual(["user", "assistant", "user", "assistant", "user", "assistant", "user", "assistant", "user", "assistant"]);
+  });
+
   test("F16-N1 código errado não vincula", async ({ page, user }) => {
     const number = phone();
     await login(page, user, "/ajustes");

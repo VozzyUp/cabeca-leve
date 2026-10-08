@@ -51,4 +51,5 @@ Passo a passo para criar cada conta, checklist de segurança e pendências: `rep
 ```bash
 npm run db:start   # Supabase local no Docker (copie as chaves que ele mostra para .env.local)
 npm run test:int   # testes de integração contra o Supabase local
+npx playwright test  # ponta a ponta: 48 casos, axe em todas as telas, computador e celular (plano em replica/test-plan.md)
 ```

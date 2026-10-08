@@ -54,6 +54,18 @@ export async function respond(store: DataStore, text: string, opts: {
     await store.appendMessage({ role: "assistant", text: reply.text, cards: [], channel: opts.channel });
     return { user, reply };
   }
+  // mensagens que chegam juntas esperam a vez: o histórico de um turno não se mistura com o de outro
+  try {
+    return await store.withTurn(() => turn(store, text, opts));
+  } catch (error) {
+    if (!(error instanceof Error && error.message === "turno ocupado")) throw error;
+    return { user: null, reply: { text: "Ainda estou terminando a resposta anterior. Mande de novo em instantes.", cards: [] }, stored: false };
+  }
+}
+
+async function turn(store: DataStore, text: string, opts: {
+  channel: "web" | "whatsapp" | "voice"; clientMessageId?: string; externalMessageId?: string; now?: Date;
+}): Promise<{ user: ChatMessage | null; reply: AssistantReply; stored?: false }> {
   // limite de uso: protege o custo de IA (e o número de WhatsApp) contra abuso
   const [lastMinute, lastDay] = await Promise.all([
     store.countUserMessagesSince(new Date(Date.now() - 60_000).toISOString()),

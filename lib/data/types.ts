@@ -72,6 +72,8 @@ export type ChatMessage = {
   text: string;
   cards: ActionCardData[];
   createdAt: string;
+  clientId?: string;  // id que o app gerou no envio (para trocar a mensagem provisória pela gravada)
+  local?: true;       // só existe na tela (aviso de limite): não está gravada
 };
 
 export type ActionRecord = {

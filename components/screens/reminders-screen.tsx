@@ -28,7 +28,8 @@ export function RemindersScreen() {
   async function add(e: FormEvent) {
     e.preventDefault();
     if (!form.title.trim()) { setFormError("Escreva do que lembrar."); return; }
-    if (!form.day || !form.time || !data) { setFormError("Escolha o dia e a hora."); return; }
+    if (!data) return;  // o fuso vem com a lista; o botão fica desligado até ela chegar
+    if (!form.day || !form.time) { setFormError("Escolha o dia e a hora."); return; }
     const [y, m, d] = form.day.split("-").map(Number);
     const [h, min] = form.time.split(":").map(Number);
     const at = zonedToUtc(y, m, d, h, min, data.timezone);
@@ -82,7 +83,7 @@ export function RemindersScreen() {
           <Field label="Dia" type="date" value={form.day} onChange={(e) => setForm({ ...form, day: e.target.value })} />
           <Field label="Hora" type="time" value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} />
           <RepeatSelect id="repetir-lembrete" value={form.repeat} onChange={(repeat) => setForm({ ...form, repeat })} baseDay={form.day || null} />
-          <Button type="submit" loading={saving} icon={<Plus className="size-4" />}>Criar</Button>
+          <Button type="submit" loading={saving} disabled={!data} icon={<Plus className="size-4" />}>Criar</Button>
         </form>
       </Card>
 

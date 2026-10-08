@@ -90,3 +90,12 @@ Paridade 63,2/100; **40 de 40 obrigatórias completas**.
 - Avaliações: 36 do original (33 da App Store pelo feed oficial da Apple e 3 visíveis no Google Play) e 130 de concorrentes (Zapia 124, Meu Assessor IA 6). Reddit e Reclame Aqui bloquearam o acesso (403). O HN não tem menções.
 - Temas em português em `replica/themes-ptbr.json`. Relatórios em `feedback.md` e `feedback-categoria.md`. Plano em `fixes.md` (F1 a F7). Sete linhas novas no `features.csv` e o teto de gastos subiu para should.
 - Posicionamento recomendado: "o assistente que responde quando você precisa" (suporte, cobrança e acesso são 12 de 36 avaliações).
+
+## 2026-10-08: /replica-test
+
+- Plano em `replica/test-plan.md`: 63 casos (48 de ponta a ponta, 9 de integração, 2 de unidade, 1 pelo script do navegador e 3 manuais), mais uma lista manual de 7 itens para quando as chaves entrarem. São 48 testes no Playwright (`e2e/`, computador e celular).
+- Toda spec falha com erro de console ou resposta 5xx. O axe passa em todas as telas.
+- Para o WhatsApp e a cobrança, um servidor falso da UAZAPI e da Asaas (`e2e/mock-server.mjs`); os e-mails chegam no Mailpit do Supabase local.
+- 9 bugs em `replica/bugs.md`, todos corrigidos com teste: 1 S1 (redirecionamento aberto no login), 2 S2 (mensagens simultâneas perdidas; conversa presa nas 500 mais antigas), 5 S3, 1 S4.
+- O que foi mais difícil do que parecia: o dev server compila cada página na primeira visita e, com 3 testes em paralelo, passava de 10 s. O tempo de espera subiu para 20 s, e isso revelou o BUG-005.
+- O F01-N1 achou três bugs em sequência. Cada correção deixou o teste mais exigente: primeiro em série, depois em paralelo, depois repetido. A disputa pela posição das mensagens só aparece com várias chegando ao mesmo tempo, que é justamente o uso no WhatsApp.
