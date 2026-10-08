@@ -195,6 +195,8 @@ export type Settings = {
   timezone: string;
   plan: "trial" | "monthly" | "yearly" | "none";
   trialEndsOn: string | null;
+  // assinatura paga: até quando vale e se renova sozinha
+  billing?: { periodEnd: string | null; renews: boolean; pastDue: boolean };
   tone: "direct" | "warm" | "playful";
   answerLength: "short" | "detailed";
   voice: "female" | "male";

@@ -1,42 +1,42 @@
 feature,area,priority,original,clone,notes
-Cadastro e login com e-mail e senha,conta e assinatura,must,yes,partial,S31: entrar e criar conta com validação; Supabase Auth no /replica-backend
-Recuperar senha por e-mail,conta e assinatura,must,yes,partial,S31: pedido sem revelar se a conta existe; envio do e-mail no /replica-backend
-Planos mensal e anual com checkout,conta e assinatura,must,yes,partial,"S32: planos, economia do anual e caminho até o cadastro; checkout (Stripe ou Asaas) no /replica-backend; preços provisórios"
-Acesso liberado automaticamente quando o pagamento é aprovado,conta e assinatura,must,yes,no,original libera pelo e-mail da compra; e-mails diferentes geram 'assinatura inválida' (suporte)
-Cancelar a assinatura dentro do app com acesso até o fim do ciclo,conta e assinatura,must,yes,no,suporte
-Mesma conta em vários dispositivos com sincronização em tempo real,conta e assinatura,must,yes,no,suporte
+Cadastro e login com e-mail e senha,conta e assinatura,must,yes,yes,"Supabase Auth: cadastro com confirmação por e-mail, entrar, sair (aqui ou em todos os aparelhos) | S31"
+Recuperar senha por e-mail,conta e assinatura,must,yes,yes,link por e-mail e tela de senha nova; não revela se o e-mail tem conta
+Planos mensal e anual com checkout,conta e assinatura,must,yes,yes,"Asaas Checkout: mensal recorrente no cartão, anual por Pix ou cartão; preços provisórios"
+Acesso liberado automaticamente quando o pagamento é aprovado,conta e assinatura,must,yes,yes,"webhook da Asaas (idempotente) libera o plano; vale a conta que abriu o pagamento, não o e-mail da compra"
+Cancelar a assinatura dentro do app com acesso até o fim do ciclo,conta e assinatura,must,yes,yes,um toque em Ajustes; para de cobrar na Asaas e o acesso vale até o fim do período
+Mesma conta em vários dispositivos com sincronização em tempo real,conta e assinatura,must,yes,partial,mesma conta em qualquer aparelho e no WhatsApp; atualização ao vivo (Realtime) depois
 Layout responsivo: barra inferior no celular e barra lateral no computador,conta e assinatura,must,yes,yes,capturas da App Store
-Nota fiscal enviada por e-mail após o pagamento,conta e assinatura,should,yes,no,suporte
-Período de teste gratuito,conta e assinatura,could,yes,partial,S32 oferece 7 dias; S29 mostra até quando vale; cobrança no backend
+Nota fiscal enviada por e-mail após o pagamento,conta e assinatura,should,yes,partial,emitida pela Asaas (ativar no painel)
+Período de teste gratuito,conta e assinatura,could,yes,yes,"7 dias desde o cadastro; depois, sem plano, o assistente pede para assinar e os dados ficam guardados"
 Tela inicial do assistente com saudação e atalho para o briefing,assistente,must,yes,yes,"saudação, exemplos prontos e atalho para o resumo do dia (S04) | S01"
-Conversa por texto em linguagem natural (pt-BR),assistente,must,yes,partial,intérprete de regras provisório; Claude entra no /replica-backend | S02
-Uma mensagem cria vários itens de áreas diferentes,assistente,must,yes,partial,"gasto, entrada, lembrete, tarefa e hábito na mesma mensagem; o resto com o Claude"
+Conversa por texto em linguagem natural (pt-BR),assistente,must,yes,yes,"Claude Opus 5.5 com 13 ferramentas; sem chave, intérprete de regras | S02"
+Uma mensagem cria vários itens de áreas diferentes,assistente,must,yes,yes,chamadas de ferramenta em paralelo
 Card de confirmação no chat para cada item criado,assistente,must,yes,yes,S02: lembrete criado / transação criada
 Desfazer a ação pelo card,assistente,must,yes,yes,S02
 Atalho do card para abrir o item na área certa,assistente,must,yes,yes,S02: abrir em lembretes / abrir no extrato
-Perguntas sobre os próprios dados respondidas com números e cards,assistente,must,yes,no,F03
-Editar concluir e apagar itens pelo chat,assistente,must,yes,no,
-Datas e horas relativas no fuso do usuário,assistente,must,yes,partial,"hoje, amanhã, depois de amanhã e HH:MM no fuso de Brasília | amanhã / sexta / daqui a 5 dias"
-Pergunta de volta quando falta informação no pedido,assistente,must,yes,no,
+Perguntas sobre os próprios dados respondidas com números e cards,assistente,must,yes,yes,"ferramentas de consulta: tarefas, lembretes, finanças do mês, hábitos e o dia (F03)"
+Editar concluir e apagar itens pelo chat,assistente,must,yes,partial,"concluir e mudar tarefas e lembretes, marcar hábito; apagar e editar gastos depois"
+Datas e horas relativas no fuso do usuário,assistente,must,yes,yes,"data, hora e fuso em cada mensagem; o modelo resolve 'amanhã', 'sexta', 'daqui a 2 horas'"
+Pergunta de volta quando falta informação no pedido,assistente,must,yes,yes,"instrução do assistente (valor de gasto, horário de lembrete)"
 Indicador das etapas enquanto o assistente trabalha,assistente,should,yes,no,
 Histórico da conversa com filtro por dia semana e mês,assistente,should,yes,no,S02
 Enviar foto ou documento no chat e usar o conteúdo,assistente,should,yes,no,App Store 3.0
 Memória de preferências e fatos do usuário,assistente,should,yes,no,site [conferir]
-Briefing diário em texto,assistente,should,yes,partial,S04 montado com os dados do dia; envio no horário pela fila e texto pelo Claude no /replica-backend
+Briefing diário em texto,assistente,should,yes,yes,S04 e entrega no horário por push e WhatsApp; texto montado por regras (Claude depois)
 Briefing do dia em áudio,assistente,could,yes,partial,S04: botão Ouvir com a voz do navegador; áudio gerado no servidor depois
 Pesquisar um assunto resumir e salvar como nota,assistente,could,yes,no,site [conferir]
-Ditado no campo de mensagem,voz,must,yes,partial,"reconhecimento de voz do navegador (Chrome, Edge, Safari); transcrição no servidor no /replica-backend | S01"
-Enviar áudio e ter o conteúdo transcrito e organizado,voz,must,yes,no,
+Ditado no campo de mensagem,voz,must,yes,yes,reconhecimento do navegador ou gravação transcrita pela Groq | S01
+Enviar áudio e ter o conteúdo transcrito e organizado,voz,must,yes,partial,"no WhatsApp, sim (Groq); anexar áudio gravado no app depois"
 Modo de voz com resposta falada,voz,should,yes,partial,"S03: fala vira pedido e a resposta é lida em voz alta, com a voz do navegador"
 Escolher a voz do assistente,voz,could,yes,partial,S30 guarda a escolha; prévia com a voz do navegador
-Vincular número de WhatsApp com mensagem de boas-vindas,whatsapp,must,yes,partial,S29 guarda o número em E.164; mensagem de boas-vindas pela Meta no /replica-backend
-Conversar com o assistente pelo WhatsApp em texto,whatsapp,must,yes,no,
-Mandar áudio pelo WhatsApp e ter tudo organizado,whatsapp,must,yes,no,
-Receber lembretes e avisos pelo WhatsApp,whatsapp,must,yes,no,App Store 2.0
-Mesmos dados e histórico entre app e WhatsApp,whatsapp,must,yes,no,
+Vincular número de WhatsApp com mensagem de boas-vindas,whatsapp,must,yes,yes,código de 6 dígitos mandado do próprio celular (link wa.me pronto); boas-vindas na confirmação
+Conversar com o assistente pelo WhatsApp em texto,whatsapp,must,yes,yes,"UAZAPI agora, Meta pronta atrás da mesma interface"
+Mandar áudio pelo WhatsApp e ter tudo organizado,whatsapp,must,yes,yes,transcrição pela Groq e o mesmo assistente
+Receber lembretes e avisos pelo WhatsApp,whatsapp,must,yes,yes,varredura de cada minuto; resumo da manhã também; na Meta exigirá modelos aprovados
+Mesmos dados e histórico entre app e WhatsApp,whatsapp,must,yes,yes,"mesma conversa do dia, mesmo banco"
 Mandar foto pelo WhatsApp (comprovante ou fatura),whatsapp,should,yes,no,site [conferir]
 Conversar e receber lembretes pelo Telegram,telegram,could,yes,no,site [conferir]
-Notificação push de lembretes no navegador e no celular,notificações,must,yes,partial,aviso só com o app aberto; Web Push e fila no backend
+Notificação push de lembretes no navegador e no celular,notificações,must,yes,yes,"Web Push com o app fechado (no iPhone, com o app na tela inicial)"
 "Preferências de notificação: canais, silêncio e limite por dia",notificações,should,yes,partial,S29: canais liga/desliga e horário do resumo; silêncio e limite por dia depois
 Notificação 'seu dia' mostrando o que vem a seguir,notificações,should,yes,no,novidades Google Play
 Despertador para lembretes importantes,notificações,could,yes,no,App Store 3.0; exige app nativo
@@ -62,7 +62,7 @@ Marcos com datas,projetos,should,yes,partial,etapas marcáveis na tela; data por
 Situação do projeto pelo prazo decorrido (no rumo ou em risco),projetos,could,yes,no,site [conferir]
 Modelos de projeto,projetos,could,yes,no,exclusão: modelos de projeto
 Orçamento do projeto ligado aos gastos,projetos,could,yes,no,site [conferir]
-Lembrete único em data e hora,lembretes,must,yes,partial,dados em memória até o /replica-backend
+Lembrete único em data e hora,lembretes,must,yes,yes,"app, conversa e WhatsApp; aviso por push e WhatsApp"
 Lembretes recorrentes (diário semanal mensal),lembretes,must,yes,no,App Store 3.1: lembretes mensais
 Avisar com antecedência (ex.: 1 dia e 1 hora antes),lembretes,should,yes,no,site [conferir]
 Resumo diário dos lembretes pela manhã,lembretes,should,yes,no,site [conferir]
@@ -83,11 +83,11 @@ Registrar refeições e ver calorias e macros do dia,saúde,could,yes,partial,S1
 Medidas corporais com gráfico e histórico,saúde,could,yes,yes,"S17: peso, cintura e quadril; linha do peso com tabela"
 Sincronizar treinos passos e sono do Apple Saúde e Health Connect,saúde,could,yes,no,exige app nativo
 Conectar Strava e marcar hábitos esportivos sozinho,saúde,could,yes,no,suporte; privacidade 6.1
-Lançar despesa e receita pelo chat com categoria e meio de pagamento,finanças,must,yes,partial,dados em memória até o /replica-backend | S02
-Resumo do mês: entrou saiu sobra e patrimônio,finanças,must,yes,partial,patrimônio = saldo em conta; sem investimentos; dados provisórios até o /replica-backend
-Extrato com busca e filtros,finanças,must,yes,partial,busca por texto; filtros por conta e período depois; dados em memória até o /replica-backend | S24
+Lançar despesa e receita pelo chat com categoria e meio de pagamento,finanças,must,yes,yes,"pela conversa no app e no WhatsApp, com categoria e forma de pagamento | S02"
+Resumo do mês: entrou saiu sobra e patrimônio,finanças,must,yes,yes,S18 com dados reais
+Extrato com busca e filtros,finanças,must,yes,partial,busca por texto e paginação; filtros por conta e período depois | S24
 Categorias e subcategorias,finanças,must,yes,partial,categorias padrão; sem subcategorias nem edição
-Contas bancárias com saldo atualizado pelos lançamentos,finanças,must,yes,partial,S22 com saldo calculado pelos lançamentos; cadastrar e editar contas depois
+Contas bancárias com saldo atualizado pelos lançamentos,finanças,must,yes,yes,saldo calculado no banco (view account_balances); compra no crédito não mexe na conta
 Cartões de crédito com limite fechamento e vencimento,finanças,should,yes,partial,"S22: limite, fechamento, vencimento, fatura aberta e limite disponível; cadastrar pela conversa depois"
 Compra no crédito cai na fatura e não na conta,finanças,should,yes,yes,o saldo da conta ignora o crédito; a compra entra na fatura do ciclo (S22)
 Compras parceladas com parcelas pagas e data de quitação,finanças,should,yes,partial,"S21: parcela atual, quanto falta, quitação e previsão de 6 meses; registrar parcelado pela conversa depois"
@@ -131,7 +131,7 @@ App para Apple Watch,apps nativos,could,yes,no,App Store 3.0; exige app nativo
 Skill da Alexa,apps nativos,could,yes,no,site [conferir]; exige certificação da Amazon
 Chamar Uber pelo chat com destino pronto,integrações extras,could,yes,no,site [conferir]
 Buscar e tocar vídeos do YouTube dentro do app,integrações extras,could,yes,no,privacidade 6.2
-Excluir a conta e todos os dados pelo app,privacidade,must,yes,partial,"S29: confirmação digitada, apaga tudo e volta ao login; exclusão em cascata no Supabase no /replica-backend"
+Excluir a conta e todos os dados pelo app,privacidade,must,yes,yes,"apaga tudo em cascata (testado com conversa, notas e segundo usuário)"
 Excluir só algumas seções dos dados,privacidade,should,yes,no,exclusão de conta
 Exportar os dados (portabilidade),privacidade,should,yes,yes,S29: baixa tudo em JSON
 Desconectar integrações e revogar acessos,privacidade,should,yes,partial,S08 liga e desliga as agendas; revogar tokens de verdade no backend

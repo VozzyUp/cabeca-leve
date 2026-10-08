@@ -278,6 +278,9 @@ export const fakeStore: DataStore = {
     mutate((s) => s.messages.push(m));
     return { id: m.id, role: m.role, text: m.text, cards: m.cards, createdAt: m.createdAt };
   },
+  async countUserMessagesSince(iso) {
+    return load().messages.filter((m) => m.role === "user" && !m.system && m.createdAt >= iso).length;
+  },
   async listTodayTranscript() {
     const today = localDate(new Date(), DEFAULT_TZ);
     return load().messages.filter((m) => localDate(new Date(m.createdAt), DEFAULT_TZ) === today)

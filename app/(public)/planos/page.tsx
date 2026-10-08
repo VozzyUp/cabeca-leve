@@ -2,7 +2,10 @@ import { Check } from "lucide-react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/components/ui/cn";
+import { startCheckout } from "@/app/actions";
 import { PLANS, TRIAL_DAYS, yearlySaving } from "@/lib/plans";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { currentUser } from "@/lib/supabase/server";
 import { formatMoney } from "@/lib/time";
 
 const INCLUDED = [
@@ -18,9 +21,15 @@ const FAQ = [
   ["Meus dados ficam com quem?", "Só com você. Dá para baixar tudo ou excluir a conta a qualquer momento, em Ajustes."],
 ];
 
-// S32: planos. O checkout (Stripe ou Asaas) entra no /replica-backend; até lá o botão leva ao cadastro.
+// S32: planos. Quem já entrou vai direto para a página de pagamento da Asaas; quem não, para o cadastro.
+const cta = "inline-flex h-12 items-center justify-center rounded-md text-base font-semibold";
+const primary = "bg-accent text-on-accent hover:opacity-90";
+const secondary = "border border-border text-text hover:bg-surface-2";
+
 export default async function Page({ searchParams }: PageProps<"/planos">) {
-  const { novo } = await searchParams;
+  const { novo, plano, expirou } = await searchParams;
+  const loggedIn = isSupabaseConfigured() && !!(await currentUser());
+  const chosen = typeof plano === "string" ? plano : null;
   const plans = [PLANS.monthly, PLANS.yearly];
   return (
     <div className="flex flex-col items-center gap-10">
@@ -28,6 +37,7 @@ export default async function Page({ searchParams }: PageProps<"/planos">) {
         <p className="text-label text-muted">S32</p>
         <h1 className="text-3xl font-bold text-text">{novo ? "Conta criada. Escolha o plano" : "Tire a vida da cabeça"}</h1>
         <p className="text-body">Um assistente que organiza tarefas, dinheiro e rotina pela conversa. {TRIAL_DAYS} dias grátis para testar.</p>
+        {expirou && <p role="status" className="text-sm text-warning">A página de pagamento expirou. Escolha o plano de novo.</p>}
       </header>
       <ul className="grid w-full max-w-3xl grid-cols-1 gap-4 sm:grid-cols-2">
         {plans.map((p) => {
@@ -41,11 +51,17 @@ export default async function Page({ searchParams }: PageProps<"/planos">) {
                 </div>
                 <p><span className="font-mono text-4xl font-semibold text-text">{formatMoney(p.priceCents)}</span> <span className="text-sm text-muted">{p.period}</span></p>
                 <p className="text-sm text-muted">{yearly ? `equivale a ${formatMoney(Math.round(p.priceCents / 12))} por mês` : "cobrado todo mês, cancele quando quiser"}</p>
-                <Link href={`/entrar?modo=criar&plano=${p.id}`}
-                  className={cn("mt-auto inline-flex h-12 items-center justify-center rounded-md text-base font-semibold",
-                    yearly ? "bg-accent text-on-accent hover:opacity-90" : "border border-border text-text hover:bg-surface-2")}>
-                  Começar {TRIAL_DAYS} dias grátis
-                </Link>
+                {loggedIn ? (
+                  <form action={startCheckout.bind(null, p.id)} className="mt-auto">
+                    <button type="submit" className={cn(cta, "w-full", yearly ? primary : secondary, chosen === p.id && "ring-2 ring-focus")}>
+                      {yearly ? "Pagar o ano (Pix ou cartão)" : "Assinar no cartão"}
+                    </button>
+                  </form>
+                ) : (
+                  <Link href={`/entrar?modo=criar&plano=${p.id}`} className={cn(cta, "mt-auto", yearly ? primary : secondary)}>
+                    Começar {TRIAL_DAYS} dias grátis
+                  </Link>
+                )}
               </Card>
             </li>
           );

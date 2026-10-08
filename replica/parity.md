@@ -1,64 +1,42 @@
-## Parity: 37.9 / 100
+## Parity: 57.5 / 100
 
-features 37.9  (136 counted, must-haves 10 of 40 done)
+features 57.5  (136 counted, must-haves 32 of 40 done)
 
-Not shippable yet: 30 must-have features are not done.
+Not shippable yet: 8 must-have features are not done.
 
 ## By area, weakest first
 - telegram                       0.0  (1 features)
 - apps nativos                   0.0  (6 features)
 - integrações extras             0.0  (2 features)
-- whatsapp                       8.8  (6 features)
 - avisos proativos              10.0  (7 features)
-- lembretes                     13.6  (5 features)
 - automações                    16.7  (4 features)
 - agenda                        22.2  (5 features)
+- lembretes                     27.3  (5 features)
 - projetos                      28.6  (5 features)
-- notificações                  31.2  (4 features)
 - tarefas                       32.1  (6 features)
-- conta e assinatura            33.3  (9 features)
-- voz                           33.3  (4 features)
 - conhecimento                  40.0  (7 features)
-- assistente                    42.9  (17 features)
-- finanças                      44.3  (17 features)
+- notificações                  50.0  (4 features)
 - metas                         50.0  (3 features)
-- privacidade                   50.0  (4 features)
 - saúde                         56.2  (8 features)
+- finanças                      57.1  (17 features)
+- voz                           66.7  (4 features)
+- privacidade                   66.7  (4 features)
 - hábitos                       67.6  (8 features)
+- assistente                    73.8  (17 features)
 - personalização                75.0  (2 features)
+- whatsapp                      88.2  (6 features)
+- conta e assinatura            89.6  (9 features)
 - visão do dia                  90.9  (6 features)
 
 ## Missing, in build order
-- [must] assistente: Editar concluir e apagar itens pelo chat, no
-- [must] assistente: Pergunta de volta quando falta informação no pedido, no
-- [must] assistente: Perguntas sobre os próprios dados respondidas com números e cards, no  (F03)
-- [must] conta e assinatura: Acesso liberado automaticamente quando o pagamento é aprovado, no  (original libera pelo e-mail da compra; e-mails diferentes geram 'assinatura inválida' (suporte))
-- [must] conta e assinatura: Cancelar a assinatura dentro do app com acesso até o fim do ciclo, no  (suporte)
-- [must] conta e assinatura: Mesma conta em vários dispositivos com sincronização em tempo real, no  (suporte)
 - [must] lembretes: Lembretes recorrentes (diário semanal mensal), no  (App Store 3.1: lembretes mensais)
 - [must] tarefas: Tarefas recorrentes, no
-- [must] voz: Enviar áudio e ter o conteúdo transcrito e organizado, no
-- [must] whatsapp: Conversar com o assistente pelo WhatsApp em texto, no
-- [must] whatsapp: Mandar áudio pelo WhatsApp e ter tudo organizado, no
-- [must] whatsapp: Mesmos dados e histórico entre app e WhatsApp, no
-- [must] whatsapp: Receber lembretes e avisos pelo WhatsApp, no  (App Store 2.0)
-- [must] assistente: Conversa por texto em linguagem natural (pt-BR), partial  (intérprete de regras provisório; Claude entra no /replica-backend | S02)
-- [must] assistente: Datas e horas relativas no fuso do usuário, partial  (hoje, amanhã, depois de amanhã e HH:MM no fuso de Brasília | amanhã / sexta / daqui a 5 dias)
-- [must] assistente: Uma mensagem cria vários itens de áreas diferentes, partial  (gasto, entrada, lembrete, tarefa e hábito na mesma mensagem; o resto com o Claude)
-- [must] conta e assinatura: Cadastro e login com e-mail e senha, partial  (S31: entrar e criar conta com validação; Supabase Auth no /replica-backend)
-- [must] conta e assinatura: Planos mensal e anual com checkout, partial  (S32: planos, economia do anual e caminho até o cadastro; checkout (Stripe ou Asaas) no /replica-backend; preços provisórios)
-- [must] conta e assinatura: Recuperar senha por e-mail, partial  (S31: pedido sem revelar se a conta existe; envio do e-mail no /replica-backend)
+- [must] assistente: Editar concluir e apagar itens pelo chat, partial  (concluir e mudar tarefas e lembretes, marcar hábito; apagar e editar gastos depois)
+- [must] conta e assinatura: Mesma conta em vários dispositivos com sincronização em tempo real, partial  (mesma conta em qualquer aparelho e no WhatsApp; atualização ao vivo (Realtime) depois)
 - [must] finanças: Categorias e subcategorias, partial  (categorias padrão; sem subcategorias nem edição)
-- [must] finanças: Contas bancárias com saldo atualizado pelos lançamentos, partial  (S22 com saldo calculado pelos lançamentos; cadastrar e editar contas depois)
-- [must] finanças: Extrato com busca e filtros, partial  (busca por texto; filtros por conta e período depois; dados em memória até o /replica-backend | S24)
-- [must] finanças: Lançar despesa e receita pelo chat com categoria e meio de pagamento, partial  (dados em memória até o /replica-backend | S02)
-- [must] finanças: Resumo do mês: entrou saiu sobra e patrimônio, partial  (patrimônio = saldo em conta; sem investimentos; dados provisórios até o /replica-backend)
-- [must] lembretes: Lembrete único em data e hora, partial  (dados em memória até o /replica-backend)
-- [must] notificações: Notificação push de lembretes no navegador e no celular, partial  (aviso só com o app aberto; Web Push e fila no backend)
-- [must] privacidade: Excluir a conta e todos os dados pelo app, partial  (S29: confirmação digitada, apaga tudo e volta ao login; exclusão em cascata no Supabase no /replica-backend)
+- [must] finanças: Extrato com busca e filtros, partial  (busca por texto e paginação; filtros por conta e período depois | S24)
 - [must] tarefas: Criar tarefa com prazo prioridade e observações, partial  (prazo e prioridade pela tela e pela conversa; observações depois)
-- [must] voz: Ditado no campo de mensagem, partial  (reconhecimento de voz do navegador (Chrome, Edge, Safari); transcrição no servidor no /replica-backend | S01)
-- [must] whatsapp: Vincular número de WhatsApp com mensagem de boas-vindas, partial  (S29 guarda o número em E.164; mensagem de boas-vindas pela Meta no /replica-backend)
+- [must] voz: Enviar áudio e ter o conteúdo transcrito e organizado, partial  (no WhatsApp, sim (Groq); anexar áudio gravado no app depois)
 - [should] agenda: Criar evento com convidados pelo chat, no  (site [conferir])
 - [should] agenda: Vários calendários por conta, no  (App Store 3.1)
 - [should] assistente: Enviar foto ou documento no chat e usar o conteúdo, no  (App Store 3.0)
@@ -69,7 +47,6 @@ Not shippable yet: 30 must-have features are not done.
 - [should] avisos proativos: Aviso de cartão perto do limite, no  (site [conferir])
 - [should] avisos proativos: Aviso de renda comprometida, no  (site [conferir])
 - [should] conhecimento: Busca por sentido nas notas e conversas, no  (exclusão: índices de busca semântica)
-- [should] conta e assinatura: Nota fiscal enviada por e-mail após o pagamento, no  (suporte)
 - [should] finanças: Lista 'a resolver' com contas atrasadas e próximas e botão confirmar, no  (S18)
 - [should] finanças: Previsão do mês (realizado mais previsto) e projeção do saldo, no  (S18)
 - [should] finanças: Transferência entre contas e ajuste de saldo fora de gasto e receita, no  (site [conferir])
@@ -85,9 +62,9 @@ Not shippable yet: 30 must-have features are not done.
 - [should] whatsapp: Mandar foto pelo WhatsApp (comprovante ou fatura), no  (site [conferir])
 - [should] agenda: Conectar Google Agenda e ver os eventos, partial  (S08: tela e estados conectada/desconectada com eventos de exemplo; OAuth no /replica-backend)
 - [should] agenda: Conectar Outlook e ver os eventos, partial  (S08: idem; OAuth da Microsoft no /replica-backend)
-- [should] assistente: Briefing diário em texto, partial  (S04 montado com os dados do dia; envio no horário pela fila e texto pelo Claude no /replica-backend)
 - [should] automações: Criar revisão agendada com dia hora fontes e instrução, partial  (S27 lista, pausa e descreve; criar pela conversa com o Claude no /replica-backend)
 - [should] avisos proativos: Aviso de conta a vencer, partial  (S04 lista contas dos próximos 3 dias; S20 avisa quando o dia passou sem pagamento; envio ativo no backend)
+- [should] conta e assinatura: Nota fiscal enviada por e-mail após o pagamento, partial  (emitida pela Asaas (ativar no painel))
 - [should] finanças: Cartões de crédito com limite fechamento e vencimento, partial  (S22: limite, fechamento, vencimento, fatura aberta e limite disponível; cadastrar pela conversa depois)
 - [should] finanças: Compras parceladas com parcelas pagas e data de quitação, partial  (S21: parcela atual, quanto falta, quitação e previsão de 6 meses; registrar parcelado pela conversa depois)
 - [should] finanças: Contas recorrentes e assinaturas com pausar e pular cobrança, partial  (S20: pausar e retomar; avisa quando o dia passou sem pagamento; pular uma cobrança depois)
@@ -132,7 +109,6 @@ Not shippable yet: 30 must-have features are not done.
 - [could] telegram: Conversar e receber lembretes pelo Telegram, no  (site [conferir])
 - [could] visão do dia: Radar das áreas da vida, no  (site [conferir])
 - [could] assistente: Briefing do dia em áudio, partial  (S04: botão Ouvir com a voz do navegador; áudio gerado no servidor depois)
-- [could] conta e assinatura: Período de teste gratuito, partial  (S32 oferece 7 dias; S29 mostra até quando vale; cobrança no backend)
 - [could] hábitos: Análise de padrões (melhores dias e ranking), partial  (S13: taxa por dia da semana (90 dias) e melhor e pior dia; ranking entre hábitos depois)
 - [could] metas: Ritmo da meta (no ritmo atrás à frente) e pausar, partial  (à frente, no ritmo ou atrás pelo tempo decorrido; pausar depois)
 - [could] saúde: Plano de dieta com refeições e metas de macros, partial  (S16: refeições, itens e calorias; macros depois)

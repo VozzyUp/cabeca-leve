@@ -28,7 +28,8 @@ describe.skipIf(!run)("SupabaseStore", () => {
     b = await createSupabaseStore(admin, users[1], `b-${stamp}@teste.local`);
   });
   afterAll(async () => {
-    for (const id of users) await admin.auth.admin.deleteUser(id).catch(() => {});
+    const { error } = await admin.auth.admin.deleteUser(users[0]);
+    expect(error).toBeNull();
   });
 
   it("cadastro cria perfil, categorias, conta e aviso de boas-vindas", async () => {
@@ -78,8 +79,10 @@ describe.skipIf(!run)("SupabaseStore", () => {
     expect(error).not.toBeNull();  // escrita só pelo servidor
   });
 
-  it("excluir a conta apaga tudo em cascata", async () => {
+  it("excluir a conta apaga tudo em cascata, inclusive conversa e notas", async () => {
     await b.createTask({ title: "Temporária", dueOn: null });
+    await b.appendMessage({ role: "user", text: "oi", cards: [] });
+    await b.createNote({ title: "Ideia", body: "texto", notebook: "Pessoal", kind: "note" });
     await b.deleteAllData();
     const { data } = await admin.from("tasks").select("id").eq("user_id", users[1]);
     expect(data).toEqual([]);

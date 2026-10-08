@@ -55,3 +55,16 @@ assinatura, WhatsApp, áudio, push com o app fechado, OAuth das agendas e envio 
 Verificação no navegador: `scripts/slice-check.cjs`, `scripts/m2-check.cjs` e `scripts/m3-check.cjs`
 (grupos financas, organizacao, plano, saude, conta e exclusao), em 1440 e 390 px, sem erros no console.
 
+
+## /replica-backend (2026-10-08)
+
+| parte | estado | o que falta | mais difícil do que parecia |
+| --- | --- | --- | --- |
+| banco e login | feito | Realtime entre aparelhos | apagar uma conta com conversa falhava: o gatilho que limpa o índice de busca rodava com o papel do Auth, sem permissão. Só apareceu porque os testes apagam os usuários no fim; corrigido com `security definer` |
+| agente Claude | feito | streaming da resposta, memória | a resposta final nem sempre volta em `runner.params.messages`; o turno com erro precisa ser fechado com uma resposta, senão a próxima mensagem quebra o histórico (uma mensagem de sistema não pode ficar seguida de outra do usuário) |
+| WhatsApp | feito (UAZAPI) | modelos de mensagem da Meta | celulares do Brasil chegam do WhatsApp sem o 9; a UAZAPI não assina o webhook (segredo na URL + token da instância no corpo) |
+| entregas | feito | revisões agendadas com Claude | duas varreduras ao mesmo tempo mandariam em dobro: reserva com chave única antes de enviar |
+| cobrança | feito (sandbox) | — | o checkout recorrente da Asaas só aceita cartão: anual virou pagamento único por Pix ou cartão; a assinatura nasce com id provisório e recebe o real no SUBSCRIPTION_CREATED |
+
+Paridade 57,5/100 (era 37,9); 32 de 40 obrigatórias completas. Detalhes, passo a passo das contas e
+checklist de segurança em `replica/backend.md`.

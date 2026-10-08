@@ -202,7 +202,8 @@ const groups = {
       await p.getByRole('button', { name: 'Esqueci a senha' }).click();
       await p.getByLabel('E-mail').fill('ana@exemplo.com.br');
       await p.getByRole('button', { name: 'Mandar o link' }).click();
-      ok(await p.getByText('Se existir uma conta com').isVisible(), 'S31: recuperar senha sem revelar se a conta existe');
+      await p.getByText('Se existir uma conta com').waitFor();
+      ok(true, 'S31: recuperar senha sem revelar se a conta existe');
       await p.getByRole('button', { name: 'Voltar para entrar' }).click();
       await p.getByLabel('Senha').fill('12345678');
       await p.getByRole('button', { name: 'Entrar', exact: true }).last().click();

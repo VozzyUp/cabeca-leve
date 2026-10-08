@@ -43,6 +43,8 @@ export interface DataStore {
   markCardsUndone(actionId: string): Promise<void>;
   // conversa de hoje como a API recebe (blocos exatos, em ordem, inclusive os passos internos)
   listTodayTranscript(): Promise<TranscriptEntry[]>;
+  // mensagens que a pessoa mandou desde um instante (limite de uso)
+  countUserMessagesSince(iso: string): Promise<number>;
 
   // finanças (M3)
   listCards(): Promise<CreditCard[]>;

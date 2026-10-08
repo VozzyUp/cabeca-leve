@@ -215,6 +215,11 @@ export async function createSupabaseStore(db: Admin, userId: string, email: stri
     async markCardsUndone(actionId) {
       await markCards(actionId);
     },
+    async countUserMessagesSince(iso) {
+      const r = await db.from("messages").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("role", "user").gte("created_at", iso);
+      if (r.error) throw new Error(r.error.message);
+      return r.count ?? 0;
+    },
     async listTodayTranscript() {
       const conv = must(await db.from("conversations").select("id").eq("user_id", userId).eq("local_date", today()).maybeSingle() as Result<{ id: string } | null>);
       if (!conv) return [];
@@ -414,17 +419,20 @@ export async function createSupabaseStore(db: Admin, userId: string, email: stri
     async getSettings() {
       const [p, sub, wa, integ] = await Promise.all([
         db.from("profiles").select("*").eq("user_id", userId).single(),
-        db.from("subscriptions").select("plan, status").eq("user_id", userId).in("status", ["active", "trialing", "past_due"]).order("created_at", { ascending: false }).limit(1),
+        db.from("subscriptions").select("plan, status, current_period_end, cancel_at_period_end").eq("user_id", userId).order("created_at", { ascending: false }).limit(5),
         db.from("channel_links").select("external_id, verified_at").eq("user_id", userId).eq("channel", "whatsapp").maybeSingle(),
         db.from("integrations").select("provider").eq("user_id", userId).eq("status", "active"),
       ]);
       const prof = must(p);
-      const s = must(sub)[0];
+      // vale a assinatura ativa, ou a cancelada que ainda está dentro do período pago
+      const nowIso = new Date().toISOString();
+      const s = must(sub).find((x) => ["active", "trialing", "past_due"].includes(x.status) || (x.current_period_end ?? "") > nowIso);
       const providers = new Set(must(integ).map((i) => i.provider));
       const waRow = must(wa as Result<{ external_id: string; verified_at: string | null } | null>);
       const plan: Settings["plan"] = s ? (s.plan as "monthly" | "yearly") : prof.trial_ends_on >= today() ? "trial" : "none";
       return {
         name: prof.display_name ?? "você", email: email ?? "", timezone: prof.timezone, plan, trialEndsOn: plan === "trial" ? prof.trial_ends_on : null,
+        billing: s ? { periodEnd: s.current_period_end, renews: !s.cancel_at_period_end && s.status !== "canceled", pastDue: s.status === "past_due" } : undefined,
         tone: (prof.assistant_tone === "custom" ? "warm" : prof.assistant_tone) as Settings["tone"], answerLength: prof.answer_length as Settings["answerLength"],
         voice: (prof.assistant_voice === "male" ? "male" : "female"), memoryEnabled: prof.memory_enabled, theme: prof.theme as Settings["theme"],
         briefingTime: prof.briefing_enabled ? hm(prof.briefing_time) : null,

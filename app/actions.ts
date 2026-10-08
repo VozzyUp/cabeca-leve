@@ -1,5 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { billingEnabled, cancelSubscription, createCheckout } from "@/lib/billing/asaas";
 import { z } from "zod";
 import { getStore } from "@/lib/data";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -159,4 +161,22 @@ export async function linkWhatsApp(number: string) {
   const result = await startLink(user.id, n);
   revalidatePath("/ajustes");
   return result;
+}
+
+// Abre a página de pagamento da Asaas para o plano escolhido
+export async function startCheckout(plan: "monthly" | "yearly") {
+  const p = z.enum(["monthly", "yearly"]).parse(plan);
+  const user = await currentUser();
+  if (!user) redirect(`/entrar?modo=criar&plano=${p}`);
+  if (!billingEnabled()) throw new Error("Cobrança não configurada");
+  const settings = await (await getStore()).getSettings();
+  redirect(await createCheckout(user.id, p, settings.trialEndsOn));
+}
+
+// Cancelar em um toque: para de cobrar e o acesso vale até o fim do período pago
+export async function cancelPlan() {
+  const user = await currentUser();
+  if (!user) throw new Error("Sessão expirada");
+  await cancelSubscription(user.id);
+  revalidatePath("/", "layout");
 }

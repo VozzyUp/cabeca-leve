@@ -40,5 +40,15 @@ node scripts/m2-check.cjs replica/clone-screens           # M2: tarefas, hábito
 node scripts/m3-check.cjs replica/clone-screens financas  # ou organizacao, plano, saude, conta, exclusao
 ```
 
-Até o `/replica-backend`, os dados são de exemplo e ficam num arquivo local; login, pagamento,
-WhatsApp e agendas mostram a tela completa, mas ainda não conectam a nada.
+Sem `.env.local`, o app roda no **modo de demonstração**: dados de exemplo num arquivo local e sem login.
+
+## Backend
+
+Com as variáveis de `.env.example` preenchidas, o app usa Supabase (banco e login), Claude
+(assistente), UAZAPI (WhatsApp), Groq (áudio), QStash (agendamento), Web Push e Asaas (cobrança).
+Passo a passo para criar cada conta, checklist de segurança e pendências: `replica/backend.md`.
+
+```bash
+npm run db:start   # Supabase local no Docker (copie as chaves que ele mostra para .env.local)
+npm run test:int   # testes de integração contra o Supabase local
+```
