@@ -127,6 +127,18 @@ Coluna "auto":
 | F15-N4 | negativo | evento repetido da Asaas | ignorado (idempotente) | int | passou |
 | F15-M1 | pagamento real | sandbox da Asaas: cartão recusado, Pix pago, Pix vencido | ver lista manual | manual | pendente (chave) |
 
+## Confiança: F1 a F3 do fixes.md
+
+| caso | tipo | passos | esperado | auto | resultado |
+| --- | --- | --- | --- | --- | --- |
+| F17-H2 | feliz | assinar → Cancelar assinatura → a Asaas cobra o mês seguinte mesmo assim | aviso e e-mail com protocolo CL-…; Ajustes mostra o comprovante; a cobrança nova é estornada sozinha e o período não aumenta | e2e | passou |
+| F15-E4 | borda: pagou e o webhook atrasou | teste vencido → checkout → volta para /planos/obrigado | "Confirmando o pagamento…"; a conversa funciona; Ajustes diz "Pagamento em confirmação"; quando a Asaas confirma, "Plano ativo" | e2e | passou |
+| F15-N5 | negativo: abuso | abrir /planos/obrigado sem ter aberto pagamento | nada é liberado | e2e | passou |
+| F3-H1 | feliz | Ajustes → Falar com uma pessoa → mensagem; o time responde no painel | protocolo e prazo; o time recebe e-mail e WhatsApp; a resposta aparece no app e chega por e-mail | e2e | passou |
+| F3-E1 | borda | "quero falar com uma pessoa" na conversa, com o teste vencido | abre o chamado e responde com o protocolo | e2e | passou |
+| F3-N1 | negativo: segurança | conta comum abre /suporte/painel | página não encontrada | e2e | passou |
+| F3-U1 | unidade | jeitos de pedir uma pessoa, e frases parecidas que não são pedido | reconhece só os pedidos | unid | passou |
+
 ## F18 Excluir · F19 Personalizar
 
 | caso | tipo | passos | esperado | auto | resultado |

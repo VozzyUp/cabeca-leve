@@ -351,6 +351,8 @@ export const fakeStore: DataStore = {
     mutate((s) => s.messages.push(m));
     return { id: m.id, role: m.role, text: m.text, cards: m.cards, createdAt: m.createdAt };
   },
+  async openSupportTicket() { return null; },  // demonstração: sem time de suporte
+  async listSupportTickets() { return []; },
   withTurn(fn) {
     const run = turnQueue.then(fn, fn);
     turnQueue = run.then(() => undefined, () => undefined);

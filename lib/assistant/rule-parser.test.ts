@@ -109,3 +109,15 @@ describe("lembretes que se repetem", () => {
     expect(one("me lembra de ligar pro banco amanhã às 9h").recurrenceRule).toBeNull();
   });
 });
+
+describe("pedir uma pessoa", () => {
+  it("reconhece os jeitos comuns de pedir um humano", async () => {
+    const { wantsHuman } = await import("./rule-parser");
+    for (const t of ["quero falar com uma pessoa", "me passa pro suporte", "atendimento humano por favor", "Quero falar com um atendente", "posso conversar com alguém do time?"]) {
+      expect(wantsHuman(t), t).toBe(true);
+    }
+    for (const t of ["gastei 30 no almoço", "me lembra de ligar pra minha mãe", "falar com a pessoa do RH amanhã às 10h", "me lembra de falar com alguém sobre o carro"]) {
+      expect(wantsHuman(t), t).toBe(false);
+    }
+  });
+});

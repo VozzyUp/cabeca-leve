@@ -7,6 +7,7 @@ import { getStore } from "@/lib/data";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { currentUser } from "@/lib/supabase/server";
 import { startLink } from "@/lib/whatsapp/link";
+import { answerTicket, isSupportAdmin } from "@/lib/support";
 import type { Settings } from "@/lib/data/types";
 
 // Ações de servidor das telas do M3 e M4. Cada uma valida a entrada, grava pelo DataStore
@@ -204,4 +205,21 @@ export async function renameCategory(id: string, name: string) {
 export async function archiveCategory(id: string) {
   await (await getStore()).archiveCategory(uuid.parse(id));
   revalidatePath("/dinheiro", "layout");
+}
+
+// F3: falar com uma pessoa. Abre o chamado (protocolo e prazo) e avisa o time.
+export async function openSupport(message: string) {
+  const text = z.string().trim().min(5, "Conte um pouco mais").max(4000).parse(message);
+  const ticket = await (await getStore()).openSupportTicket(text, "web");
+  revalidatePath("/ajustes/suporte");
+  return ticket;
+}
+
+// Painel do time: só e-mails em ADMIN_EMAILS respondem
+export async function answerSupport(ticketId: string, reply: string) {
+  const user = await currentUser();
+  if (!user || !isSupportAdmin(user.email)) throw new Error("Sem permissão");
+  const ok = await answerTicket(uuid.parse(ticketId), z.string().trim().min(1).max(4000).parse(reply), user.email!);
+  revalidatePath("/suporte/painel");
+  return ok;
 }

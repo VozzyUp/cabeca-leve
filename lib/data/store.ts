@@ -1,7 +1,7 @@
 import type {
   Account, ActionRecord, Automation, BodyMeasurement, CalendarEvent, Category, ChatMessage, CreditCard, FocusSession, Goal,
   Habit, HabitLog, InstallmentPurchase, Meal, MealLog, Note, Notice, Project, Recurrence, Reminder, Settings, Task,
-  Transaction, Workout, WorkoutLog,
+  SupportTicket, Transaction, Workout, WorkoutLog,
 } from "./types";
 
 // Mensagem a gravar. `content` são os blocos exatos da API (reenviados byte a byte ao modelo);
@@ -55,6 +55,9 @@ export interface DataStore {
   listTodayTranscript(): Promise<TranscriptEntry[]>;
   // mensagens que a pessoa mandou desde um instante (limite de uso)
   countUserMessagesSince(iso: string): Promise<number>;
+  // falar com uma pessoa (F3): null no modo de demonstração
+  openSupportTicket(message: string, channel: "web" | "whatsapp" | "voice"): Promise<{ protocol: string; dueAt: string } | null>;
+  listSupportTickets(): Promise<SupportTicket[]>;
   // um turno do assistente por vez na conversa de hoje (mensagens que chegam juntas esperam a vez)
   withTurn<T>(fn: () => Promise<T>): Promise<T>;
 

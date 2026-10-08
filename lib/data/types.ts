@@ -162,7 +162,7 @@ export type Automation = {
 
 export type Notice = {
   id: string;
-  kind: "reminder" | "briefing" | "automation" | "bill" | "system";
+  kind: "reminder" | "briefing" | "automation" | "bill" | "system" | "support" | "billing";
   title: string;
   body: string;
   href: string | null;
@@ -201,7 +201,11 @@ export type Settings = {
   plan: "trial" | "monthly" | "yearly" | "none";
   trialEndsOn: string | null;
   // assinatura paga: até quando vale e se renova sozinha
-  billing?: { periodEnd: string | null; renews: boolean; pastDue: boolean };
+  billing?: {
+    periodEnd: string | null; renews: boolean; pastDue: boolean;
+    confirming?: boolean;                 // voltou do pagamento e a Asaas ainda não confirmou (F2)
+    canceledAt?: string | null; cancelProtocol?: string | null;  // comprovante do cancelamento (F1)
+  };
   tone: "direct" | "warm" | "playful";
   answerLength: "short" | "detailed";
   voice: "female" | "male";
@@ -210,4 +214,16 @@ export type Settings = {
   briefingTime: string | null;
   channels: { whatsapp: string | null; whatsappVerified?: boolean; telegram: boolean; email: boolean; push: boolean };
   calendars: { google: boolean; outlook: boolean };
+};
+
+// F3: chamado para uma pessoa do time
+export type SupportTicket = {
+  id: string;
+  protocol: string;
+  message: string;
+  status: "open" | "answered" | "closed";
+  dueAt: string;
+  reply: string | null;
+  answeredAt: string | null;
+  createdAt: string;
 };

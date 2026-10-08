@@ -321,14 +321,14 @@ isOneToOne: false
                   ]
                 },"checkout_sessions": {
                   Row: {
-                    "created_at": string,"id": string,"plan": string,"status": string,"updated_at": string,"user_id": string
+                    "created_at": string,"id": string,"plan": string,"returned_at": string | null,"status": string,"updated_at": string,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"id": string,"plan": string,"status"?: string,"updated_at"?: string,"user_id": string
+                    "created_at"?: string,"id": string,"plan": string,"returned_at"?: string | null,"status"?: string,"updated_at"?: string,"user_id": string
                   }
                   Update: {
-                    "created_at"?: string,"id"?: string,"plan"?: string,"status"?: string,"updated_at"?: string,"user_id"?: string
+                    "created_at"?: string,"id"?: string,"plan"?: string,"returned_at"?: string | null,"status"?: string,"updated_at"?: string,"user_id"?: string
                   }
                   Relationships: [
                     
@@ -935,14 +935,28 @@ isOneToOne: false
                   ]
                 },"subscriptions": {
                   Row: {
-                    "cancel_at_period_end": boolean,"checkout_email": string | null,"created_at": string,"current_period_end": string | null,"id": string,"plan": string,"provider": string,"provider_customer_id": string,"provider_subscription_id": string,"status": string,"updated_at": string,"user_id": string
+                    "cancel_at_period_end": boolean,"cancel_protocol": string | null,"canceled_at": string | null,"checkout_email": string | null,"created_at": string,"current_period_end": string | null,"id": string,"plan": string,"provider": string,"provider_customer_id": string,"provider_subscription_id": string,"status": string,"updated_at": string,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "cancel_at_period_end"?: boolean,"checkout_email"?: string | null,"created_at"?: string,"current_period_end"?: string | null,"id"?: string,"plan": string,"provider"?: string,"provider_customer_id": string,"provider_subscription_id": string,"status": string,"updated_at"?: string,"user_id": string
+                    "cancel_at_period_end"?: boolean,"cancel_protocol"?: string | null,"canceled_at"?: string | null,"checkout_email"?: string | null,"created_at"?: string,"current_period_end"?: string | null,"id"?: string,"plan": string,"provider"?: string,"provider_customer_id": string,"provider_subscription_id": string,"status": string,"updated_at"?: string,"user_id": string
                   }
                   Update: {
-                    "cancel_at_period_end"?: boolean,"checkout_email"?: string | null,"created_at"?: string,"current_period_end"?: string | null,"id"?: string,"plan"?: string,"provider"?: string,"provider_customer_id"?: string,"provider_subscription_id"?: string,"status"?: string,"updated_at"?: string,"user_id"?: string
+                    "cancel_at_period_end"?: boolean,"cancel_protocol"?: string | null,"canceled_at"?: string | null,"checkout_email"?: string | null,"created_at"?: string,"current_period_end"?: string | null,"id"?: string,"plan"?: string,"provider"?: string,"provider_customer_id"?: string,"provider_subscription_id"?: string,"status"?: string,"updated_at"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"support_tickets": {
+                  Row: {
+                    "answered_at": string | null,"answered_by": string | null,"channel": string,"created_at": string,"due_at": string,"id": string,"message": string,"protocol": string,"reply": string | null,"status": string,"updated_at": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "answered_at"?: string | null,"answered_by"?: string | null,"channel": string,"created_at"?: string,"due_at": string,"id"?: string,"message": string,"protocol": string,"reply"?: string | null,"status"?: string,"updated_at"?: string,"user_id": string
+                  }
+                  Update: {
+                    "answered_at"?: string | null,"answered_by"?: string | null,"channel"?: string,"created_at"?: string,"due_at"?: string,"id"?: string,"message"?: string,"protocol"?: string,"reply"?: string | null,"status"?: string,"updated_at"?: string,"user_id"?: string
                   }
                   Relationships: [
                     

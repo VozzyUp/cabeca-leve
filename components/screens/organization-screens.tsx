@@ -1,4 +1,4 @@
-import { Bell, CalendarClock, FolderKanban, Info, Megaphone, Receipt, Sparkles, Target, Workflow } from "lucide-react";
+import { Bell, CalendarClock, CreditCard, FolderKanban, Info, LifeBuoy, Megaphone, Receipt, Sparkles, Target, Workflow } from "lucide-react";
 import Link from "next/link";
 import { markNoticesRead, setAutomationActive, setMilestoneDone } from "@/app/actions";
 import { ActionButton, ActionCheck, ActionSwitch } from "@/components/ui/action-controls";
@@ -196,7 +196,7 @@ export async function AutomationsScreen() {
 }
 
 // ---- S28 ----
-const NOTICE_ICON: Record<Notice["kind"], typeof Bell> = { reminder: Bell, briefing: Sparkles, automation: CalendarClock, bill: Receipt, system: Info };
+const NOTICE_ICON: Record<Notice["kind"], typeof Bell> = { reminder: Bell, briefing: Sparkles, automation: CalendarClock, bill: Receipt, system: Info, support: LifeBuoy, billing: CreditCard };
 
 function ago(iso: string, now: Date, tz: string) {
   const min = Math.round((now.getTime() - Date.parse(iso)) / 60_000);

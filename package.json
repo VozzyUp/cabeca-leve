@@ -15,7 +15,7 @@
     "db:start": "supabase start -x imgproxy,vector,logflare,edge-runtime,supavisor",
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
-    "db:types": "supabase gen types typescript --local > lib/supabase/database.types.ts",
+    "db:types": "supabase gen types typescript --local > lib/supabase/database.types.ts.tmp && mv lib/supabase/database.types.ts.tmp lib/supabase/database.types.ts",
     "test:int": "SUPABASE_TEST=1 vitest run --no-file-parallelism lib/data/supabase-store.int.test.ts lib/assistant/agent.int.test.ts lib/whatsapp/whatsapp.int.test.ts lib/deliveries.int.test.ts lib/billing/asaas.int.test.ts"
   },
   "dependencies": {

@@ -185,3 +185,7 @@ export function parseMessage(text: string, now: Date, tz: string): Intent[] {
     .map((c) => parseReminder(c, now, tz) ?? parseTask(c, now, tz) ?? parseHabit(c) ?? parseTransaction(c))
     .filter((x): x is Intent => x !== null);
 }
+
+// "quero falar com uma pessoa", "me passa pro suporte", "atendimento humano"
+const HUMAN = /\b(falar|conversar)\s+com\s+(uma\s+pessoa|um\s+humano|uma\s+humana|algu[eé]m\s+d[oe]\s+(time|suporte|voc[eê]s)|um\s+atendente|o\s+suporte)\b|\bpassa\s+(pro|para\s+o)\s+suporte\b|\b(suporte|atendimento)\s+humano\b|\bquero\s+(um\s+)?(humano|atendente)\b/i;
+export const wantsHuman = (text: string) => HUMAN.test(text);

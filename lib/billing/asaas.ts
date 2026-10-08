@@ -1,5 +1,7 @@
 import crypto from "node:crypto";
 import { BRAND } from "@/lib/brand";
+import { sendEmail } from "@/lib/email";
+import { newProtocol } from "@/lib/support";
 import { PLANS } from "@/lib/plans";
 import { getAdmin } from "@/lib/supabase/server";
 
@@ -45,14 +47,23 @@ export async function createCheckout(userId: string, plan: "monthly" | "yearly",
   return checkoutUrl(id);
 }
 
+const longDate = (iso: string) => new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", day: "numeric", month: "long", year: "numeric" }).format(new Date(iso));
+
+// F1: cancelar dá comprovante (protocolo, data e até quando vale), no app e por e-mail
 export async function cancelSubscription(userId: string) {
   const db = getAdmin();
-  const { data: sub } = await db.from("subscriptions").select("id, provider_subscription_id").eq("user_id", userId)
+  const { data: sub } = await db.from("subscriptions").select("id, provider_subscription_id, current_period_end, cancel_at_period_end, canceled_at").eq("user_id", userId)
     .in("status", ["active", "past_due", "trialing"]).order("created_at", { ascending: false }).limit(1).maybeSingle();
-  if (!sub) return false;
+  if (!sub || sub.canceled_at) return false;
   // anual é pagamento único: não há cobrança futura para cancelar, só não renova
   if (sub.provider_subscription_id.startsWith("sub_")) await asaas(`/subscriptions/${sub.provider_subscription_id}`, { method: "DELETE" });
-  await db.from("subscriptions").update({ cancel_at_period_end: true }).eq("id", sub.id);
+  const protocol = newProtocol(), canceledAt = new Date().toISOString();
+  await db.from("subscriptions").update({ cancel_at_period_end: true, canceled_at: canceledAt, cancel_protocol: protocol }).eq("id", sub.id);
+  const until = sub.current_period_end ? longDate(sub.current_period_end) : null;
+  const body = `Protocolo ${protocol}, em ${longDate(canceledAt)}. Nenhuma cobrança nova será feita.${until ? ` Seu acesso continua até ${until}.` : ""}`;
+  await db.from("notices").insert({ user_id: userId, kind: "billing", title: "Assinatura cancelada", body, href: "/ajustes" });
+  const { data: user } = await db.auth.admin.getUserById(userId);
+  await sendEmail(user.user?.email ?? "", `${BRAND.name}: comprovante de cancelamento`, `Sua assinatura do ${BRAND.name} foi cancelada.\n\n${body}\n\nSe aparecer qualquer cobrança depois disto, nós estornamos automaticamente.`);
   return true;
 }
 
@@ -112,6 +123,15 @@ export async function handleAsaasEvent(e: AsaasEvent): Promise<"ok" | "duplicate
     userId = data?.[0]?.user_id ?? null;
   } else if (e.payment?.subscription && ["PAYMENT_CONFIRMED", "PAYMENT_RECEIVED", "PAYMENT_OVERDUE", "PAYMENT_REFUNDED", "PAYMENT_CHARGEBACK_REQUESTED"].includes(e.event)) {
     const paid = e.event === "PAYMENT_CONFIRMED" || e.event === "PAYMENT_RECEIVED";
+    // F1: cobrança de um período que começa depois do cancelamento volta sozinha para a pessoa
+    const { data: current } = await db.from("subscriptions").select("user_id, canceled_at").eq("provider_subscription_id", e.payment.subscription).maybeSingle();
+    if (paid && current?.canceled_at && e.payment.dueDate && e.payment.dueDate > current.canceled_at.slice(0, 10)) {
+      await asaas(`/payments/${e.payment.id}/refund`, { method: "POST", body: JSON.stringify({ description: "Cobrança depois do cancelamento" }) });
+      await db.from("notices").insert({ user_id: current.user_id, kind: "billing", title: "Cobrança estornada",
+        body: "Chegou uma cobrança depois do seu cancelamento. Já pedimos o estorno à Asaas; o valor volta no mesmo meio de pagamento." });
+      await db.from("billing_events").update({ processed_at: new Date().toISOString(), user_id: current.user_id }).eq("id", row.id);
+      return "ok";
+    }
     const patch = paid
       ? { status: "active", ...(e.payment.dueDate ? { current_period_end: addMonths(e.payment.dueDate, 1) } : {}) }
       : { status: e.event === "PAYMENT_OVERDUE" ? "past_due" : "unpaid" };
@@ -121,4 +141,13 @@ export async function handleAsaasEvent(e: AsaasEvent): Promise<"ok" | "duplicate
 
   await db.from("billing_events").update({ processed_at: new Date().toISOString(), user_id: userId }).eq("id", row.id);
   return result;
+}
+
+// F2: a pessoa voltou da página de pagamento (successUrl). Marca a volta no checkout das
+// últimas 2 h; o getSettings libera o acesso por 2 h a partir daqui, até o webhook confirmar.
+export async function markCheckoutReturned(userId: string) {
+  const db = getAdmin();
+  const { data: session } = await db.from("checkout_sessions").select("id").eq("user_id", userId).eq("status", "pending").is("returned_at", null)
+    .gte("created_at", new Date(Date.now() - 2 * 3_600_000).toISOString()).order("created_at", { ascending: false }).limit(1).maybeSingle();
+  if (session) await db.from("checkout_sessions").update({ returned_at: new Date().toISOString() }).eq("id", session.id);
 }

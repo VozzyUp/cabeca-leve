@@ -6,7 +6,7 @@ export const SCREENS = [
   "/conversa", "/conversa/voz", "/dia", "/dia/calendario", "/agenda", "/tarefas", "/lembretes", "/habitos", "/foco",
   "/projetos", "/metas", "/notas", "/dinheiro", "/dinheiro/extrato", "/dinheiro/contas", "/dinheiro/fixos",
   "/dinheiro/variaveis", "/dinheiro/parcelas", "/dinheiro/analise", "/dinheiro/categorias", "/saude", "/saude/treino",
-  "/saude/dieta", "/saude/progresso", "/automacoes", "/avisos", "/briefing", "/mais", "/ajustes", "/ajustes/assistente",
+  "/saude/dieta", "/saude/progresso", "/automacoes", "/avisos", "/briefing", "/mais", "/ajustes", "/ajustes/assistente", "/ajustes/suporte",
 ];
 
 test("X-H1 todas as telas abrem, sem violações de acessibilidade @celular", async ({ page, user }) => {

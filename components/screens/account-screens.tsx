@@ -1,4 +1,4 @@
-import { Bell, ChevronRight, CreditCard, Sparkles } from "lucide-react";
+import { Bell, ChevronRight, CreditCard, LifeBuoy, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { cancelPlan } from "@/app/actions";
 import { Card } from "@/components/ui/card";
@@ -25,7 +25,8 @@ export async function SettingsScreen() {
   const [settings, notices] = await Promise.all([store.getSettings(), store.listNotices()]);
   const unread = notices.filter((n) => !n.readAt).length;
   const end = settings.billing?.periodEnd ? formatShortDate(settings.billing.periodEnd.slice(0, 10)) : null;
-  const plan = settings.billing?.pastDue ? "Pagamento atrasado: atualize o cartão para não perder o acesso"
+  const plan = settings.billing?.confirming ? "Pagamento em confirmação: tudo liberado enquanto a Asaas confirma"
+    : settings.billing?.pastDue ? "Pagamento atrasado: atualize o cartão para não perder o acesso"
     : settings.billing && settings.plan !== "trial" && settings.plan !== "none"
     ? `Plano ${PLANS[settings.plan].name.toLowerCase()} · ${settings.billing.renews ? `renova em ${end}` : `vale até ${end}, sem renovar`}`
     : settings.plan === "trial"
@@ -38,8 +39,16 @@ export async function SettingsScreen() {
       <Card className="divide-y divide-border p-0">
         <LinkRow href="/planos" icon={CreditCard} title="Assinatura" hint={plan} />
         <LinkRow href="/ajustes/assistente" icon={Sparkles} title="Jeito do assistente" hint="tom, voz, memória e tema" />
+        <LinkRow href="/ajustes/suporte" icon={LifeBuoy} title="Falar com uma pessoa" hint="resposta de alguém do time em até 1 dia útil" />
         <LinkRow href="/avisos" icon={Bell} title="Avisos" hint={unread ? `${unread} novo${unread === 1 ? "" : "s"}` : "tudo lido"} />
       </Card>
+      {settings.billing?.canceledAt && (
+        <p role="note" className="rounded-lg border border-border bg-surface px-4 py-3 text-sm text-body">
+          Assinatura cancelada em {formatShortDate(settings.billing.canceledAt.slice(0, 10))}, protocolo{" "}
+          <span className="font-mono text-text">{settings.billing.cancelProtocol}</span>. Nenhuma cobrança nova
+          {end ? `; acesso até ${end}` : ""}. Se chegar alguma cobrança, ela é estornada sozinha.
+        </p>
+      )}
       {settings.billing?.renews && (
         <form action={cancelPlan} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface px-4 py-3">
           <span className="text-sm text-body">Cancelar é imediato: para de cobrar e o acesso continua até {end}.</span>

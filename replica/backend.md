@@ -16,7 +16,8 @@ Sem as variáveis do Supabase, o app continua no modo de demonstração (dados d
 | 5 | **Upstash QStash** | copiar o token e as chaves de assinatura; criar um agendamento (Schedules) a cada minuto (`* * * * *`) chamando `POST https://seu-dominio/api/cron/sweep` | `QSTASH_TOKEN`, `QSTASH_CURRENT_SIGNING_KEY`, `QSTASH_NEXT_SIGNING_KEY` |
 | 6 | **Web Push** | `npx web-push generate-vapid-keys` | `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` |
 | 7 | **Asaas** (sandbox) | criar a chave de API do sandbox; criar o webhook (Integrações > Webhooks) para `https://seu-dominio/api/webhooks/asaas` com os eventos `CHECKOUT_*`, `SUBSCRIPTION_*` e `PAYMENT_*` e um token de 32+ caracteres; ativar a emissão de nota fiscal para assinaturas no painel | `ASAAS_API_URL`, `ASAAS_API_KEY`, `ASAAS_WEBHOOK_TOKEN` |
-| 8 | **Resend** | verificar o domínio (SPF, DKIM, DMARC) e colocar o SMTP da Resend no Supabase (Authentication > SMTP Settings). Os e-mails de login passam a sair do seu domínio | (no painel do Supabase) |
+| 8 | **Resend** | verificar o domínio (SPF, DKIM, DMARC) e colocar o SMTP da Resend no Supabase (Authentication > SMTP Settings). Os e-mails de login passam a sair do seu domínio. A chave de API manda o comprovante de cancelamento e os e-mails do suporte | `RESEND_API_KEY`, `EMAIL_FROM` (e o SMTP no painel do Supabase) |
+| 9 | **Suporte humano** | criar sua conta no app com o e-mail do time; definir para onde vão os avisos de chamado novo. Responder em `https://seu-dominio/suporte/painel` | `ADMIN_EMAILS`, `SUPPORT_EMAIL`, `SUPPORT_WHATSAPP` |
 
 Depois de preencher: `npm run dev` e criar a primeira conta pelo `/entrar`.
 
@@ -36,6 +37,7 @@ Depois de preencher: `npm run dev` e criar a primeira conta pelo `/entrar`.
 | push | Web Push com service worker; ligado em Ajustes > Notificações no aparelho | `lib/push.ts`, `public/sw.js` |
 | repetição | lembretes e tarefas que se repetem (todo dia, dias úteis, dias da semana, todo mês) em RRULE; a entrega reagenda o lembrete e concluir a tarefa cria a próxima | `lib/domain/recurrence.ts` |
 | tempo real | Supabase Realtime nas tabelas das telas; o navegador entra com o token da sessão, então o RLS só entrega as linhas da pessoa | `components/realtime-sync.tsx` |
+| confiança (F1 a F3) | cancelar dá protocolo, aviso e e-mail, e cobrança de período depois do cancelamento é estornada sozinha; quem volta da página de pagamento usa o app por até 2 h enquanto a Asaas confirma; "falar com uma pessoa" abre chamado com protocolo e prazo (1 dia útil), avisa o time por e-mail e WhatsApp, e a resposta do painel chega pelo app, WhatsApp e e-mail | `lib/billing/asaas.ts`, `lib/support.ts`, `app/(app)/ajustes/suporte`, `app/(app)/suporte/painel` |
 | cobrança | Asaas Checkout hospedado: mensal recorrente no cartão; anual em pagamento único por Pix ou cartão. Webhook idempotente atualiza `subscriptions`; cancelar em um toque (acesso até o fim do período); sem plano e com o teste vencido, o assistente explica e não roda | `lib/billing/asaas.ts`, `app/api/webhooks/asaas` |
 
 ## Testes

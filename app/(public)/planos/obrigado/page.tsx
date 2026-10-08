@@ -1,13 +1,17 @@
-import Link from "next/link";
+import { PaymentStatus } from "@/components/screens/payment-status";
 import { Card } from "@/components/ui/card";
+import { markCheckoutReturned } from "@/lib/billing/asaas";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { currentUser } from "@/lib/supabase/server";
 
-// Volta da página de pagamento. A liberação vem do webhook da Asaas, não deste endereço.
-export default function Page() {
+// Volta da página de pagamento. Quem libera o plano é o webhook da Asaas; enquanto ele não chega,
+// marcar a volta deixa a pessoa usar o app por até 2 h (F2), em vez de "assinatura inválida".
+export default async function Page() {
+  const user = isSupabaseConfigured() ? await currentUser() : null;
+  if (user) await markCheckoutReturned(user.id);
   return (
     <Card className="mx-auto mt-8 flex max-w-md flex-col gap-3 p-6 text-center">
-      <h1 className="text-2xl font-bold text-text">Pagamento recebido</h1>
-      <p className="text-body">Assim que a Asaas confirmar (no Pix é na hora; no cartão, em instantes), seu plano aparece em Ajustes.</p>
-      <Link href="/conversa" className="mx-auto inline-flex h-10 items-center rounded-md bg-accent px-4 text-sm font-semibold text-on-accent">Voltar para o assistente</Link>
+      <PaymentStatus signedIn={!!user} />
     </Card>
   );
 }

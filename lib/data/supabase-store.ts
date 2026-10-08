@@ -1,10 +1,12 @@
 import type { Admin } from "@/lib/supabase/server";
 import type { Json, TablesUpdate } from "@/lib/supabase/database.types";
 import { nextDate, nextFireAt } from "@/lib/domain/recurrence";
+import { newProtocol, notifyOwner, supportDueAt } from "@/lib/support";
 import { addDays, localDate, zonedToUtc } from "@/lib/time";
 import type { DataStore } from "./store";
 import type {
   ActionCardData, ActionRecord, BodyMeasurement, CalendarEvent, ChatMessage, Note, Reminder, Settings, Task, Transaction,
+  SupportTicket,
 } from "./types";
 
 // DataStore sobre o Supabase. Usa o cliente de serviço e filtra TODA consulta por user_id:
@@ -279,6 +281,25 @@ export async function createSupabaseStore(db: Admin, userId: string, email: stri
     async markCardsUndone(actionId) {
       await markCards(actionId);
     },
+    async openSupportTicket(message, channel) {
+      const dueAt = supportDueAt().toISOString();
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const protocol = newProtocol();
+        const r = await db.from("support_tickets").insert({ user_id: userId, protocol, channel, message, due_at: dueAt }).select("id").single();
+        if (r.error?.code === "23505") continue;  // protocolo repetido (raro): sorteia outro
+        must(r);
+        must(await db.from("notices").insert({ user_id: userId, kind: "support", title: `Chamado aberto (${protocol})`,
+          body: `Uma pessoa do time responde até ${new Intl.DateTimeFormat("pt-BR", { timeZone: tz, day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(dueAt))}.`, href: "/ajustes/suporte" }));
+        await notifyOwner({ protocol, message, channel, dueAt, userEmail: email });
+        return { protocol, dueAt };
+      }
+      throw new Error("Não deu para abrir o chamado");
+    },
+    async listSupportTickets() {
+      const rows = must(await db.from("support_tickets").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(50));
+      return rows.map((t): SupportTicket => ({ id: t.id, protocol: t.protocol, message: t.message, status: t.status as SupportTicket["status"],
+        dueAt: t.due_at, reply: t.reply, answeredAt: t.answered_at, createdAt: t.created_at }));
+    },
     async withTurn(fn) {
       const conversationId = await todayConversation();
       // espera a vez por até 45 s; o prazo de 120 s solta a conversa se um servidor cair no meio
@@ -496,7 +517,7 @@ export async function createSupabaseStore(db: Admin, userId: string, email: stri
     async getSettings() {
       const [p, sub, wa, integ] = await Promise.all([
         db.from("profiles").select("*").eq("user_id", userId).single(),
-        db.from("subscriptions").select("plan, status, current_period_end, cancel_at_period_end").eq("user_id", userId).order("created_at", { ascending: false }).limit(5),
+        db.from("subscriptions").select("plan, status, current_period_end, cancel_at_period_end, canceled_at, cancel_protocol").eq("user_id", userId).order("created_at", { ascending: false }).limit(5),
         db.from("channel_links").select("external_id, verified_at").eq("user_id", userId).eq("channel", "whatsapp").maybeSingle(),
         db.from("integrations").select("provider").eq("user_id", userId).eq("status", "active"),
       ]);
@@ -506,10 +527,19 @@ export async function createSupabaseStore(db: Admin, userId: string, email: stri
       const s = must(sub).find((x) => ["active", "trialing", "past_due"].includes(x.status) || (x.current_period_end ?? "") > nowIso);
       const providers = new Set(must(integ).map((i) => i.provider));
       const waRow = must(wa as Result<{ external_id: string; verified_at: string | null } | null>);
-      const plan: Settings["plan"] = s ? (s.plan as "monthly" | "yearly") : prof.trial_ends_on >= today() ? "trial" : "none";
+      // F2: voltou da página de pagamento e a Asaas ainda não avisou: libera por 2 h, sem "assinatura inválida"
+      const confirming = !s && prof.trial_ends_on < today()
+        ? must(await db.from("checkout_sessions").select("plan").eq("user_id", userId).eq("status", "pending")
+            .gte("returned_at", new Date(Date.now() - 2 * 3_600_000).toISOString()).order("returned_at", { ascending: false }).limit(1))[0]
+        : undefined;
+      const plan: Settings["plan"] = s ? (s.plan as "monthly" | "yearly") : confirming ? (confirming.plan as "monthly" | "yearly")
+        : prof.trial_ends_on >= today() ? "trial" : "none";
       return {
         name: prof.display_name ?? "você", email: email ?? "", timezone: prof.timezone, plan, trialEndsOn: plan === "trial" ? prof.trial_ends_on : null,
-        billing: s ? { periodEnd: s.current_period_end, renews: !s.cancel_at_period_end && s.status !== "canceled", pastDue: s.status === "past_due" } : undefined,
+        billing: s ? {
+          periodEnd: s.current_period_end, renews: !s.cancel_at_period_end && s.status !== "canceled", pastDue: s.status === "past_due",
+          canceledAt: s.canceled_at, cancelProtocol: s.cancel_protocol,
+        } : confirming ? { periodEnd: null, renews: false, pastDue: false, confirming: true } : undefined,
         tone: (prof.assistant_tone === "custom" ? "warm" : prof.assistant_tone) as Settings["tone"], answerLength: prof.answer_length as Settings["answerLength"],
         voice: (prof.assistant_voice === "male" ? "male" : "female"), memoryEnabled: prof.memory_enabled, theme: prof.theme as Settings["theme"],
         briefingTime: prof.briefing_enabled ? hm(prof.briefing_time) : null,

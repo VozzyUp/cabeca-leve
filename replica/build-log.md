@@ -113,3 +113,15 @@ Paridade 63,2/100; **40 de 40 obrigatórias completas**.
 - Voz "leve, direta, presente", com as 10 frases mais vistas revisadas. O código das telas (S01…) saiu da vista.
 - Sweep limpo. "Nectar" sem acento fica fora do sweep, porque casa com "conectar"; essa grafia é conferida por palavra inteira.
 - Os testes voltaram a passar depois da marca: 48 de ponta a ponta, 25 de integração e 46 de unidade.
+
+## 2026-10-08: F1 a F3 do fixes.md
+
+- **F1, cancelar com comprovante:** ao cancelar, a pessoa recebe protocolo `CL-XXXXXX`, aviso no app e e-mail pela Resend, e o comprovante fica em Ajustes. Se a Asaas cobrar um período que começa depois do cancelamento, o webhook pede o estorno, avisa a pessoa e não estende o acesso.
+- **F2, pagamento em confirmação:** voltar da página de pagamento libera o app por até 2 h enquanto o webhook não chega. A tela de obrigado acompanha ao vivo até mostrar "Plano ativo". Abrir essa página sem ter pago não libera nada.
+- **F3, falar com uma pessoa:**
+  - o chamado nasce em Ajustes, na conversa ou no WhatsApp ("quero falar com uma pessoa"), e funciona mesmo com o teste vencido;
+  - tem protocolo e prazo de 1 dia útil, e o time recebe aviso por e-mail e WhatsApp;
+  - o time responde em `/suporte/painel` (só `ADMIN_EMAILS` entra), e a resposta chega pelo app, pelo WhatsApp e por e-mail;
+  - o agente ganhou a ferramenta `open_support_ticket` e nunca finge ser o suporte.
+- Migração `20261008000700_confianca.sql`. `npm run db:types` agora só troca o arquivo de tipos se a geração der certo: um reinício do ambiente tinha zerado o arquivo.
+- Testes: `e2e/confianca.spec.ts` (6) e um teste de unidade dos pedidos por uma pessoa. Bateria completa: 54 de ponta a ponta, 25 de integração e 47 de unidade.

@@ -77,6 +77,8 @@ Ordem: evidência × custo. Questões de preço e de política de reembolso vão
 | F6 | **Lembrete que chega.** Botão "testar aviso agora" (push e WhatsApp) com o resultado na tela. Se o push falhar, o lembrete sai pelo WhatsApp. | S | `/replica-backend` | lembretes, 2 (fino) | entrega por push e WhatsApp, já pronta |
 | F7 | **Seu WhatsApp não corre risco.** Dizer no cadastro e nos Ajustes: "você conversa com o nosso número; nunca pedimos acesso ao seu WhatsApp". O assistente nunca escreve para terceiros. Migrar o número para a API oficial da Meta antes de crescer. | S (texto) + M (Meta) | `/replica-brand`, `/replica-backend` | categoria, 5 + 4 (fino) | arquitetura já é essa; envio por modelo da Meta, não |
 
+**Andamento (2026-10-08):** F1, F2, F3 e F4 estão **feitos**, com testes em `e2e/confianca.spec.ts` e na bateria do `/replica-test`. Faltam F5, F6 e F7.
+
 Todas as linhas estão no `features.csv` com `original = no`. A exceção é o teto de gastos: ele já tinha linha, porque o original tem a função (mal feita). Ali só subi a prioridade de could para should.
 
 ## 5. Posicionamento

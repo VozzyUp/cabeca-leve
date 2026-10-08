@@ -141,9 +141,9 @@ Vídeos aulas depoimentos e comunidade,marca e conteúdo,could,yes,skip,conteúd
 Ofertas vitalícias e promoções de aniversário,marca e conteúdo,could,yes,skip,decisão comercial deles; a sua sai do /replica-launch
 Venda pela Hotmart (marketplace e afiliados),marca e conteúdo,could,yes,skip,parceria deles; o clone escolhe o próprio meio de cobrança
 Base de usuários e avaliações,marca e conteúdo,could,yes,skip,pertencem ao original
-Cancelar com comprovante e conferência de cobrança depois do cancelamento,conta e assinatura,should,no,no,"fixes.md F1: cobrança após cancelar (Néctar 3 avaliações, categoria 3)"
-Pagamento em confirmação sem bloquear o acesso (nunca 'assinatura inválida'),conta e assinatura,should,no,no,"fixes.md F2: pagou e não entra (Néctar 4, fino)"
-Falar com uma pessoa: suporte humano com protocolo e prazo,conta e assinatura,should,no,no,"fixes.md F3: suporte que não responde (Néctar 5, fino; categoria 5)"
+Cancelar com comprovante e conferência de cobrança depois do cancelamento,conta e assinatura,should,no,yes,"F1: protocolo, aviso e e-mail; estorno automático de cobrança de período depois do cancelamento (confianca.spec.ts F17-H2)"
+Pagamento em confirmação sem bloquear o acesso (nunca 'assinatura inválida'),conta e assinatura,should,no,yes,"F2: volta do checkout libera 2 h; tela de obrigado acompanha ao vivo; sem 'assinatura inválida' (F15-E4, F15-N5)"
+Falar com uma pessoa: suporte humano com protocolo e prazo,conta e assinatura,should,no,yes,"F3: chamado com protocolo e prazo pela tela, pela conversa e pelo WhatsApp; time avisado; painel /suporte/painel responde (F3-H1, F3-E1, F3-N1)"
 "Bateria de testes do assistente com pedidos reais (finanças, busca, lembretes)",assistente,must,no,no,fixes.md F4: falhas e erros (Néctar 7 em 2 fontes) | /replica-test
 Testar aviso agora (push e WhatsApp) e reserva pelo WhatsApp quando o push falha,lembretes,should,no,no,"fixes.md F6: lembretes não chegam (Néctar 2, fino)"
 Nunca pedir acesso ao WhatsApp da pessoa e dizer isso no cadastro,privacidade,should,no,no,"fixes.md F7: banimento e golpes na categoria (Zapia 5+4, fino: 1 fonte)"
