@@ -1,6 +1,6 @@
 # Bugs
 
-Rodada de 2026-10-08, base `a46397f` (antes das correções).
+Rodada de 2026-10-08. Base: `2ce673e` (antes de qualquer correção).
 Ambiente: Chromium do Playwright 1.56, 1440 px e Pixel 7. Supabase local; UAZAPI e Asaas falsas.
 Só entra aqui o que foi reproduzido. Cada correção tem um teste que falhava antes e passa depois.
 
@@ -32,14 +32,14 @@ Atual: o navegador vai para `http://evil.example/x`.
 Evidência: teste `F15-N2 voltar=/\evil.example/x não leva para fora do app`, que recebia o host `chromewebdata` (página de erro de DNS do evil.example). O console mostrava "Failed to fetch RSC payload for http://evil.example/x".
 Causa: a checagem aceitava qualquer coisa que começasse com `/` e não com `//`. O navegador trata `/\` como `//`. O link de confirmação de e-mail (`/auth/confirm?next=`) tinha a mesma checagem.
 Correção: `safeAppPath()` em `lib/validation.ts` resolve o caminho como o navegador resolveria e confere a origem. É usada nos dois lugares. Testes: `lib/validation.test.ts`, que cobre 9 formas de escapar, e os 3 casos F15-N2.
-Status: corrigido (commit abaixo)
+Status: corrigido em 5df5ca0
 
 ### BUG-001: no limite de mensagens, a mensagem some sem explicação
 
 - Severidade: S3 (dá para contornar esperando um minuto, mas parece que o app engoliu a mensagem)
 - Fluxo / caso: F01 / F01-N1
 - Tela: S02 (/conversa)
-- Build: a46397f. Navegador: Chromium, 1440 px
+- Build: 2ce673e. Navegador: Chromium, 1440 px
 
 Passos
 1. Mandar 12 mensagens no mesmo minuto.
@@ -50,14 +50,14 @@ Atual: a mensagem some e nenhuma resposta aparece. A API devolvia as duas últim
 Evidência: teste `F01-N1`. Antes da correção a resposta da API era `{"messages":[{"text":"oi 11"…`.
 Causa: no limite, `respond()` não grava nada (de propósito), e a rota `/api/chat` ignorava a resposta do assistente.
 Correção: `respond()` avisa quando não gravou (`stored: false`). A rota então devolve a mensagem e o aviso só para quem mandou, sem gravar.
-Status: corrigido (commit abaixo)
+Status: corrigido em a46397f
 
 ### BUG-004: mensagens duplicadas quando o tempo real recarrega no meio de um envio
 
 - Severidade: S3 (a resposta pode aparecer duas vezes até recarregar a página)
 - Fluxo / caso: F01 / F01-H1 no celular (X-E3)
 - Tela: S02 (/conversa)
-- Build: a46397f. Aparelho: Pixel 7 (emulado)
+- Build: 2ce673e. Aparelho: Pixel 7 (emulado)
 
 Passos
 1. No celular, mandar "gastei 35 na padaria e me lembra do mercado às 18h".
@@ -68,14 +68,14 @@ Atual: o React acusa "Encountered two children with the same key" com o id da me
 Evidência: teste `F01-H1` no projeto celular, que falhou pelo erro de console.
 Causa: ao receber a resposta, a tela juntava as mensagens novas à lista sem conferir se o recarregamento já as tinha trazido.
 Correção: `merge()` em `chat-screen.tsx` junta sem repetir id.
-Status: corrigido (commit abaixo)
+Status: corrigido em a46397f
 
 ### BUG-003: dias fora do mês no calendário sem contraste suficiente
 
 - Severidade: S3 (difícil de ler com baixa visão; reprova WCAG 1.4.3)
 - Fluxo / caso: transversal / X-H1
 - Tela: S06 (/dia/calendario)
-- Build: a46397f. Navegador: Chromium, 1440 px e Pixel 7
+- Build: 2ce673e. Navegador: Chromium, 1440 px e Pixel 7
 
 Passos
 1. Abrir /dia/calendario na visão de mês.
@@ -84,7 +84,7 @@ Esperado: todos os números com contraste de pelo menos 4,5:1.
 Atual: os dias do mês anterior e do seguinte ficam com `opacity-40` sobre o texto e reprovam no axe (`color-contrast`, serious).
 Evidência: teste `X-H1`: `button[data-day="2026-09-27"] > .size-7.font-mono.mx-auto`.
 Correção: o número usa a cor `text-muted`, que passa no contraste. A transparência ficou só nos pontinhos.
-Status: corrigido (commit abaixo)
+Status: corrigido em a46397f
 
 ### BUG-005: criar lembrete antes de a lista carregar dá a mensagem errada
 
@@ -102,7 +102,7 @@ Atual: aparece "Escolha o dia e a hora." mesmo com os dois preenchidos.
 Evidência: teste `F04-E3` na bateria completa. O retrato da página mostra Dia `2026-10-09`, Hora `09:30` e a mensagem de erro.
 Causa: a mesma condição tratava "falta dia ou hora" e "a lista ainda não chegou".
 Correção: o botão Criar fica desligado até a lista carregar, e a mensagem só aparece quando falta dia ou hora.
-Status: corrigido (commit abaixo)
+Status: corrigido em 5df5ca0
 
 ### BUG-006: sessão vencida com a tela aberta prende a pessoa
 
@@ -120,7 +120,7 @@ Esperado: ir para o login e, depois de entrar, voltar para /tarefas.
 Atual: a tarefa não salva e a tela mostra "Sessão expirada. Entre de novo.", sem levar ao login. As chamadas em segundo plano seguem recebendo 401.
 Evidência: teste `F15-E3`, que esperou 60 s pela ida ao login. Na bateria completa, o F15-E1 mostrava três 401 no console da tela aberta.
 Correção: `lib/api.ts` leva para `/entrar?voltar=<tela atual>` ao receber 401.
-Status: corrigido (commit abaixo)
+Status: corrigido em 5df5ca0
 
 ### BUG-007: mensagens que chegam juntas se perdem e os turnos se misturam
 
@@ -147,7 +147,7 @@ Testes:
 - `supabase-store.int.test.ts`: 15 mensagens juntas ficam com posições seguidas; 3 turnos não se sobrepõem; um turno que falha solta a vez.
 - `F02-E5`: 5 mensagens juntas no WhatsApp viram 5 lançamentos e 5 respostas, intercaladas pergunta e resposta.
 
-Status: corrigido (commit abaixo)
+Status: corrigido em 5df5ca0
 
 ### BUG-008: depois de 500 mensagens, a conversa para de mostrar as novas
 
@@ -164,7 +164,7 @@ Esperado: a nova é a última da lista.
 Atual: a lista termina em "antiga 499". A busca pegava as 500 primeiras em ordem crescente, ou seja, as mais antigas.
 Evidência: `supabase-store.int.test.ts`, teste "a conversa mostra as 500 mensagens mais recentes", que falhou com `expected 'antiga 499' to be 'a mais nova'`.
 Correção: busca em ordem decrescente e inverte.
-Status: corrigido (commit abaixo)
+Status: corrigido em 5df5ca0
 
 ### BUG-009: o tempo real apaga da tela a mensagem que está saindo e o aviso de limite
 
@@ -181,7 +181,7 @@ Esperado: a mensagem enviada e a resposta (inclusive o aviso de limite, que não
 Atual: o recarregamento troca a lista pela do servidor. Some a mensagem provisória e somem as que só existem na tela.
 Evidência: retrato do F01-N1 (repetição 2), com o campo vazio e sem a mensagem "gastei 7 no chiclete" nem o aviso. A mesma chamada direto na API respondeu em 0,5 s com o aviso.
 Correção: `useResource` aceita um `combine`. A conversa mantém as mensagens só da tela (enviando, com erro ou aviso de limite). A provisória sai quando a gravada, com o mesmo `clientId`, chega do servidor.
-Status: corrigido (commit abaixo)
+Status: corrigido em 5df5ca0
 
 ## Para conferir (não reproduzido como falha visível)
 
