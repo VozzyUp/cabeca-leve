@@ -16,7 +16,15 @@ export async function POST(request: Request) {
   }
   const store = await getStore();
   try {
-    await respond(store, parsed.data.text, { channel: "web", clientMessageId: parsed.data.clientMessageId });
+    const result = await respond(store, parsed.data.text, { channel: "web", clientMessageId: parsed.data.clientMessageId });
+    if (result.stored === false) {
+      // limite de uso: nada foi gravado, mas a pessoa precisa ver a mensagem e o motivo
+      const createdAt = new Date().toISOString();
+      return Response.json({ messages: [
+        { id: parsed.data.clientMessageId, role: "user", text: parsed.data.text, cards: [], createdAt },
+        { id: crypto.randomUUID(), role: "assistant", text: result.reply.text, cards: [], createdAt },
+      ] });
+    }
   } catch (error) {
     // mesma mensagem enviada de novo: não roda o assistente outra vez
     if (!(error instanceof Error && /client_message_id|duplicate key/.test(error.message))) throw error;

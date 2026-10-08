@@ -45,7 +45,7 @@ const LIMIT_PER_DAY = 400;
 // Claude; sem ela, o intérprete de regras (só para testes e demonstração).
 export async function respond(store: DataStore, text: string, opts: {
   channel: "web" | "whatsapp" | "voice"; clientMessageId?: string; externalMessageId?: string; now?: Date;
-}): Promise<{ user: ChatMessage | null; reply: AssistantReply }> {
+}): Promise<{ user: ChatMessage | null; reply: AssistantReply; stored?: false }> {
   // teste grátis acabou e não há assinatura: guarda a mensagem e explica, sem rodar o assistente
   if (isSupabaseConfigured() && (await store.getSettings()).plan === "none") {
     const site = process.env.NEXT_PUBLIC_SITE_URL ?? "";
@@ -61,7 +61,7 @@ export async function respond(store: DataStore, text: string, opts: {
   ]);
   if (lastMinute >= LIMIT_PER_MINUTE || lastDay >= LIMIT_PER_DAY) {
     const reply = { text: lastMinute >= LIMIT_PER_MINUTE ? "Muitas mensagens em pouco tempo. Espere um minutinho e mande de novo." : "Você chegou ao limite de mensagens de hoje. Amanhã eu volto com tudo.", cards: [] };
-    return { user: null, reply };
+    return { user: null, reply, stored: false };  // não grava: a resposta volta só para quem mandou
   }
   if (agentEnabled()) {
     const reply = await runAgent({ store, text, ...opts });

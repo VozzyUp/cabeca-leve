@@ -84,3 +84,9 @@ checklist de segurança em `replica/backend.md`.
 
 Paridade 63,2/100; **40 de 40 obrigatórias completas**.
 
+
+## 2026-10-08: /replica-entrepreneur
+
+- Avaliações: 36 do original (33 da App Store pelo feed oficial da Apple e 3 visíveis no Google Play) e 130 de concorrentes (Zapia 124, Meu Assessor IA 6). Reddit e Reclame Aqui bloquearam o acesso (403). O HN não tem menções.
+- Temas em português em `replica/themes-ptbr.json`. Relatórios em `feedback.md` e `feedback-categoria.md`. Plano em `fixes.md` (F1 a F7). Sete linhas novas no `features.csv` e o teto de gastos subiu para should.
+- Posicionamento recomendado: "o assistente que responde quando você precisa" (suporte, cobrança e acesso são 12 de 36 avaliações).

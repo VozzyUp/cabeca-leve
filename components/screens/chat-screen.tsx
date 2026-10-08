@@ -28,6 +28,12 @@ const SUGGESTIONS = [
   "Quero ler 20 minutos todo dia às 21h",
 ];
 
+// junta mensagens sem repetir: o tempo real pode recarregar o histórico no meio de um envio
+const merge = (list: Local[], add: Local[]) => {
+  const ids = new Set(add.map((x) => x.id));
+  return [...list.filter((x) => !ids.has(x.id)), ...add];
+};
+
 const loadHistory = async (): Promise<Local[]> => (await api.chatHistory()).messages;
 
 function greeting(now = new Date()) {
@@ -72,7 +78,7 @@ export function ChatScreen() {
     setSending(true);
     try {
       const { messages: fresh } = await api.sendMessage(clientId, text);
-      setMessages((m) => [...(m ?? []).filter((x) => x.id !== clientId), ...fresh]);
+      setMessages((m) => merge((m ?? []).filter((x) => x.id !== clientId), fresh));
     } catch {
       setMessages((m) => (m ?? []).map((x) => (x.id === clientId ? { ...x, status: "error" } : x)));
     } finally {

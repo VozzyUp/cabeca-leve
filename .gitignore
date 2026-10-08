@@ -43,3 +43,6 @@ next-env.d.ts
 
 # banco provisório de desenvolvimento (lib/data/fake-store.ts)
 /.data/
+test-results/
+playwright-report/
+replica/e2e-results.json

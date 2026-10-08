@@ -103,11 +103,11 @@ export function CalendarView({ items, today }: { items: CalendarItem[]; today: s
                     <button type="button" data-day={d} tabIndex={isSel ? 0 : -1} onClick={() => setSelected(d)}
                       aria-label={`${longDay(d)}${d === today ? ", hoje" : ""}: ${list.length ? `${list.length} ${list.length === 1 ? "item" : "itens"}` : "nada marcado"}`}
                       className={cn("flex w-full flex-col items-center gap-1 rounded-md py-1.5", view === "week" ? "min-h-40 items-stretch px-1" : "min-h-14",
-                        isSel ? "bg-surface-3" : "hover:bg-surface-2", outside && "opacity-40")}>
+                        isSel ? "bg-surface-3" : "hover:bg-surface-2")}>
                       <span className={cn("mx-auto flex size-7 items-center justify-center rounded-full font-mono text-sm",
-                        d === today ? "bg-accent font-semibold text-on-accent" : "text-text")}>{Number(d.slice(8))}</span>
+                        d === today ? "bg-accent font-semibold text-on-accent" : outside ? "text-muted" : "text-text")}>{Number(d.slice(8))}</span>
                       {view === "month" ? (
-                        <span aria-hidden className="flex items-center gap-0.5">
+                        <span aria-hidden className={cn("flex items-center gap-0.5", outside && "opacity-40")}>
                           {list.slice(0, 3).map((i) => <span key={i.id} className={cn("size-1.5 rounded-full", DOT[i.source])} />)}
                           {list.length > 3 && <span className="text-[10px] leading-none text-muted">+{list.length - 3}</span>}
                         </span>
