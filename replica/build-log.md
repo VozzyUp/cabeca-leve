@@ -99,3 +99,9 @@ Paridade 63,2/100; **40 de 40 obrigatórias completas**.
 - 9 bugs em `replica/bugs.md`, todos corrigidos com teste: 1 S1 (redirecionamento aberto no login), 2 S2 (mensagens simultâneas perdidas; conversa presa nas 500 mais antigas), 5 S3, 1 S4.
 - O que foi mais difícil do que parecia: o dev server compila cada página na primeira visita e, com 3 testes em paralelo, passava de 10 s. O tempo de espera subiu para 20 s, e isso revelou o BUG-005.
 - O F01-N1 achou três bugs em sequência. Cada correção deixou o teste mais exigente: primeiro em série, depois em paralelo, depois repetido. A disputa pela posição das mensagens só aparece com várias chegando ao mesmo tempo, que é justamente o uso no WhatsApp.
+
+## 2026-10-08: /replica-diff
+
+- Paridade 64,5 (antes 63,2): 40 de 40 obrigatórias e nenhum bug S1 ou S2 aberto. Ainda abaixo de 80, então não está pronto para vender.
+- Linhas atualizadas no `features.csv` com o que o backend já entrega: o resumo da manhã com os lembretes, o "Seu dia" por push e WhatsApp, o tom usado pelo agente e o indicador de etapa.
+- O layout não foi medido: só há as imagens de divulgação da App Store. A comparação de comportamento está em `parity.md`.

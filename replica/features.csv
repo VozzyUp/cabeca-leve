@@ -18,7 +18,7 @@ Perguntas sobre os próprios dados respondidas com números e cards,assistente,m
 Editar concluir e apagar itens pelo chat,assistente,must,yes,yes,"tarefas, lembretes, lançamentos e hábitos: consulta o id e edita, conclui, apaga ou arquiva"
 Datas e horas relativas no fuso do usuário,assistente,must,yes,yes,"data, hora e fuso em cada mensagem; o modelo resolve 'amanhã', 'sexta', 'daqui a 2 horas'"
 Pergunta de volta quando falta informação no pedido,assistente,must,yes,yes,"instrução do assistente (valor de gasto, horário de lembrete)"
-Indicador das etapas enquanto o assistente trabalha,assistente,should,yes,no,
+Indicador das etapas enquanto o assistente trabalha,assistente,should,yes,partial,passo genérico 'Entendendo o pedido' / 'Ouvindo o áudio'; etapas reais de cada ferramenta exigem streaming
 Histórico da conversa com filtro por dia semana e mês,assistente,should,yes,no,S02
 Enviar foto ou documento no chat e usar o conteúdo,assistente,should,yes,no,App Store 3.0
 Memória de preferências e fatos do usuário,assistente,should,yes,no,site [conferir]
@@ -38,7 +38,7 @@ Mandar foto pelo WhatsApp (comprovante ou fatura),whatsapp,should,yes,no,site [c
 Conversar e receber lembretes pelo Telegram,telegram,could,yes,no,site [conferir]
 Notificação push de lembretes no navegador e no celular,notificações,must,yes,yes,"Web Push com o app fechado (no iPhone, com o app na tela inicial)"
 "Preferências de notificação: canais, silêncio e limite por dia",notificações,should,yes,partial,S29: canais liga/desliga e horário do resumo; silêncio e limite por dia depois
-Notificação 'seu dia' mostrando o que vem a seguir,notificações,should,yes,no,novidades Google Play
+Notificação 'seu dia' mostrando o que vem a seguir,notificações,should,yes,partial,"push e WhatsApp 'Seu dia' de manhã com o resumo; notificação viva do que vem a seguir, não"
 Despertador para lembretes importantes,notificações,could,yes,no,App Store 3.0; exige app nativo
 Visão do dia com linha do tempo de compromissos tarefas hábitos e lembretes,visão do dia,must,yes,yes,"S05 com compromissos das agendas conectadas (exemplo até o backend), tarefas, hábitos e lembretes"
 Contador de itens em aberto e itens sem horário,visão do dia,should,yes,yes,
@@ -65,7 +65,7 @@ Orçamento do projeto ligado aos gastos,projetos,could,yes,no,site [conferir]
 Lembrete único em data e hora,lembretes,must,yes,yes,"app, conversa e WhatsApp; aviso por push e WhatsApp"
 Lembretes recorrentes (diário semanal mensal),lembretes,must,yes,yes,"todo dia, dias úteis, dias da semana, todo mês (tela, conversa e WhatsApp); a entrega reagenda a próxima"
 Avisar com antecedência (ex.: 1 dia e 1 hora antes),lembretes,should,yes,no,site [conferir]
-Resumo diário dos lembretes pela manhã,lembretes,should,yes,no,site [conferir]
+Resumo diário dos lembretes pela manhã,lembretes,should,yes,yes,"resumo da manhã no horário escolhido, por push e WhatsApp, com os lembretes do dia na seção Agenda (lib/deliveries.ts)"
 Marcar lembrete como importante,lembretes,could,yes,no,site [conferir]
 Criar hábito com dias da semana e horário,hábitos,must,yes,yes,pela conversa com dias escolhidos; pela tela só diário
 Marcar hábito como feito inclusive em dia anterior,hábitos,must,yes,yes,S12 marca hoje; S13 marca e desmarca qualquer dia planejado do mês atual e do anterior
@@ -114,14 +114,14 @@ Criar revisão agendada com dia hora fontes e instrução,automações,should,ye
 Revisão entregue no chat com push opcional,automações,should,yes,no,envio pela fila (QStash) no /replica-backend; S28 já guarda o que chegou
 Histórico de execuções da automação,automações,could,yes,no,site [conferir]
 Prévia da revisão antes de salvar,automações,could,yes,no,site [conferir]
-Aviso de conta a vencer,avisos proativos,should,yes,partial,S04 lista contas dos próximos 3 dias; S20 avisa quando o dia passou sem pagamento; envio ativo no backend
+Aviso de conta a vencer,avisos proativos,should,yes,partial,"o resumo da manhã (push e WhatsApp) cita as contas dos próximos 3 dias; aviso próprio 2 dias antes, não"
 Aviso de cartão perto do limite,avisos proativos,should,yes,no,site [conferir]
 Aviso de renda comprometida,avisos proativos,should,yes,no,site [conferir]
 Aviso de projeto parado,avisos proativos,could,yes,no,site [conferir]
 Aviso de aperto previsto para o próximo mês,avisos proativos,could,yes,no,site [conferir]
 Mensagem de reconhecimento quando o dia fecha com tudo feito,avisos proativos,could,yes,no,site [conferir]
 Placar do dia no fim da tarde,avisos proativos,could,yes,no,site [conferir]
-Tom de conversa escolhido ou descrito pelo usuário,personalização,should,yes,partial,S30 guarda tom e tamanho das respostas; o Claude usa no /replica-backend
+Tom de conversa escolhido ou descrito pelo usuário,personalização,should,yes,partial,"o agente usa o tom e o tamanho escolhidos em S30; tom descrito em texto livre, não"
 Tema claro e escuro,personalização,should,yes,yes,"S30: escuro, claro ou do aparelho"
 Apps iOS e Android nas lojas,apps nativos,could,yes,no,fora da v1: plataformas escolhidas são web e WhatsApp
 Widgets na tela inicial e bloqueada,apps nativos,could,yes,no,App Store 3.0 e 3.1; exige app nativo
