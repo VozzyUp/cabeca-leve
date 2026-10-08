@@ -58,7 +58,7 @@ export async function AssistantSettingsScreen() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1">
-        <Link href="/ajustes" className="text-sm font-medium text-info hover:underline">← Ajustes</Link>
+        <Link href="/ajustes" className="text-sm font-medium text-accent hover:underline">← Ajustes</Link>
         <PageHeader id="S30" title="Jeito do assistente" />
       </div>
       <AssistantForm initial={settings} />

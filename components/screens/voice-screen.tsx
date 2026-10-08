@@ -90,7 +90,6 @@ export function VoiceScreen() {
     <div className="flex flex-1 flex-col gap-6">
       <header className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-label text-muted">S03</p>
           <h1 className="text-[28px] font-bold leading-[34px]">Conversa por voz</h1>
         </div>
         <Link href="/conversa" aria-label="Voltar para a conversa escrita" className="flex size-10 items-center justify-center rounded-full text-body hover:bg-surface-2"><X className="size-5" /></Link>
@@ -101,7 +100,7 @@ export function VoiceScreen() {
           <MicOff aria-hidden className="size-10 text-muted" />
           <p className="font-semibold text-text">Este navegador não reconhece voz</p>
           <p className="max-w-sm text-sm text-muted">Use o Chrome, o Edge ou o Safari, ou mande um áudio pelo WhatsApp.</p>
-          <Link href="/conversa" className="text-sm font-medium text-info hover:underline">Escrever na conversa</Link>
+          <Link href="/conversa" className="text-sm font-medium text-accent hover:underline">Escrever na conversa</Link>
         </div>
       ) : (
         <div className="flex flex-1 flex-col items-center justify-center gap-8">

@@ -88,7 +88,7 @@ const today = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Pa
     const box = p.getByLabel('Mensagem para o assistente');
     await box.fill('gastei 12 no pão de padaria no pix e recebi 300 de freela');
     await box.press('Enter');
-    await p.getByText(/Feito: salvei/).waitFor({ timeout: 15000 });
+    await p.getByText(/Pronto, tirei da sua cabeça/).waitFor({ timeout: 15000 });
     await p.goto(base + '/dinheiro/extrato', { waitUntil: 'networkidle' });
     await p.getByRole('radio', { name: 'Saiu' }).click();
     ok(await p.getByText('−R$ 12,00').first().isVisible() && (await p.getByText('+R$ 300,00').count()) === 0, 'filtro "Saiu" esconde as entradas');

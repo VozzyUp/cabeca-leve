@@ -6,7 +6,7 @@ const say = async (page: Page, text: string) => {
   await box.fill(text);
   await box.press("Enter");
   await expect(page.getByText(text)).toBeVisible();
-  await expect(page.getByText(/Feito: salvei|Ainda não consegui/).last()).toBeVisible();
+  await expect(page.getByText(/Pronto, tirei da sua cabeça|Esse eu ainda não sei fazer/).last()).toBeVisible();
 };
 const metric = (page: Page, label: string) => page.getByText(label, { exact: true }).locator("xpath=following-sibling::p[1]");
 

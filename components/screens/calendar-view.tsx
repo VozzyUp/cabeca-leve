@@ -77,7 +77,7 @@ export function CalendarView({ items, today }: { items: CalendarItem[]; today: s
           <IconButton label={view === "week" ? "Semana anterior" : "Mês anterior"} onClick={() => shift(-1)}><ChevronLeft className="size-5" /></IconButton>
           <p aria-live="polite" className="min-w-40 text-center text-sm font-medium text-text">{capitalizeFirst(formatMonth(month))}</p>
           <IconButton label={view === "week" ? "Próxima semana" : "Próximo mês"} onClick={() => shift(1)}><ChevronRight className="size-5" /></IconButton>
-          {selected !== today && <button type="button" onClick={() => setSelected(today)} className="ml-2 text-sm font-medium text-info hover:underline">Hoje</button>}
+          {selected !== today && <button type="button" onClick={() => setSelected(today)} className="ml-2 text-sm font-medium text-accent hover:underline">Hoje</button>}
         </div>
         <Segmented label="Visão" value={view} onChange={setView} options={[{ value: "month", label: "Mês" }, { value: "week", label: "Semana" }]} />
       </div>

@@ -160,7 +160,7 @@ export async function AutomationsScreen() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader id="S27" title="Revisões agendadas">
-        <Link href="/conversa" className="text-sm font-medium text-info hover:underline">Criar pela conversa</Link>
+        <Link href="/conversa" className="text-sm font-medium text-accent hover:underline">Criar pela conversa</Link>
       </PageHeader>
       <p className="max-w-2xl text-sm text-body">
         Resumos que o assistente monta com os seus dados e manda no dia e na hora que você escolher. Para criar uma, peça na conversa:

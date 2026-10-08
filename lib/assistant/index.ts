@@ -14,7 +14,7 @@ export async function handleMessage(store: DataStore, text: string, now = new Da
   if (intents.length === 0) {
     return {
       cards: [],
-      text: "Ainda não consegui entender esse pedido. Por enquanto eu anoto gastos e lembretes, por exemplo: " +
+      text: "Esse eu ainda não sei fazer. Tente assim: " +
         "“gastei 35 na padaria”, “me lembra de pagar a luz amanhã às 9h”, “cria uma tarefa de enviar o relatório até sexta” " +
         "ou “quero meditar todo dia às 7h”.",
     };
@@ -35,7 +35,7 @@ export async function handleMessage(store: DataStore, text: string, now = new Da
     name(count("habit"), "o hábito", "hábitos"),
   ].filter(Boolean);
   const list = parts.length > 1 ? `${parts.slice(0, -1).join(", ")} e ${parts.at(-1)}` : parts[0];
-  return { cards, text: `Feito: salvei ${list}. Se algo saiu errado, é só desfazer no card.` };
+  return { cards, text: `Pronto, tirei da sua cabeça: ${list}. Errei algo? Toque em Desfazer no card.` };
 }
 
 const LIMIT_PER_MINUTE = 12;
@@ -49,7 +49,7 @@ export async function respond(store: DataStore, text: string, opts: {
   // teste grátis acabou e não há assinatura: guarda a mensagem e explica, sem rodar o assistente
   if (isSupabaseConfigured() && (await store.getSettings()).plan === "none") {
     const site = process.env.NEXT_PUBLIC_SITE_URL ?? "";
-    const reply = { text: `Seu teste grátis terminou. Para continuar, escolha um plano em ${site}/planos. Seus dados continuam guardados.`, cards: [] };
+    const reply = { text: `Seu teste grátis terminou. Para continuar, escolha um plano em ${site}/planos. Tudo o que você anotou continua guardado.`, cards: [] };
     const user = await store.appendMessage({ role: "user", text, cards: [], channel: opts.channel, clientMessageId: opts.clientMessageId, externalMessageId: opts.externalMessageId });
     await store.appendMessage({ role: "assistant", text: reply.text, cards: [], channel: opts.channel });
     return { user, reply };

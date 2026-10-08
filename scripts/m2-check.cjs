@@ -42,7 +42,7 @@ const ok = (c, m) => { console.log((c ? 'ok    ' : 'FALHOU') + ' ' + m); if (!c)
   const box = p.getByLabel('Mensagem para o assistente');
   await box.fill('cria uma tarefa de ligar pro banco amanhã e quero ler todo dia às 21h');
   await box.press('Enter');
-  await p.getByText('Feito: salvei').waitFor({ timeout: 10000 });
+  await p.getByText(/Pronto, tirei da sua cabeça/).waitFor({ timeout: 10000 });
   ok(await p.getByText('Tarefa salvo').count() + await p.getByText('Tarefa salva').count() >= 1 && await p.getByText('Hábito salvo').isVisible(), 'S02: cards de tarefa e hábito pela conversa');
 
   // S12 hábitos

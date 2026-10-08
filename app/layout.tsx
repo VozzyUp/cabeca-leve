@@ -1,15 +1,19 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
+import { BRAND } from "@/lib/brand";
 import "./globals.css";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
 const jetbrains = JetBrains_Mono({ variable: "--font-jetbrains", subsets: ["latin"] });
 
-// Nome provisório: o definitivo sai do /replica-brand
 export const metadata: Metadata = {
-  title: "Assistente",
-  description: "Seu assistente pessoal: tarefas, lembretes, dinheiro e hábitos numa conversa.",
+  title: { default: BRAND.name, template: `%s · ${BRAND.name}` },
+  description: BRAND.description,
+  applicationName: BRAND.name,
+  icons: { icon: "/icon.svg" },
 };
+
+export const viewport: Viewport = { themeColor: BRAND.color };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (

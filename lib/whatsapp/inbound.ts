@@ -25,8 +25,8 @@ export async function processInbound(msg: Inbound) {
   if (!userId) {
     const linked = msg.text ? await tryVerify(msg.from, msg.text) : null;
     await wa.sendText(msg.from, linked
-      ? "Pronto! Este WhatsApp está ligado à sua conta. Pode mandar o que precisar: gastos, lembretes, tarefas, por texto ou áudio."
-      : `Oi! Este número ainda não está ligado a uma conta. Para usar aqui, entre em ${site()}/ajustes e toque em Vincular WhatsApp.`);
+      ? "Pronto! Este WhatsApp está ligado à sua conta. Agora é só mandar por aqui o que quiser tirar da cabeça: gastos, lembretes, tarefas, por texto ou áudio."
+      : `Oi! Este número ainda não está ligado a uma conta do Cabeça Leve. Para usar aqui, entre em ${site()}/ajustes e toque em Vincular WhatsApp.`);
     return;
   }
   await getAdmin().from("channel_links").update({ last_inbound_at: msg.at.toISOString() })

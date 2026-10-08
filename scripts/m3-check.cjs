@@ -221,7 +221,7 @@ const groups = {
     }],
     ['S03', '/conversa/voz', async (p) => {
       await p.getByRole('button', { name: 'Falar com o assistente' }).click();
-      await p.getByText(/Feito: salvei/).waitFor({ timeout: 10000 });
+      await p.getByText(/Pronto, tirei da sua cabeça/).waitFor({ timeout: 10000 });
       ok(await p.getByText('gastei 20 no café').isVisible(), 'S03: fala transcrita aparece');
       await p.getByText('Toque para falar').waitFor({ timeout: 3000 });
       ok(true, 'S03: resposta lida e volta a esperar');

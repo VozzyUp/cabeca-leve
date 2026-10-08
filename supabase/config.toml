@@ -416,13 +416,13 @@ enabled = true
 
 # E-mails do login em português (no projeto da nuvem: cole o mesmo texto em Authentication > Emails)
 [auth.email.template.confirmation]
-subject = "Confirme seu e-mail"
+subject = "Cabeça Leve: confirme seu e-mail"
 content_path = "./supabase/templates/confirmacao.html"
 
 [auth.email.template.recovery]
-subject = "Criar uma senha nova"
+subject = "Cabeça Leve: crie uma senha nova"
 content_path = "./supabase/templates/nova-senha.html"
 
 [auth.email.template.email_change]
-subject = "Confirme o e-mail novo"
+subject = "Cabeça Leve: confirme o e-mail novo"
 content_path = "./supabase/templates/troca-email.html"

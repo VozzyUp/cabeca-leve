@@ -65,7 +65,7 @@ export function PairedColumnChart({ caption, groups, series }: {
 export function DataTable({ caption, head, rows }: { caption: string; head: string[]; rows: string[][] }) {
   return (
     <details className="text-sm">
-      <summary className="cursor-pointer text-xs font-medium text-info hover:underline">Ver como tabela</summary>
+      <summary className="cursor-pointer text-xs font-medium text-accent hover:underline">Ver como tabela</summary>
       <table className="mt-2 w-full text-left">
         <caption className="sr-only">{caption}</caption>
         <thead><tr className="text-xs text-muted">{head.map((h, i) => <th key={i} scope="col" className={cn("py-1 font-medium", i > 0 && "text-right")}>{h || "Período"}</th>)}</tr></thead>

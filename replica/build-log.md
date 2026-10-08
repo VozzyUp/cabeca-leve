@@ -105,3 +105,11 @@ Paridade 63,2/100; **40 de 40 obrigatórias completas**.
 - Paridade 64,5 (antes 63,2): 40 de 40 obrigatórias e nenhum bug S1 ou S2 aberto. Ainda abaixo de 80, então não está pronto para vender.
 - Linhas atualizadas no `features.csv` com o que o backend já entrega: o resumo da manhã com os lembretes, o "Seu dia" por push e WhatsApp, o tom usado pelo agente e o indicador de etapa.
 - O layout não foi medido: só há as imagens de divulgação da App Store. A comparação de comportamento está em `parity.md`.
+
+## 2026-10-08: /replica-brand
+
+- Nome de trabalho **Cabeça Leve**, aplicado em `lib/brand.ts`, nas notificações, nos e-mails e na cobrança. As checagens de INPI e WIPO ficaram a rodar (`brand.md`).
+- Paleta laranja (#fb923c no tema escuro, #c2410c no claro) sobre neutros quentes, sem nenhuma falha AA nos dois temas. Os links também passaram para o laranja, porque o azul lembrava o original.
+- Voz "leve, direta, presente", com as 10 frases mais vistas revisadas. O código das telas (S01…) saiu da vista.
+- Sweep limpo. "Nectar" sem acento fica fora do sweep, porque casa com "conectar"; essa grafia é conferida por palavra inteira.
+- Os testes voltaram a passar depois da marca: 48 de ponta a ponta, 25 de integração e 46 de unidade.

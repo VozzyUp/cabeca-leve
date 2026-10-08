@@ -103,7 +103,7 @@ export async function VariableScreen() {
                   </li>
                 ))}
               </ul>
-              <Link href="/dinheiro/extrato" className="mt-2 inline-block text-sm font-medium text-info hover:underline">Ver o extrato completo</Link>
+              <Link href="/dinheiro/extrato" className="mt-2 inline-block text-sm font-medium text-accent hover:underline">Ver o extrato completo</Link>
             </Card>
           </div>
         </>

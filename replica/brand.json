@@ -1,0 +1,7 @@
+{
+  "name": "Cabeça Leve",
+  "_note": "Sem 'Nectar' sem acento: casa com 'conectar' e 'desconectar'. Essa grafia é conferida por palavra inteira: grep -rniw nectar (fora de node_modules, .next e replica/).",
+  "avoid": ["Néctar", "meu-nectar", "meunectar"],
+  "domains": ["meu-nectar.com"],
+  "colors": ["#0a1424", "#5c9ce4", "#7090c0", "#182034", "#18283c"]
+}

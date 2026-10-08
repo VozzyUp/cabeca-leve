@@ -34,7 +34,6 @@ export default async function Page({ searchParams }: PageProps<"/planos">) {
   return (
     <div className="flex flex-col items-center gap-10">
       <header className="flex max-w-xl flex-col items-center gap-3 text-center">
-        <p className="text-label text-muted">S32</p>
         <h1 className="text-3xl font-bold text-text">{novo ? "Conta criada. Escolha o plano" : "Tire a vida da cabeça"}</h1>
         <p className="text-body">Um assistente que organiza tarefas, dinheiro e rotina pela conversa. {TRIAL_DAYS} dias grátis para testar.</p>
         {expirou && <p role="status" className="text-sm text-warning">A página de pagamento expirou. Escolha o plano de novo.</p>}

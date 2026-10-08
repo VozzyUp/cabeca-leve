@@ -1,6 +1,6 @@
 // Service worker: recebe as notificações (Web Push) e abre o app no item certo ao tocar.
 self.addEventListener("push", (event) => {
-  let data = { title: "Assistente", body: "", url: "/" };
+  let data = { title: "Cabeça Leve", body: "", url: "/" };
   try { data = { ...data, ...event.data.json() }; } catch {}
   event.waitUntil(self.registration.showNotification(data.title, { body: data.body, data: { url: data.url }, icon: "/icon.svg", badge: "/icon.svg" }));
 });

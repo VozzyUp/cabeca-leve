@@ -59,7 +59,6 @@ export function StatementScreen() {
     <div className="flex flex-col gap-6">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-label text-muted">S24</p>
           <h1 className="text-[28px] font-bold leading-[34px]">Extrato</h1>
         </div>
         {data && <Metric label="Saldo em conta" value={formatMoney(balance)} />}
@@ -104,7 +103,7 @@ export function StatementScreen() {
       {data && data.transactions.length === 0 && (
         <EmptyState icon={<Receipt className="size-8" />} title="Nenhum lançamento ainda"
           text="Conte na conversa: “gastei 42 no almoço” ou “recebi o salário”."
-          action={<Link href="/conversa" className="text-sm font-medium text-info hover:underline">Abrir a conversa</Link>} />
+          action={<Link href="/conversa" className="text-sm font-medium text-accent hover:underline">Abrir a conversa</Link>} />
       )}
       {data && data.transactions.length > 0 && filtered.length === 0 && (
         <p className="text-sm text-muted">{query ? `Nada encontrado para “${query}”` : "Nenhum lançamento"}{filtering ? " com esses filtros" : ""}.</p>

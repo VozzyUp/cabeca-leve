@@ -48,7 +48,7 @@ export async function HabitDetailScreen({ id }: { id: string }) {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1">
-        <Link href="/habitos" className="text-sm font-medium text-info hover:underline">← Hábitos</Link>
+        <Link href="/habitos" className="text-sm font-medium text-accent hover:underline">← Hábitos</Link>
         <PageHeader id="S13" title={habit.name} />
         <p className="text-sm text-muted">{capitalizeFirst(describeWeekdays(habit.weekdays))}{habit.time ? ` às ${habit.time}` : ""}</p>
       </div>
@@ -137,7 +137,7 @@ export async function HealthScreen() {
                 <ActionCheck title="Treino feito" checked={workoutLogs.some((l) => l.workoutId === w.id && l.day === today)}
                   action={setWorkoutDone.bind(null, w.id, today)} />
               </div>
-              <Link href="/saude/treino" className="text-sm font-medium text-info hover:underline">Ver a ficha</Link>
+              <Link href="/saude/treino" className="text-sm font-medium text-accent hover:underline">Ver a ficha</Link>
             </>
           ) : <p className="text-sm text-muted">Dia de descanso. O próximo treino aparece aqui no dia.</p>}
         </Card>

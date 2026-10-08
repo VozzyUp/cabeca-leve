@@ -35,7 +35,7 @@ test.describe("F01 conversa", () => {
     await box(page).fill("    ");
     await expect(page.getByRole("button", { name: "Enviar", exact: true })).toHaveCount(0);
     await box(page).press("Enter");
-    await expect(page.getByRole("log", { name: "Mensagens" }).getByText(/Ainda não consegui/)).toHaveCount(0);
+    await expect(page.getByRole("log", { name: "Mensagens" }).getByText(/Esse eu ainda não sei fazer/)).toHaveCount(0);
   });
 
   test("F01-E2 o mesmo envio duas vezes (duplo clique, nova tentativa) grava uma vez", async ({ page, user }) => {
@@ -65,7 +65,7 @@ test.describe("F01 conversa", () => {
   test("F01-E5 pedido que o assistente não entende recebe exemplos", async ({ page }) => {
     await box(page).fill("como você está?");
     await box(page).press("Enter");
-    await expect(page.getByText(/Ainda não consegui entender/)).toBeVisible();
+    await expect(page.getByText(/Esse eu ainda não sei fazer/)).toBeVisible();
   });
 
   test("F01-E6 recarregar a página mantém a conversa", async ({ page }) => {

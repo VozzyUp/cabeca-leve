@@ -84,8 +84,8 @@ export function SignIn({ initialMode, notice, demo, next, plan }: {
           )}
           {serverError && <p role="alert" className="text-sm text-danger">{serverError}</p>}
           <Button type="submit" size="lg" loading={pending}>{SUBMIT[mode]}</Button>
-          {mode === "signin" && <button type="button" onClick={() => go("reset")} className="text-sm font-medium text-info hover:underline">Esqueci a senha</button>}
-          {mode === "reset" && <button type="button" onClick={() => go("signin")} className="text-sm font-medium text-info hover:underline">Lembrei a senha</button>}
+          {mode === "signin" && <button type="button" onClick={() => go("reset")} className="text-sm font-medium text-accent hover:underline">Esqueci a senha</button>}
+          {mode === "reset" && <button type="button" onClick={() => go("signin")} className="text-sm font-medium text-accent hover:underline">Lembrei a senha</button>}
         </form>
       )}
     </Card>

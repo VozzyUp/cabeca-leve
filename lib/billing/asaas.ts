@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { BRAND } from "@/lib/brand";
 import { PLANS } from "@/lib/plans";
 import { getAdmin } from "@/lib/supabase/server";
 
@@ -31,7 +32,7 @@ export function checkoutUrl(id: string) {
 export async function createCheckout(userId: string, plan: "monthly" | "yearly", trialEndsOn: string | null) {
   const p = PLANS[plan];
   const callback = { successUrl: `${site()}/planos/obrigado`, cancelUrl: `${site()}/planos`, expiredUrl: `${site()}/planos?expirou=1` };
-  const items = [{ name: `Plano ${p.name.toLowerCase()}`, description: "Assistente pessoal com IA", quantity: 1, value: p.priceCents / 100 }];
+  const items = [{ name: `Plano ${p.name.toLowerCase()}`, description: `${BRAND.name}: assistente pessoal com IA`, quantity: 1, value: p.priceCents / 100 }];
   // quem ainda está no teste grátis só paga a 1ª mensalidade quando o teste acaba
   const firstDue = trialEndsOn && trialEndsOn > new Date().toISOString().slice(0, 10) ? new Date(`${trialEndsOn}T12:00:00-03:00`) : new Date();
   const body = plan === "monthly"

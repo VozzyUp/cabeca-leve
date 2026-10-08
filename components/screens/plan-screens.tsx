@@ -45,7 +45,7 @@ export async function BriefingScreen() {
       ))}
       <p className="text-xs text-muted">
         {settings.briefingTime ? `Chega todo dia às ${settings.briefingTime}. ` : ""}
-        <Link href="/automacoes" className="font-medium text-info hover:underline">Mudar o horário ou o canal</Link>
+        <Link href="/automacoes" className="font-medium text-accent hover:underline">Mudar o horário ou o canal</Link>
       </p>
     </div>
   );
@@ -125,7 +125,7 @@ export async function AgendaScreen() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader id="S08" title="Agenda">
-        <Link href="/dia/calendario" className="text-sm font-medium text-info hover:underline">Ver no calendário</Link>
+        <Link href="/dia/calendario" className="text-sm font-medium text-accent hover:underline">Ver no calendário</Link>
       </PageHeader>
       <section aria-labelledby="agendas" className="flex flex-col gap-2">
         <SectionLabel id="agendas">Agendas conectadas</SectionLabel>

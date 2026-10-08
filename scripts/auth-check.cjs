@@ -62,7 +62,7 @@ async function lastLinkTo(email, pattern) {
   const box = p.getByLabel('Mensagem para o assistente');
   await box.fill('gastei 42 no almoço');
   await box.press('Enter');
-  await p.getByText(/Feito: salvei/).waitFor({ timeout: 15000 });
+  await p.getByText(/Pronto, tirei da sua cabeça/).waitFor({ timeout: 15000 });
   await p.goto(base + '/dinheiro/extrato', { waitUntil: 'networkidle' });
   ok(await p.getByText('−R$ 42,00').first().isVisible(), 'gasto da conversa chega no extrato');
 

@@ -69,7 +69,6 @@ export function RemindersScreen() {
     <div className="flex flex-col gap-6">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-label text-muted">S11</p>
           <h1 className="text-[28px] font-bold leading-[34px]">Lembretes</h1>
         </div>
         <Segmented label="Mostrar" value={view} onChange={setView}
@@ -99,7 +98,7 @@ export function RemindersScreen() {
         <EmptyState icon={<Bell className="size-8" />}
           title={view === "next" ? "Nenhum lembrete pela frente" : "Nada concluído ainda"}
           text="Peça na conversa, do seu jeito: “me lembra de levar o lixo hoje às 20h”."
-          action={<Link href="/conversa" className="text-sm font-medium text-info hover:underline">Abrir a conversa</Link>} />
+          action={<Link href="/conversa" className="text-sm font-medium text-accent hover:underline">Abrir a conversa</Link>} />
       )}
 
       {data && [...groups.entries()].map(([day, items]) => (

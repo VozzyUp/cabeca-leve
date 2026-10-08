@@ -48,7 +48,7 @@ export function ActionCard({
             </button>
           ) : <span />}
           {onOpen && openLabel && (
-            <button type="button" onClick={onOpen} className="inline-flex items-center gap-1 rounded-sm text-xs font-medium text-info hover:underline">
+            <button type="button" onClick={onOpen} className="inline-flex items-center gap-1 rounded-sm text-xs font-medium text-accent hover:underline">
               {openLabel} <ChevronRight aria-hidden className="size-3.5" />
             </button>
           )}

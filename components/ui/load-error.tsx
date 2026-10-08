@@ -12,9 +12,9 @@ export function LoadError({ what, onRetry }: { what: string; onRetry: () => void
 
 export function PageHeader({ id, title, children }: { id: string; title: string; children?: React.ReactNode }) {
   return (
-    <header className="flex flex-wrap items-end justify-between gap-4">
+    // id da tela (S01…) fica só no HTML, para testes e o mapa do recon; não aparece para a pessoa
+    <header data-screen={id} className="flex flex-wrap items-end justify-between gap-4">
       <div>
-        <p className="text-label text-muted">{id}</p>
         <h1 className="text-[28px] font-bold leading-[34px]">{title}</h1>
       </div>
       {children}

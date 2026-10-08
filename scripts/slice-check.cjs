@@ -21,7 +21,7 @@ const ok = (c, m) => { console.log((c ? 'ok    ' : 'FALHOU') + ' ' + m); if (!c)
   const box = p.getByLabel('Mensagem para o assistente');
   await box.fill('gastei 35 na padaria e me lembra do mercado às 18h');
   await box.press('Enter');
-  await p.getByText('Feito: salvei').waitFor({ timeout: 10000 });
+  await p.getByText(/Pronto, tirei da sua cabeça/).waitFor({ timeout: 10000 });
   const cards = p.locator('article');
   ok(await cards.count() === 2, 'S02: dois cards (lançamento + lembrete)');
   ok(await p.getByText('Padaria', { exact: true }).isVisible() && await p.getByText('Mercado', { exact: true }).isVisible(), 'S02: títulos certos nos cards');

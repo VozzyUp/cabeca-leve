@@ -82,7 +82,7 @@ export function MoneyScreen() {
               ))}
             </tbody>
           </table>
-          <Link href="/dinheiro/extrato" className="mt-3 inline-block text-sm font-medium text-info hover:underline">Ver todos os lançamentos</Link>
+          <Link href="/dinheiro/extrato" className="mt-3 inline-block text-sm font-medium text-accent hover:underline">Ver todos os lançamentos</Link>
         </Card>
       )}
     </div>
