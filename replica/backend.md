@@ -28,21 +28,24 @@ Depois de preencher: `npm run dev` e criar a primeira conta pelo `/entrar`.
 | camada de dados | `DataStore` com duas implementações: Supabase (por usuário) e demonstração (arquivo). As telas não mudaram | `lib/data/` |
 | login | e-mail e senha com confirmação por e-mail, recuperar senha, sair (neste aparelho ou em todos); sessão em cookie http-only renovada pelo `proxy.ts`; quem não entrou vai para `/entrar` | `app/auth-actions.ts`, `proxy.ts`, `app/auth/confirm` |
 | exclusão de conta | apaga o usuário no Auth e tudo dele em cascata (testado com conversa e notas) | `lib/data/supabase-store.ts` |
-| agente | Claude Opus 5.5 (`claude-opus-5-5`) pelo Tool Runner, 13 ferramentas estritas, esforço `low`, cache do prompt, reserva automática em recusas (`fallbacks: "default"`), histórico do dia reenviado byte a byte; sem chave, usa o intérprete de regras | `lib/assistant/agent.ts` |
+| agente | Claude Opus 5.5 (`claude-opus-5-5`) pelo Tool Runner, 21 ferramentas estritas (criar, consultar, editar e apagar), esquema sem os limites que a API não aceita (o Zod confere no servidor), esforço `low`, cache do prompt, reserva automática em recusas (`fallbacks: "default"`), histórico do dia reenviado byte a byte; sem chave, usa o intérprete de regras | `lib/assistant/agent.ts` |
 | limites | 12 mensagens por minuto e 400 por dia por pessoa (custo de IA e abuso) | `lib/assistant/index.ts` |
 | WhatsApp | interface única com UAZAPI (agora) e WhatsApp Cloud API da Meta (pronta); vínculo do número por código enviado do próprio celular; respostas com uma linha por item salvo; mensagem repetida não roda duas vezes | `lib/whatsapp/` |
 | áudio | Groq `whisper-large-v3-turbo` em português: áudios do WhatsApp e ditado no app quando o navegador não reconhece voz | `lib/transcribe.ts`, `app/api/transcribe` |
 | entregas | varredura de cada minuto: lembretes vencidos e resumo da manhã por push e WhatsApp, com reserva em `scheduled_deliveries` (nada sai em dobro) e registro em Avisos | `lib/deliveries.ts`, `app/api/cron/sweep` |
 | push | Web Push com service worker; ligado em Ajustes > Notificações no aparelho | `lib/push.ts`, `public/sw.js` |
+| repetição | lembretes e tarefas que se repetem (todo dia, dias úteis, dias da semana, todo mês) em RRULE; a entrega reagenda o lembrete e concluir a tarefa cria a próxima | `lib/domain/recurrence.ts` |
+| tempo real | Supabase Realtime nas tabelas das telas; o navegador entra com o token da sessão, então o RLS só entrega as linhas da pessoa | `components/realtime-sync.tsx` |
 | cobrança | Asaas Checkout hospedado: mensal recorrente no cartão; anual em pagamento único por Pix ou cartão. Webhook idempotente atualiza `subscriptions`; cancelar em um toque (acesso até o fim do período); sem plano e com o teste vencido, o assistente explica e não roda | `lib/billing/asaas.ts`, `app/api/webhooks/asaas` |
 
 ## Testes
 
 ```bash
-npm test                 # 36 testes de unidade
+npm test                 # 44 testes de unidade
 npm run db:start         # Supabase local (Docker)
-npm run test:int         # 19 testes de integração: banco, isolamento entre usuários, agente, WhatsApp, entregas e cobrança
+npm run test:int         # 23 testes de integração: banco, isolamento entre usuários, agente, WhatsApp, entregas e cobrança
 node scripts/auth-check.cjs   # login de ponta a ponta no navegador (com npm run dev)
+node scripts/musts-check.cjs replica/clone-screens  # repetição, edição, categorias, filtros, áudio e tempo real entre dois aparelhos
 ```
 
 ## Checklist de segurança
@@ -65,6 +68,6 @@ node scripts/auth-check.cjs   # login de ponta a ponta no navegador (com npm run
 - **Agendas (Google e Outlook):** a tela está pronta e desconectar funciona; conectar exige criar os apps OAuth e passar pela verificação do Google (semanas). Não implementado.
 - **Revisões agendadas (S27):** a lista e o pausar funcionam; gerar a revisão com o Claude no horário ainda não.
 - **Streaming da resposta:** o agente responde de uma vez (alguns segundos); mostrar o texto chegando aos poucos fica para depois.
-- **Memória do assistente, busca por sentido (embeddings), lembretes e tarefas recorrentes:** não implementados.
+- **Memória do assistente e busca por sentido (embeddings):** não implementadas.
 - **Nota fiscal:** emitida pela própria Asaas; ativar no painel.
 - **Custo da IA:** medir com uso real (as mensagens guardam tokens de entrada, saída e cache).

@@ -180,3 +180,28 @@ export async function cancelPlan() {
   await cancelSubscription(user.id);
   revalidatePath("/", "layout");
 }
+
+// Categorias (S18 > Categorias): criar, renomear e arquivar
+const categoryName = z.string().trim().min(1, "Dê um nome").max(60);
+
+export async function createCategory(input: { name: string; kind: "expense" | "income"; parentId: string | null }) {
+  const parsed = z.object({ name: categoryName, kind: z.enum(["expense", "income"]), parentId: uuid.nullable() }).parse(input);
+  const store = await getStore();
+  const existing = await store.listCategories();
+  if (existing.some((c) => c.name.toLocaleLowerCase("pt-BR") === parsed.name.toLocaleLowerCase("pt-BR") && (c.parentId ?? null) === parsed.parentId)) {
+    return { ok: false as const, error: "Já existe uma categoria com esse nome aqui." };
+  }
+  await store.createCategory(parsed);
+  revalidatePath("/dinheiro", "layout");
+  return { ok: true as const };
+}
+
+export async function renameCategory(id: string, name: string) {
+  await (await getStore()).updateCategory(uuid.parse(id), { name: categoryName.parse(name) });
+  revalidatePath("/dinheiro", "layout");
+}
+
+export async function archiveCategory(id: string) {
+  await (await getStore()).archiveCategory(uuid.parse(id));
+  revalidatePath("/dinheiro", "layout");
+}

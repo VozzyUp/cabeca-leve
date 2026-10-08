@@ -15,6 +15,11 @@ export function useResource<T>(fetcher: () => Promise<T>) {
     return () => { alive = false; };
   }, [fetcher, version]);
   const reload = useCallback(() => { setState((s) => ({ ...s, error: false })); setVersion((v) => v + 1); }, []);
+  // mudou em outro aparelho (components/realtime-sync.tsx): busca de novo, sem piscar a tela
+  useEffect(() => {
+    window.addEventListener("app:data-changed", reload);
+    return () => window.removeEventListener("app:data-changed", reload);
+  }, [reload]);
   const setData = useCallback((fn: (d: T | null) => T | null) => setState((s) => ({ ...s, data: fn(s.data) })), []);
   return { data: state.data, error: state.error, reload, setData };
 }

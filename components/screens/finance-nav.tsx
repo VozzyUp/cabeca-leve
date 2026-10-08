@@ -11,6 +11,7 @@ export function FinanceNav() {
       { href: "/dinheiro/contas", label: "Contas e cartões" },
       { href: "/dinheiro/analise", label: "Análise" },
       { href: "/dinheiro/extrato", label: "Extrato" },
+      { href: "/dinheiro/categorias", label: "Categorias" },
     ]} />
   );
 }

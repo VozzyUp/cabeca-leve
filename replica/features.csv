@@ -4,7 +4,7 @@ Recuperar senha por e-mail,conta e assinatura,must,yes,yes,link por e-mail e tel
 Planos mensal e anual com checkout,conta e assinatura,must,yes,yes,"Asaas Checkout: mensal recorrente no cartão, anual por Pix ou cartão; preços provisórios"
 Acesso liberado automaticamente quando o pagamento é aprovado,conta e assinatura,must,yes,yes,"webhook da Asaas (idempotente) libera o plano; vale a conta que abriu o pagamento, não o e-mail da compra"
 Cancelar a assinatura dentro do app com acesso até o fim do ciclo,conta e assinatura,must,yes,yes,um toque em Ajustes; para de cobrar na Asaas e o acesso vale até o fim do período
-Mesma conta em vários dispositivos com sincronização em tempo real,conta e assinatura,must,yes,partial,mesma conta em qualquer aparelho e no WhatsApp; atualização ao vivo (Realtime) depois
+Mesma conta em vários dispositivos com sincronização em tempo real,conta e assinatura,must,yes,yes,Supabase Realtime: telas abertas se atualizam com o que muda em outro aparelho ou no WhatsApp
 Layout responsivo: barra inferior no celular e barra lateral no computador,conta e assinatura,must,yes,yes,capturas da App Store
 Nota fiscal enviada por e-mail após o pagamento,conta e assinatura,should,yes,partial,emitida pela Asaas (ativar no painel)
 Período de teste gratuito,conta e assinatura,could,yes,yes,"7 dias desde o cadastro; depois, sem plano, o assistente pede para assinar e os dados ficam guardados"
@@ -15,7 +15,7 @@ Card de confirmação no chat para cada item criado,assistente,must,yes,yes,S02:
 Desfazer a ação pelo card,assistente,must,yes,yes,S02
 Atalho do card para abrir o item na área certa,assistente,must,yes,yes,S02: abrir em lembretes / abrir no extrato
 Perguntas sobre os próprios dados respondidas com números e cards,assistente,must,yes,yes,"ferramentas de consulta: tarefas, lembretes, finanças do mês, hábitos e o dia (F03)"
-Editar concluir e apagar itens pelo chat,assistente,must,yes,partial,"concluir e mudar tarefas e lembretes, marcar hábito; apagar e editar gastos depois"
+Editar concluir e apagar itens pelo chat,assistente,must,yes,yes,"tarefas, lembretes, lançamentos e hábitos: consulta o id e edita, conclui, apaga ou arquiva"
 Datas e horas relativas no fuso do usuário,assistente,must,yes,yes,"data, hora e fuso em cada mensagem; o modelo resolve 'amanhã', 'sexta', 'daqui a 2 horas'"
 Pergunta de volta quando falta informação no pedido,assistente,must,yes,yes,"instrução do assistente (valor de gasto, horário de lembrete)"
 Indicador das etapas enquanto o assistente trabalha,assistente,should,yes,no,
@@ -26,7 +26,7 @@ Briefing diário em texto,assistente,should,yes,yes,S04 e entrega no horário po
 Briefing do dia em áudio,assistente,could,yes,partial,S04: botão Ouvir com a voz do navegador; áudio gerado no servidor depois
 Pesquisar um assunto resumir e salvar como nota,assistente,could,yes,no,site [conferir]
 Ditado no campo de mensagem,voz,must,yes,yes,reconhecimento do navegador ou gravação transcrita pela Groq | S01
-Enviar áudio e ter o conteúdo transcrito e organizado,voz,must,yes,partial,"no WhatsApp, sim (Groq); anexar áudio gravado no app depois"
+Enviar áudio e ter o conteúdo transcrito e organizado,voz,must,yes,yes,"áudio anexado no app ou mandado no WhatsApp, transcrito pela Groq e organizado pelo assistente"
 Modo de voz com resposta falada,voz,should,yes,partial,"S03: fala vira pedido e a resposta é lida em voz alta, com a voz do navegador"
 Escolher a voz do assistente,voz,could,yes,partial,S30 guarda a escolha; prévia com a voz do navegador
 Vincular número de WhatsApp com mensagem de boas-vindas,whatsapp,must,yes,yes,código de 6 dígitos mandado do próprio celular (link wa.me pronto); boas-vindas na confirmação
@@ -51,8 +51,8 @@ Conectar Outlook e ver os eventos,agenda,should,yes,partial,S08: idem; OAuth da 
 Vários calendários por conta,agenda,should,yes,no,App Store 3.1
 Criar evento com convidados pelo chat,agenda,should,yes,no,site [conferir]
 Mover ou editar evento pelo chat,agenda,could,yes,no,site [conferir]
-Criar tarefa com prazo prioridade e observações,tarefas,must,yes,partial,prazo e prioridade pela tela e pela conversa; observações depois
-Tarefas recorrentes,tarefas,must,yes,no,
+Criar tarefa com prazo prioridade e observações,tarefas,must,yes,yes,pela tela (janela de edição) e pela conversa
+Tarefas recorrentes,tarefas,must,yes,yes,"concluir cria a próxima ocorrência, uma vez só"
 Listas de hoje próximas e atrasadas,tarefas,must,yes,yes,também sem prazo e feitas
 Subtarefas,tarefas,should,yes,no,Google Play
 Quadro Kanban (a fazer fazendo feito),tarefas,should,yes,no,site [conferir]
@@ -63,7 +63,7 @@ Situação do projeto pelo prazo decorrido (no rumo ou em risco),projetos,could,
 Modelos de projeto,projetos,could,yes,no,exclusão: modelos de projeto
 Orçamento do projeto ligado aos gastos,projetos,could,yes,no,site [conferir]
 Lembrete único em data e hora,lembretes,must,yes,yes,"app, conversa e WhatsApp; aviso por push e WhatsApp"
-Lembretes recorrentes (diário semanal mensal),lembretes,must,yes,no,App Store 3.1: lembretes mensais
+Lembretes recorrentes (diário semanal mensal),lembretes,must,yes,yes,"todo dia, dias úteis, dias da semana, todo mês (tela, conversa e WhatsApp); a entrega reagenda a próxima"
 Avisar com antecedência (ex.: 1 dia e 1 hora antes),lembretes,should,yes,no,site [conferir]
 Resumo diário dos lembretes pela manhã,lembretes,should,yes,no,site [conferir]
 Marcar lembrete como importante,lembretes,could,yes,no,site [conferir]
@@ -85,8 +85,8 @@ Sincronizar treinos passos e sono do Apple Saúde e Health Connect,saúde,could,
 Conectar Strava e marcar hábitos esportivos sozinho,saúde,could,yes,no,suporte; privacidade 6.1
 Lançar despesa e receita pelo chat com categoria e meio de pagamento,finanças,must,yes,yes,"pela conversa no app e no WhatsApp, com categoria e forma de pagamento | S02"
 Resumo do mês: entrou saiu sobra e patrimônio,finanças,must,yes,yes,S18 com dados reais
-Extrato com busca e filtros,finanças,must,yes,partial,busca por texto e paginação; filtros por conta e período depois | S24
-Categorias e subcategorias,finanças,must,yes,partial,categorias padrão; sem subcategorias nem edição
+Extrato com busca e filtros,finanças,must,yes,yes,"busca, tipo, mês, categoria (com subcategorias), forma de pagamento e total filtrado | S24"
+Categorias e subcategorias,finanças,must,yes,yes,"tela Dinheiro > Categorias: criar, subcategoria, renomear, arquivar; o assistente usa as da pessoa"
 Contas bancárias com saldo atualizado pelos lançamentos,finanças,must,yes,yes,saldo calculado no banco (view account_balances); compra no crédito não mexe na conta
 Cartões de crédito com limite fechamento e vencimento,finanças,should,yes,partial,"S22: limite, fechamento, vencimento, fatura aberta e limite disponível; cadastrar pela conversa depois"
 Compra no crédito cai na fatura e não na conta,finanças,should,yes,yes,o saldo da conta ignora o crédito; a compra entra na fatura do ciclo (S22)

@@ -147,7 +147,7 @@ function buildTools(store: DataStore, now: Date, cards: ActionCardData[]) {
         type: z.enum(["expense", "income"]),
         amount: z.number().positive().max(10_000_000).describe("Valor em reais, ex.: 35.9"),
         description: z.string().min(1).max(200).describe("Onde ou com o quê, ex.: Padaria"),
-        category: z.enum(CATEGORIES),
+        category: z.string().max(60).describe(`Nome de uma categoria da pessoa. Padrão: ${CATEGORIES.join(", ")}. Ela pode ter criado outras e subcategorias: use query_categories se não tiver certeza`),
         payment_method: z.enum(["pix", "debit", "credit", "cash", "other"]).nullable(),
         occurred_on: z.iso.date().nullable().describe("Dia do gasto, ou null para hoje"),
       }),
@@ -297,6 +297,16 @@ function buildTools(store: DataStore, now: Date, cards: ActionCardData[]) {
       run: async ({ reminder_id }) => ((await store.deleteReminder(reminder_id)) ? json({ ok: true }) : "Erro: lembrete não encontrado."),
     })),
     strict(betaZodTool({
+      name: "query_categories",
+      description: "Lista as categorias e subcategorias da pessoa, de gastos e de entradas.",
+      inputSchema: z.object({}),
+      run: async () => {
+        const cats = await store.listCategories();
+        const name = new Map(cats.map((c) => [c.id, c.name]));
+        return json(cats.map((c) => ({ name: c.name, kind: c.kind, inside: c.parentId ? name.get(c.parentId) ?? null : null })));
+      },
+    })),
+    strict(betaZodTool({
       name: "query_transactions",
       description: "Busca lançamentos (gastos e entradas) com id, para corrigir ou apagar. Filtra por texto na descrição e por período.",
       inputSchema: z.object({
@@ -319,12 +329,14 @@ function buildTools(store: DataStore, now: Date, cards: ActionCardData[]) {
         transaction_id: z.string(),
         amount: z.number().positive().max(10_000_000).nullable(),
         description: z.string().min(1).max(200).nullable(),
-        category: z.enum(CATEGORIES).nullable(),
+        category: z.string().max(60).nullable(),
         occurred_on: z.iso.date().nullable(),
         payment_method: z.enum(["pix", "debit", "credit", "cash", "other"]).nullable(),
       }),
       run: async (i) => {
-        const category = i.category ? (await store.listCategories()).find((c) => c.name === i.category)?.id : undefined;
+        const norm = (x: string) => x.normalize("NFD").replace(/\p{M}/gu, "").toLocaleLowerCase("pt-BR").trim();
+        const category = i.category ? (await store.listCategories()).find((c) => norm(c.name) === norm(i.category!))?.id : undefined;
+        if (i.category && !category) return `Erro: a categoria "${i.category}" não existe. Use query_categories.`;
         const patch = Object.fromEntries(Object.entries({
           amountCents: i.amount === null ? null : Math.round(i.amount * 100), description: i.description, categoryId: category ?? null,
           occurredOn: i.occurred_on, paymentMethod: i.payment_method,

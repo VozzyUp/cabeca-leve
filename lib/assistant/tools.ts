@@ -63,8 +63,12 @@ export async function recordTransaction(
 ): Promise<ActionCardData> {
   const tz = store.timezone();
   const [categories, accounts] = await Promise.all([store.listCategories(), store.listAccounts()]);
-  const category = categories.find((c) => c.name === input.categoryName)
-    ?? categories.find((c) => c.name === (input.type === "income" ? "Outras entradas" : "Outros gastos"))!;
+  // nome sem diferença de maiúsculas e acentos; subcategorias valem; senão, "Outros gastos"/"Outras entradas"
+  const norm = (x: string) => x.normalize("NFD").replace(/\p{M}/gu, "").toLocaleLowerCase("pt-BR").trim();
+  const sameKind = categories.filter((c) => c.kind === input.type);
+  const category = sameKind.find((c) => norm(c.name) === norm(input.categoryName))
+    ?? categories.find((c) => c.name === (input.type === "income" ? "Outras entradas" : "Outros gastos"))
+    ?? sameKind[0];
   const occurredOn = input.occurredOn ?? localDate(now, tz);
   const t = await store.createTransaction({
     type: input.type, amountCents: input.amountCents, occurredOn, description: input.description,

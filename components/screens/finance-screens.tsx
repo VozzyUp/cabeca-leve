@@ -8,6 +8,7 @@ import { cn } from "@/components/ui/cn";
 import { EmptyState, Metric, Progress } from "@/components/ui/data";
 import { PageHeader } from "@/components/ui/load-error";
 import { FinanceNav } from "@/components/screens/finance-nav";
+import { CategoriesManager } from "@/components/screens/categories-manager";
 import type { Recurrence } from "@/lib/data/types";
 import {
   cardStatus, categoryTrends, installmentForecast, installmentStatus, monthlyTotals, recurringSummary, variableSpending,
@@ -349,6 +350,20 @@ export async function AnalysisScreen() {
           </Card>
         </>
       )}
+    </div>
+  );
+}
+
+// ---- Categorias ----
+export async function CategoriesScreen() {
+  const { store } = await serverContext();
+  const [categories, transactions] = await Promise.all([store.listCategories(), store.listTransactions()]);
+  const usage: Record<string, number> = {};
+  for (const t of transactions) if (t.categoryId) usage[t.categoryId] = (usage[t.categoryId] ?? 0) + 1;
+  return (
+    <div className="flex flex-col gap-6">
+      <FinanceHeader id="S18" title="Categorias" />
+      <CategoriesManager categories={categories} usage={usage} />
     </div>
   );
 }

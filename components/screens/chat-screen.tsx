@@ -44,6 +44,23 @@ export function ChatScreen() {
   const loadError = history.error;
   const load = history.reload;
   const [sending, setSending] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
+  const [audioError, setAudioError] = useState<string | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
+
+  // áudio anexado: vira texto no servidor (Groq) e segue como mensagem normal
+  async function sendAudio(file: File) {
+    setAudioError(null);
+    if (file.size > 10 * 1024 * 1024) { setAudioError("Áudio longo demais (até 10 MB)."); return; }
+    setTranscribing(true);
+    try {
+      const res = await fetch("/api/transcribe", { method: "POST", headers: { "Content-Type": file.type || "audio/mpeg" }, body: file });
+      const body = (await res.json().catch(() => ({}))) as { text?: string; error?: string };
+      if (!res.ok || !body.text) { setAudioError(res.status === 503 ? "Áudio ainda não está ligado neste app." : body.error ?? "Não consegui entender o áudio."); return; }
+      await send(body.text);
+    } catch { setAudioError("Não deu para enviar o áudio. Confira a conexão."); }
+    finally { setTranscribing(false); }
+  }
   const offline = !useOnline();
   const bottom = useRef<HTMLDivElement>(null);
   useEffect(() => { bottom.current?.scrollIntoView({ block: "end" }); }, [messages?.length, sending]);
@@ -135,11 +152,16 @@ export function ChatScreen() {
             )}
           </div>
         ))}
+        {transcribing && <Steps steps={[{ label: "Ouvindo o áudio", done: false }]} />}
         {sending && <Steps steps={[{ label: "Entendendo o pedido", done: false }]} />}
+        {audioError && <p role="alert" className="text-sm text-danger">{audioError}</p>}
         <div ref={bottom} className="scroll-mb-40 lg:scroll-mb-28" />
       </div>
       <div className="sticky bottom-20 -mx-4 bg-bg px-4 pb-4 pt-2 lg:bottom-0 lg:mx-0 lg:px-0 lg:pb-6">
-        <Composer onSend={(t) => send(t)} sending={sending} offline={offline} onVoiceMode={() => router.push("/conversa/voz")} />
+        <input ref={fileInput} type="file" accept="audio/*" className="sr-only" tabIndex={-1} aria-hidden
+          onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void sendAudio(f); }} />
+        <Composer onSend={(t) => send(t)} sending={sending || transcribing} offline={offline} onVoiceMode={() => router.push("/conversa/voz")}
+          onAttach={() => fileInput.current?.click()} />
       </div>
     </div>
   );

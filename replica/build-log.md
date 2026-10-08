@@ -68,3 +68,19 @@ Verificação no navegador: `scripts/slice-check.cjs`, `scripts/m2-check.cjs` e 
 
 Paridade 57,5/100 (era 37,9); 32 de 40 obrigatórias completas. Detalhes, passo a passo das contas e
 checklist de segurança em `replica/backend.md`.
+
+## As 8 obrigatórias que faltavam (2026-10-08)
+
+| item | estado | mais difícil do que parecia |
+| --- | --- | --- |
+| lembretes recorrentes | feito | "todo dia 5" é mensal e "todo dia" é diário: a ordem das regras importa; o recorrente guarda hora e minuto locais, e ocorrências perdidas com o app desligado não se acumulam |
+| tarefas recorrentes | feito | concluir, reabrir e concluir de novo não pode criar duas próximas |
+| editar e apagar pela conversa | feito | as ferramentas estritas não aceitam limites de número e tamanho no esquema, e o SDK os mandava: a API recusaria todas as chamadas só com a chave real. O esquema agora sai limpo e o Zod confere no servidor |
+| mesma conta em vários aparelhos | feito | o canal do Realtime se inscrevia antes de o token carregar, como anônimo, e o RLS escondia tudo |
+| categorias e subcategorias | feito | arquivar a de cima leva as de baixo; os lançamentos antigos mantêm a categoria |
+| extrato com filtros | feito | — |
+| observações na tarefa | feito | — |
+| áudio no app | feito | — |
+
+Paridade 63,2/100; **40 de 40 obrigatórias completas**.
+

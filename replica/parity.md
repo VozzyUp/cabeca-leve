@@ -1,8 +1,6 @@
-## Parity: 57.5 / 100
+## Parity: 63.2 / 100
 
-features 57.5  (136 counted, must-haves 32 of 40 done)
-
-Not shippable yet: 8 must-have features are not done.
+features 63.2  (136 counted, must-haves 40 of 40 done)
 
 ## By area, weakest first
 - telegram                       0.0  (1 features)
@@ -11,32 +9,24 @@ Not shippable yet: 8 must-have features are not done.
 - avisos proativos              10.0  (7 features)
 - automações                    16.7  (4 features)
 - agenda                        22.2  (5 features)
-- lembretes                     27.3  (5 features)
 - projetos                      28.6  (5 features)
-- tarefas                       32.1  (6 features)
 - conhecimento                  40.0  (7 features)
 - notificações                  50.0  (4 features)
 - metas                         50.0  (3 features)
+- lembretes                     54.5  (5 features)
 - saúde                         56.2  (8 features)
-- finanças                      57.1  (17 features)
-- voz                           66.7  (4 features)
+- tarefas                       64.3  (6 features)
+- finanças                      65.7  (17 features)
 - privacidade                   66.7  (4 features)
 - hábitos                       67.6  (8 features)
-- assistente                    73.8  (17 features)
 - personalização                75.0  (2 features)
+- assistente                    77.4  (17 features)
+- voz                           83.3  (4 features)
 - whatsapp                      88.2  (6 features)
-- conta e assinatura            89.6  (9 features)
 - visão do dia                  90.9  (6 features)
+- conta e assinatura            95.8  (9 features)
 
 ## Missing, in build order
-- [must] lembretes: Lembretes recorrentes (diário semanal mensal), no  (App Store 3.1: lembretes mensais)
-- [must] tarefas: Tarefas recorrentes, no
-- [must] assistente: Editar concluir e apagar itens pelo chat, partial  (concluir e mudar tarefas e lembretes, marcar hábito; apagar e editar gastos depois)
-- [must] conta e assinatura: Mesma conta em vários dispositivos com sincronização em tempo real, partial  (mesma conta em qualquer aparelho e no WhatsApp; atualização ao vivo (Realtime) depois)
-- [must] finanças: Categorias e subcategorias, partial  (categorias padrão; sem subcategorias nem edição)
-- [must] finanças: Extrato com busca e filtros, partial  (busca por texto e paginação; filtros por conta e período depois | S24)
-- [must] tarefas: Criar tarefa com prazo prioridade e observações, partial  (prazo e prioridade pela tela e pela conversa; observações depois)
-- [must] voz: Enviar áudio e ter o conteúdo transcrito e organizado, partial  (no WhatsApp, sim (Groq); anexar áudio gravado no app depois)
 - [should] agenda: Criar evento com convidados pelo chat, no  (site [conferir])
 - [should] agenda: Vários calendários por conta, no  (App Store 3.1)
 - [should] assistente: Enviar foto ou documento no chat e usar o conteúdo, no  (App Store 3.0)
