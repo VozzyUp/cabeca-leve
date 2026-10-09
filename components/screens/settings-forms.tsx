@@ -2,7 +2,7 @@
 import { Download, Play, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { deleteAccount, exportData, linkWhatsApp as startWhatsAppLink, testNotice, updateSettings } from "@/app/actions";
+import { clearMemories, deleteAccount, deleteMemory, exportData, linkWhatsApp as startWhatsAppLink, testNotice, updateSettings } from "@/app/actions";
 import { signOut } from "@/app/auth-actions";
 import { pushSupported, subscribePush, unsubscribePush } from "@/lib/push-client";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import { Card, SectionLabel } from "@/components/ui/card";
 import { cn } from "@/components/ui/cn";
 import { Field } from "@/components/ui/field";
 import { Segmented } from "@/components/ui/segmented";
-import type { Settings } from "@/lib/data/types";
+import type { Memory, Settings } from "@/lib/data/types";
 
 // Salva cada mudança na hora e mostra "Salvo" ou o erro ao lado do título da seção
 function useSaver(initial: Settings) {
@@ -209,7 +209,7 @@ const TONE_SAMPLE: Record<Settings["tone"], string> = {
   playful: "Anotado e guardado a sete chaves! Amanhã às 9h eu apareço pra te lembrar.",
 };
 
-export function AssistantForm({ initial }: { initial: Settings }) {
+export function AssistantForm({ initial, memories: initialMemories }: { initial: Settings; memories: Memory[] }) {
   const { settings, save, status } = useSaver(initial);
   function sample() {
     if (!("speechSynthesis" in window)) return;
@@ -249,7 +249,7 @@ export function AssistantForm({ initial }: { initial: Settings }) {
         <Row title="Lembrar o que eu conto" hint="preferências e fatos, como 'sou vegetariana' ou 'recebo dia 5', para responder melhor">
           <Switch label="Lembrar o que eu conto" checked={settings.memoryEnabled} onChange={(memoryEnabled) => save({ memoryEnabled })} />
         </Row>
-        <p className="text-xs text-muted">O que o assistente guardou vai aparecer aqui, com opção de apagar cada item, quando a memória estiver ligada ao backend.</p>
+        <MemoryList initial={initialMemories} enabled={settings.memoryEnabled} />
       </Card>
       <Card className="flex flex-wrap items-center justify-between gap-3">
         <SectionLabel>Aparência</SectionLabel>
@@ -296,6 +296,55 @@ function TestNotice() {
           <li><span className="font-medium text-text">No app:</span> está em Avisos.</li>
         </ul>
       )}
+    </div>
+  );
+}
+
+// O que o assistente guardou, com opção de esquecer cada item ou tudo
+function MemoryList({ initial, enabled }: { initial: Memory[]; enabled: boolean }) {
+  const [items, setItems] = useState(initial);
+  const [error, setError] = useState(false);
+  const [confirmAll, setConfirmAll] = useState(false);
+  const [pending, start] = useTransition();
+  function forget(m: Memory) {
+    setError(false);
+    setItems((l) => l.filter((x) => x.id !== m.id));
+    start(async () => { try { await deleteMemory(m.id); } catch { setItems((l) => [m, ...l]); setError(true); } });
+  }
+  function forgetAll() {
+    const before = items;
+    setError(false); setConfirmAll(false); setItems([]);
+    start(async () => { try { await clearMemories(); } catch { setItems(before); setError(true); } });
+  }
+  return (
+    <div className="mt-2 flex flex-col gap-2">
+      {!enabled && <p className="text-xs text-muted">A memória está desligada: o assistente não guarda nada novo nem usa o que está aqui. Você pode apagar o que já foi guardado.</p>}
+      {items.length === 0 ? (
+        <p className="text-xs text-muted">{enabled ? "Nada guardado ainda. Diga na conversa “lembra que eu recebo dia 5” e aparece aqui." : "Nada guardado."}</p>
+      ) : (
+        <>
+          <ul aria-label="O que o assistente guardou" className="flex flex-col divide-y divide-border rounded-md border border-border">
+            {items.map((m) => (
+              <li key={m.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm text-body">
+                <span className="min-w-0 break-words">{m.fact}</span>
+                <Button variant="ghost" size="sm" disabled={pending} onClick={() => forget(m)} aria-label={`Esquecer: ${m.fact}`} icon={<Trash2 className="size-4" />}>Esquecer</Button>
+              </li>
+            ))}
+          </ul>
+          <div className="flex flex-wrap items-center gap-2">
+            {confirmAll ? (
+              <>
+                <span className="text-xs text-body">Esquecer os {items.length} itens?</span>
+                <Button variant="secondary" size="sm" disabled={pending} onClick={forgetAll}>Sim, esquecer tudo</Button>
+                <Button variant="ghost" size="sm" onClick={() => setConfirmAll(false)}>Cancelar</Button>
+              </>
+            ) : (
+              <Button variant="ghost" size="sm" onClick={() => setConfirmAll(true)}>Esquecer tudo</Button>
+            )}
+          </div>
+        </>
+      )}
+      {error && <p role="alert" className="text-xs text-danger">Não deu para apagar. Tente de novo.</p>}
     </div>
   );
 }

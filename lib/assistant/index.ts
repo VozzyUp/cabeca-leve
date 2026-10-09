@@ -8,7 +8,7 @@ import { parseBudget, parseMessage, wantsHuman } from "./rule-parser";
 import type { ChatImage } from "@/lib/image";
 import { createHabit, createReminder, createTask, recordTransaction, setBudgetByName } from "./tools";
 
-export type AssistantReply = { text: string; cards: ActionCardData[] };
+export type AssistantReply = { text: string; cards: ActionCardData[]; replies?: string[] };  // replies: respostas rápidas (botões no WhatsApp)
 
 // Intérprete de regras: reserva para quando não há chave da Anthropic (testes e demonstração).
 // O agente de verdade (agent.ts) usa as mesmas ferramentas (tools.ts).

@@ -103,7 +103,7 @@ Sem eles a imagem é publicada do mesmo jeito; só as etapas correspondentes avi
    | --- | --- |
    | Assistente | chave da Anthropic, o **modelo** (Haiku 5.5, Sonnet 5.5 ou Opus 5.5; padrão Sonnet 5.5) e o **nível de raciocínio** (baixo, médio, alto, muito alto, máximo; padrão médio). Valem na hora. O botão **Testar chave** mostra o modelo em uso. Se a chave for sem workspace, preencha também o ID do workspace |
    | Áudio | chave da Groq |
-   | WhatsApp | provedor, número do assistente, endereço e token da UAZAPI; use **Gerar** no segredo do webhook |
+   | WhatsApp | provedor, número do assistente, endereço e token da UAZAPI; use **Gerar** no segredo do webhook; **Botões nas respostas** (ligados no formato atual por padrão; se não aparecerem no seu celular, tente o formato antigo ou desligue). Para conferir, use **Ajustes > Testar aviso agora**: o aviso do WhatsApp vem com botões de teste |
    | Cobrança | ambiente (sandbox ou produção), chave da Asaas; use **Gerar** no token do webhook |
    | E-mail | chave da Resend e remetente |
    | Custos (painel) | cotação do dólar, só para converter os valores da tela **Custo da IA** (padrão R$ 5,50) |

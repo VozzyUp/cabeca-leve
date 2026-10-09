@@ -9,7 +9,7 @@ const inbound = (id: string, from: string, text: string) => ({
   EventType: "messages", token: "token-e2e",
   message: { messageid: id, chatid: `${from}@s.whatsapp.net`, sender_pn: `${from}@s.whatsapp.net`, fromMe: false, isGroup: false, wasSentByApi: false, messageType: "Conversation", text, messageTimestamp: Date.now() },
 });
-const sentTo = async (digits: string) => (await mockCalls()).filter((c) => c.url === "/send/text" && String(c.body.number) === digits).map((c) => String(c.body.text));
+const sentTo = async (digits: string) => (await mockCalls()).filter((c) => (c.url === "/send/text" || c.url === "/send/menu") && String(c.body.number) === digits).map((c) => String(c.body.text));
 async function waitSent(digits: string, re: RegExp) {
   await expect.poll(async () => (await sentTo(digits)).some((t) => re.test(t)), { timeout: 15_000 }).toBe(true);
 }

@@ -67,7 +67,7 @@ test.describe("F6 testar aviso", () => {
     const status = page.getByRole("status").filter({ hasText: "WhatsApp:" });
     await expect(status).toContainText(`Mensagem enviada para +${number} no WhatsApp.`);
     await expect(status).toContainText("Notificações no aparelho ainda não estão ligadas neste app.");  // sem chaves VAPID no teste
-    expect((await mockCalls()).some((c) => c.url === "/send/text" && c.body.number === number && /Aviso de teste/.test(String(c.body.text)))).toBe(true);
+    expect((await mockCalls()).some((c) => (c.url === "/send/text" || c.url === "/send/menu") && c.body.number === number && /Aviso de teste/.test(String(c.body.text)))).toBe(true);
     await page.goto("/avisos");
     await expect(page.getByText("Aviso de teste")).toBeVisible();
   });

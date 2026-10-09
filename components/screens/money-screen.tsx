@@ -2,7 +2,10 @@
 import { ChevronLeft, ChevronRight, Wallet } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useState } from "react";
+import { confirmBillAction } from "@/app/actions";
+import { ActionButton } from "@/components/ui/action-controls";
 import { Card, SectionLabel } from "@/components/ui/card";
+import type { ToResolve } from "@/lib/domain/resolve";
 import { EmptyState, Metric } from "@/components/ui/data";
 import { IconButton } from "@/components/ui/button";
 import { LoadError, PageHeader } from "@/components/ui/load-error";
@@ -11,7 +14,7 @@ import { api } from "@/lib/api";
 import { useResource } from "@/lib/hooks";
 import { BudgetsCard } from "./budgets-card";
 import { FinanceNav } from "./finance-nav";
-import { capitalizeFirst, formatMoney } from "@/lib/time";
+import { capitalizeFirst, formatMoney, formatShortDate } from "@/lib/time";
 
 function shiftMonth(month: string, delta: number) {
   const [y, m] = month.split("-").map(Number);
@@ -58,6 +61,8 @@ export function MoneyScreen() {
         </Card>
       )}
 
+      {data && isThisMonth && data.toResolve.length > 0 && <ResolveCard items={data.toResolve} onChange={reload} />}
+
       {data && <BudgetsCard budgets={data.budgets} categories={data.expenseCategories} onChange={reload} />}
 
       {data && data.byCategory.length === 0 && (
@@ -89,5 +94,35 @@ export function MoneyScreen() {
         </Card>
       )}
     </div>
+  );
+}
+
+const WHEN = (p: ToResolve) =>
+  p.status === "late" ? `venceu em ${formatShortDate(p.dueOn)}, há ${p.days} dia${p.days === 1 ? "" : "s"}`
+  : p.status === "today" ? "vence hoje"
+  : `vence em ${formatShortDate(p.dueOn)}, daqui a ${p.days} dia${p.days === 1 ? "" : "s"}`;
+
+// A resolver: contas fixas e entradas esperadas que venceram sem lançamento ou vencem em breve
+function ResolveCard({ items, onChange }: { items: ToResolve[]; onChange: () => void }) {
+  return (
+    <Card>
+      <SectionLabel className="mb-1">A resolver</SectionLabel>
+      <p className="mb-2 text-xs text-muted">Confirme para lançar no extrato, no vencimento, com o valor combinado.</p>
+      <ul aria-label="Contas e entradas a resolver" className="flex flex-col divide-y divide-border">
+        {items.map((p) => (
+          <li key={`${p.recurrenceId}-${p.dueOn}`} className="flex items-center gap-3 py-2.5">
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span className="truncate text-sm font-medium text-text">{p.description}</span>
+              <span className={p.status === "late" ? "text-xs text-warning" : "text-xs text-muted"}>{WHEN(p)}</span>
+            </span>
+            <span className={p.kind === "income" ? "font-mono text-sm text-income" : "font-mono text-sm text-text"}>{formatMoney(p.amountCents)}</span>
+            <ActionButton variant="secondary" size="sm" aria-label={`${p.kind === "income" ? "Recebi" : "Paguei"}: ${p.description}`}
+              action={async () => { await confirmBillAction(p.recurrenceId, p.dueOn); onChange(); }}>
+              {p.kind === "income" ? "Recebi" : "Paguei"}
+            </ActionButton>
+          </li>
+        ))}
+      </ul>
+    </Card>
   );
 }

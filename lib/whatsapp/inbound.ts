@@ -5,13 +5,14 @@ import { getAdmin } from "@/lib/supabase/server";
 import { transcribe, transcriptionEnabled } from "@/lib/transcribe";
 import { findUserByNumber, tryVerify } from "./link";
 import { phoneVariants, toE164 } from "./phone";
-import { whatsapp, type Inbound } from "./provider";
+import { cardButtons, firstTime, handleButton } from "./buttons";
+import { sendReply, whatsapp, type Inbound } from "./provider";
 import { siteUrl } from "@/lib/public-env";
 import { ImageError, normalizeImage, type ChatImage } from "@/lib/image";
 
 const KIND: Record<ActionCardData["kind"], string> = {
   reminder: "Lembrete", transaction: "Lançamento", task: "Tarefa", habit: "Hábito", workout: "Ficha de treino", meal: "Plano alimentar",
-  project: "Projeto", goal: "Meta", automation: "Revisão agendada",
+  project: "Projeto", goal: "Meta", automation: "Revisão agendada", recurring: "Conta fixa",
 };
 
 // No WhatsApp não há card: a resposta leva uma linha por item salvo
@@ -38,6 +39,13 @@ export async function processInbound(msg: Inbound) {
     .eq("user_id", userId).eq("channel", "whatsapp").in("external_id", phoneVariants(msg.from).map(toE164));
 
   let text = msg.text;
+  // toque num botão: ações simples respondem na hora; as que precisam da conversa seguem como texto digitado
+  if (msg.button) {
+    if (!firstTime(`btn:${msg.externalId}`)) return;
+    const result = await handleButton(await storeForUser(userId), msg.button.id, msg.at);
+    if (!("ask" in result)) { await sendReply(wa, msg.from, result.text, result.buttons); return; }
+    text = result.ask;
+  }
   if (msg.audio) {
     if (!transcriptionEnabled()) { await wa.sendText(msg.from, "Ainda não consigo ouvir áudios por aqui. Pode mandar por texto?"); return; }
     const audio = await wa.downloadAudio(msg.audio.ref);
@@ -57,7 +65,9 @@ export async function processInbound(msg: Inbound) {
   const store = await storeForUser(userId);
   try {
     const { reply } = await respond(store, text ?? "", { channel: "whatsapp", externalMessageId: msg.externalId, now: msg.at, ...(images ? { images } : {}) });
-    await wa.sendText(msg.from, formatReply(reply.text, reply.cards));
+    // o assistente pode propor respostas rápidas; senão, o que acabou de ser registrado ganha Desfazer e Alterar
+    const buttons = reply.replies?.length ? reply.replies.map((r) => ({ id: `q:${r}`, title: r })) : cardButtons(reply.cards);
+    await sendReply(wa, msg.from, formatReply(reply.text, reply.cards), buttons);
   } catch (error) {
     // o provedor reenviou a mesma mensagem: já foi processada
     if (error instanceof Error && /duplicate key|external_message_id/.test(error.message)) return;

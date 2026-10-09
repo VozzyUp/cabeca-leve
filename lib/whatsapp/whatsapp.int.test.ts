@@ -10,7 +10,8 @@ import type { Database } from "@/lib/supabase/database.types";
 const run = process.env.SUPABASE_TEST === "1";
 
 describe.skipIf(!run)("WhatsApp (UAZAPI)", () => {
-  const sent: Array<{ number: string; text: string }> = [];
+  const sent: Array<{ number: string; text: string; type?: string; choices?: string[] }> = [];
+  let menuStatus = 200;  // 500 simula a UAZAPI recusar os botões
   let server: http.Server;
   let base = "";
   let userId = "";
@@ -27,6 +28,10 @@ describe.skipIf(!run)("WhatsApp (UAZAPI)", () => {
       req.on("end", () => {
         res.setHeader("content-type", "application/json");
         if (req.url === "/send/text") { sent.push(JSON.parse(data)); return res.end("{}"); }
+        if (req.url === "/send/menu") {
+          if (menuStatus !== 200) { res.statusCode = menuStatus; return res.end("{}"); }
+          sent.push(JSON.parse(data)); return res.end("{}");
+        }
         if (req.url === "/message/download") {
           const photo = String((JSON.parse(data || "{}") as { id?: string }).id).startsWith("IMG");
           return res.end(JSON.stringify(photo ? { fileURL: `${base}/foto.png`, mimetype: "image/png" } : { fileURL: `${base}/file.mp3`, mimetype: "audio/mpeg" }));
@@ -97,6 +102,109 @@ describe.skipIf(!run)("WhatsApp (UAZAPI)", () => {
     expect(sent.length).toBe(before);
     const { data } = await admin.from("transactions").select("id").eq("user_id", userId);
     expect(data).toHaveLength(1);
+  });
+
+  it("o que o assistente registra vem com Desfazer e Alterar; tocar em Desfazer desfaz, e o toque repetido não faz de novo", async () => {
+    const { processInbound } = await import("./inbound");
+    const { whatsapp } = await import("./provider");
+    await processInbound(inbound("B1", "gastei 31 na farmácia"));
+    const msg = sent.at(-1)!;
+    expect(msg.type).toBe("button");
+    expect(msg.text).toMatch(/✅ Lançamento: Farmácia/);
+    expect(msg.choices).toEqual([expect.stringMatching(/^↩️ Desfazer\|u:[0-9a-f-]{36}$/), expect.stringMatching(/^✏️ Alterar\|a:[0-9a-f-]{36}$/)]);
+    const undoId = msg.choices![0].split("|")[1];
+    const { data: before } = await admin.from("transactions").select("id").eq("user_id", userId).eq("description", "Farmácia");
+    expect(before).toHaveLength(1);
+
+    // o webhook entende o toque
+    const click = (id: string, mid: string) => ({ EventType: "messages", message: { messageid: mid, id: mid, chatid: `${fromWithout9}@s.whatsapp.net`, fromMe: false, isGroup: false, messageType: "ButtonsResponseMessage", text: "↩️ Desfazer", buttonOrListid: id, messageTimestamp: Date.now() } });
+    const parsed = whatsapp()!.parseWebhook(click(undoId, "BC1"));
+    expect(parsed).toEqual([expect.objectContaining({ button: { id: undoId }, text: "↩️ Desfazer" })]);
+
+    await processInbound(parsed[0]);
+    expect(sent.at(-1)!.text).toBe("↩️ Pronto, desfiz.");
+    const { data: after } = await admin.from("transactions").select("id").eq("user_id", userId).eq("description", "Farmácia");
+    expect(after).toHaveLength(0);
+    const count = sent.length;
+    await processInbound(parsed[0]);  // o provedor reenviou o mesmo toque
+    expect(sent.length).toBe(count);
+    await processInbound({ ...parsed[0], externalId: "BC2" });  // outro toque no mesmo botão
+    expect(sent.at(-1)!.text).toBe("Isso já estava desfeito.");
+  });
+
+  it("Alterar volta para a conversa como mensagem da pessoa; botão de outra conta ou inventado não faz nada", async () => {
+    const { processInbound } = await import("./inbound");
+    await processInbound(inbound("B2", "gastei 12 no estacionamento"));
+    const altId = sent.at(-1)!.choices![1].split("|")[1];
+    await processInbound({ externalId: "BA1", from: fromWithout9, text: "✏️ Alterar", audio: null, button: { id: altId }, at: new Date() });
+    const { data } = await admin.from("messages").select("text_preview").eq("user_id", userId).eq("role", "user").order("created_at");
+    expect(data!.at(-1)!.text_preview).toBe("Quero alterar o que você acabou de registrar.");
+
+    await processInbound({ externalId: "BX1", from: fromWithout9, text: "?", audio: null, button: { id: "u:00000000-0000-0000-0000-000000000000" }, at: new Date() });
+    expect(sent.at(-1)!.text).toBe("Isso já estava desfeito.");
+    await processInbound({ externalId: "BX2", from: fromWithout9, text: "?", audio: null, button: { id: "zzz:1" }, at: new Date() });
+    expect(sent.at(-1)!.text).toMatch(/não vale mais/);
+  });
+
+  it("lembrete: Feito conclui; Adiar oferece 10 minutos, 1 hora e amanhã, e cria o lembrete novo sem mexer na repetição", async () => {
+    const { processInbound } = await import("./inbound");
+    const mk = async (title: string, rule: string | null = null) =>
+      (await admin.from("reminders").insert({ user_id: userId, title, next_fire_at: new Date(Date.now() + 3_600_000).toISOString(), timezone: "America/Sao_Paulo", recurrence_rule: rule }).select("id").single()).data!.id;
+    const click = (id: string, mid: string) => processInbound({ externalId: mid, from: fromWithout9, text: "x", audio: null, button: { id }, at: new Date() });
+
+    const a = await mk("Pagar o boleto");
+    await click(`r:d:${a}`, "R1");
+    expect(sent.at(-1)!.text).toBe("✅ Feito: “Pagar o boleto”.");
+    expect((await admin.from("reminders").select("status").eq("id", a).single()).data!.status).toBe("done");
+
+    const b = await mk("Ligar para o dentista");
+    await click(`r:s:${b}`, "R2");
+    expect(sent.at(-1)!.text).toBe("Adiar “Ligar para o dentista” para quando?");
+    expect(sent.at(-1)!.choices).toEqual([`10 minutos|r:m10:${b}`, `1 hora|r:h1:${b}`, `Amanhã às 9h|r:tm:${b}`]);
+    await click(`r:m10:${b}`, "R3");
+    expect(sent.at(-1)!.text).toMatch(/^⏰ Adiado: “Ligar para o dentista” para hoje, \d{2}:\d{2}\.$/);
+    const copies = (await admin.from("reminders").select("id, status, next_fire_at").eq("user_id", userId).eq("title", "Ligar para o dentista")).data!;
+    expect(copies).toHaveLength(2);
+    expect(copies.find((c) => c.id === b)!.status).toBe("done");  // o original sai; o novo vale
+    const novo = copies.find((c) => c.id !== b)!;
+    expect(novo.status).toBe("active");
+    expect(new Date(novo.next_fire_at!).getTime() - Date.now()).toBeGreaterThan(8 * 60_000);
+    expect(new Date(novo.next_fire_at!).getTime() - Date.now()).toBeLessThan(11 * 60_000);
+
+    // lembrete que se repete: o original continua como está (a repetição não muda de horário)
+    const c = await mk("Tomar o remédio", "FREQ=DAILY;INTERVAL=1");
+    await click(`r:tm:${c}`, "R4");
+    const original = (await admin.from("reminders").select("status, next_fire_at").eq("id", c).single()).data!;
+    expect(original.status).toBe("active");
+    const tomorrow = (await admin.from("reminders").select("next_fire_at").eq("user_id", userId).eq("title", "Tomar o remédio").neq("id", c)).data!;
+    expect(tomorrow).toHaveLength(1);
+    expect(new Date(tomorrow[0].next_fire_at!).toISOString()).toMatch(/T12:00:00\.000Z$/);  // 9h em São Paulo
+    await click(`r:d:${c}`, "R5");
+    expect(sent.at(-1)!.text).toMatch(/Anotado: “Tomar o remédio”/);
+    expect((await admin.from("reminders").select("status").eq("id", c).single()).data!.status).toBe("active");
+  });
+
+  it("se a UAZAPI recusar os botões, a resposta vai só em texto; com os botões desligados também", async () => {
+    const { processInbound } = await import("./inbound");
+    menuStatus = 500;
+    try {
+      const before = sent.length;
+      await processInbound(inbound("B3", "gastei 9 no pão"));
+      expect(sent.length).toBe(before + 1);
+      expect(sent.at(-1)!.choices).toBeUndefined();
+      expect(sent.at(-1)!.text).toMatch(/✅ Lançamento: Pão/);
+    } finally { menuStatus = 200; }
+    process.env.WHATSAPP_BUTTONS = "off";
+    try {
+      await processInbound(inbound("B4", "gastei 8 no sorvete"));
+      expect(sent.at(-1)!.choices).toBeUndefined();
+      expect(sent.at(-1)!.text).toMatch(/✅ Lançamento: Sorvete/);
+    } finally { delete process.env.WHATSAPP_BUTTONS; }
+    process.env.WHATSAPP_BUTTONS = "button_legacy";
+    try {
+      await processInbound(inbound("B5", "gastei 7 no suco"));
+      expect(sent.at(-1)!.type).toBe("button_legacy");
+    } finally { delete process.env.WHATSAPP_BUTTONS; }
   });
 
   it("foto chega com legenda: baixa, reduz e segue; sem IA ligada a resposta explica; formato inválido é recusado", async () => {

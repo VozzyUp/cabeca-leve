@@ -21,7 +21,7 @@ Pergunta de volta quando falta informação no pedido,assistente,must,yes,yes,"i
 Indicador das etapas enquanto o assistente trabalha,assistente,should,yes,partial,passo genérico 'Entendendo o pedido' / 'Ouvindo o áudio'; etapas reais de cada ferramenta exigem streaming
 Histórico da conversa com filtro por dia semana e mês,assistente,should,yes,no,S02
 Enviar foto ou documento no chat e usar o conteúdo,assistente,should,yes,partial,"foto sim (JPEG, PNG, WebP; reduzida a 1280 px e lida pelo Claude); PDF e outros documentos ainda não | /api/chat/image"
-Memória de preferências e fatos do usuário,assistente,should,yes,no,site [conferir]
+Memória de preferências e fatos do usuário,assistente,should,yes,yes,"remember/forget pelo chat, fatos entram no começo do dia como dados, lista e ""esquecer"" em Ajustes, limite de 100 | lib/domain/memory.ts"
 Briefing diário em texto,assistente,should,yes,yes,S04 e entrega no horário por push e WhatsApp; texto montado por regras (Claude depois)
 Briefing do dia em áudio,assistente,could,yes,partial,S04: botão Ouvir com a voz do navegador; áudio gerado no servidor depois
 Pesquisar um assunto resumir e salvar como nota,assistente,could,yes,no,site [conferir]
@@ -94,7 +94,7 @@ Compras parceladas com parcelas pagas e data de quitação,finanças,should,yes,
 Contas recorrentes e assinaturas com pausar e pular cobrança,finanças,should,yes,partial,S20: pausar e retomar; avisa quando o dia passou sem pagamento; pular uma cobrança depois
 Previsão do mês (realizado mais previsto) e projeção do saldo,finanças,should,yes,no,S18
 Gastos por dia e por categoria com média diária,finanças,should,yes,yes,"S19: gráfico por dia (com tabela), por categoria, média, projeção e mês anterior"
-Lista 'a resolver' com contas atrasadas e próximas e botão confirmar,finanças,should,yes,no,S18
+Lista 'a resolver' com contas atrasadas e próximas e botão confirmar,finanças,should,yes,yes,"S18: contas e entradas fixas atrasadas e próximas, ""Paguei/Recebi"" lança no vencimento; também pelo chat (confirm_bill) | lib/domain/resolve.ts"
 Transferência entre contas e ajuste de saldo fora de gasto e receita,finanças,should,yes,no,site [conferir]
 Importar fatura ou comprovante por foto sem duplicar,finanças,could,yes,partial,a foto do comprovante vira lançamento; falta checar duplicidade com o extrato | foto no chat e no WhatsApp
 Análises de vários meses,finanças,could,yes,yes,"S23: médias de 5 meses, entrou × saiu por mês e categorias contra a média"
@@ -148,3 +148,5 @@ Falar com uma pessoa: suporte humano com protocolo e prazo,conta e assinatura,sh
 Testar aviso agora (push e WhatsApp) e reserva pelo WhatsApp quando o push falha,lembretes,should,no,yes,"F6: botão Testar em Ajustes, resultado por canal (aparelho, WhatsApp, app) (F6-H1, F6-E1)"
 Nunca pedir acesso ao WhatsApp da pessoa e dizer isso no cadastro,privacidade,should,no,yes,"F7: promessa no cadastro, nos Ajustes e nas dúvidas dos planos (F7-H1); o assistente não tem ferramenta para escrever a terceiros"
 Migrar o número do assistente para a API oficial da Meta (modelos aprovados),whatsapp,should,no,partial,envio por modelo aprovado fora da janela de 24 h pronto e testado (provider.test.ts); falta criar os modelos na Meta e ligar WHATSAPP_PROVIDER=meta
+"Botões de resposta no WhatsApp (desfazer, alterar, feito, adiar e respostas rápidas escolhidas pelo assistente)",whatsapp,should,no,yes,UAZAPI /send/menu e Meta interativo; chave para desligar na tela de admin | lib/whatsapp/buttons.ts
+"Cadastrar conta fixa, assinatura e entrada fixa pela conversa",dinheiro,should,no,yes,create_recurring; aparece em a resolver perto do vencimento

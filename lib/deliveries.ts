@@ -7,7 +7,8 @@ import { emailEnabled, sendEmail } from "@/lib/email";
 import { pushEnabled, sendPush } from "@/lib/push";
 import { getAdmin } from "@/lib/supabase/server";
 import { formatTime, localDate, zonedParts } from "@/lib/time";
-import { whatsapp, type Proactive } from "@/lib/whatsapp/provider";
+import { reminderButtons, testButtons } from "@/lib/whatsapp/buttons";
+import { whatsapp, type Button, type Proactive } from "@/lib/whatsapp/provider";
 
 // Entregas no horário (lembretes e resumo da manhã), chamadas pela varredura de cada minuto.
 // Cada envio reserva antes uma linha em scheduled_deliveries com chave única: se a varredura
@@ -37,14 +38,14 @@ async function channelsFor(userId: string) {
 }
 
 async function send(userId: string, source: "reminder" | "briefing", sourceId: string | null, keyBase: string,
-  { template, ...msg }: { title: string; body: string; url: string; whatsappText: string; template: Proactive }) {
+  { template, buttons, ...msg }: { title: string; body: string; url: string; whatsappText: string; template: Proactive; buttons?: Button[] }) {
   const ch = await channelsFor(userId);
   const wa = whatsapp();
   if (ch.push && (await claim(userId, source, sourceId, "push", `${keyBase}:push`, msg))) {
     try { await sendPush(userId, msg); await finish(`${keyBase}:push`, null); } catch (e) { await finish(`${keyBase}:push`, String(e)); }
   }
   if (ch.whatsapp && wa && (await claim(userId, source, sourceId, "whatsapp", `${keyBase}:whatsapp`, msg))) {
-    try { await wa.sendProactive(ch.whatsapp, { ...template, text: msg.whatsappText }, ch.lastInbound); await finish(`${keyBase}:whatsapp`, null); }
+    try { await wa.sendProactive(ch.whatsapp, { ...template, text: msg.whatsappText }, ch.lastInbound, buttons); await finish(`${keyBase}:whatsapp`, null); }
     catch (e) { await finish(`${keyBase}:whatsapp`, String(e)); }
   }
 }
@@ -59,7 +60,7 @@ export async function deliverDueReminders(now = new Date()) {
     const time = formatTime(r.next_fire_at!, r.timezone);
     await send(r.user_id, "reminder", r.id, `reminder:${r.id}:${r.next_fire_at}`, {
       title: "Lembrete", body: `${r.title} · ${time}`, url: "/lembretes", whatsappText: `⏰ Lembrete: ${r.title} (${time})`,
-      template: { template: "lembrete", params: [r.title, time], text: "" },
+      template: { template: "lembrete", params: [r.title, time], text: "" }, buttons: reminderButtons(r.id),
     });
     // recorrente: já fica marcado para a próxima ocorrência
     const next = r.recurrence_rule ? nextFireAt(r.recurrence_rule, r.next_fire_at!, r.timezone, now) : null;
@@ -115,8 +116,8 @@ export async function sendTestNotice(userId: string): Promise<TestResult> {
   const wa = whatsapp();
   let whatsappStatus: TestResult["whatsapp"] = !wa ? "not-configured" : ch.whatsapp ? "sent" : "not-linked";
   if (wa && ch.whatsapp) {
-    const text = "🔔 Aviso de teste: se você está vendo isto, os lembretes chegam aqui no WhatsApp.";
-    try { await wa.sendProactive(ch.whatsapp, { template: "aviso", params: ["teste de aviso: se você está vendo isto, os lembretes chegam aqui no WhatsApp"], text }, ch.lastInbound); }
+    const text = "🔔 Aviso de teste: se você está vendo isto, os lembretes chegam aqui no WhatsApp.\nSe aparecerem botões embaixo, toque em “Apareceu”.";
+    try { await wa.sendProactive(ch.whatsapp, { template: "aviso", params: ["teste de aviso: se você está vendo isto, os lembretes chegam aqui no WhatsApp"], text }, ch.lastInbound, testButtons()); }
     catch { whatsappStatus = "error"; }
   }
   await getAdmin().from("notices").insert({ user_id: userId, kind: "system", title: msg.title, body: msg.body, href: "/avisos" });

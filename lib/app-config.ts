@@ -22,6 +22,9 @@ export const CONFIG_GROUPS: ConfigGroup[] = [
   { title: "WhatsApp", fields: [
     { key: "WHATSAPP_PROVIDER", label: "Provedor", secret: false, options: ["uazapi", "meta"] },
     { key: "WHATSAPP_BOT_NUMBER", label: "Número do assistente (com DDI)", secret: false, hint: "ex.: 5511999990000" },
+    { key: "WHATSAPP_BUTTONS", label: "Botões nas respostas", secret: false, options: ["button", "button_legacy", "off"],
+      labels: { button: "Ligados (formato atual, recomendado)", button_legacy: "Ligados (formato antigo da UAZAPI)", off: "Desligados (só texto)" },
+      fallback: "usar o padrão (ligados, formato atual)", hint: "Desfazer, Alterar, Feito, Adiar. Se não aparecerem no seu celular, tente o formato antigo ou desligue." },
     { key: "UAZAPI_BASE_URL", label: "UAZAPI: endereço do servidor", secret: false, hint: "ex.: https://suaempresa.uazapi.com" },
     { key: "UAZAPI_INSTANCE_TOKEN", label: "UAZAPI: token da instância", secret: true },
     { key: "UAZAPI_WEBHOOK_SECRET", label: "UAZAPI: segredo do webhook", secret: true, generate: "hex32", hint: "vai no fim da URL do webhook: ?secret=…" },

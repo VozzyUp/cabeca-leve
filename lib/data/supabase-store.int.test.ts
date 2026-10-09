@@ -121,6 +121,76 @@ describe.skipIf(!run)("SupabaseStore", () => {
     expect(w.id).toBeTruthy();
   });
 
+  it("contas fixas: cadastra, só conta vencimento de agora em diante, confirma uma vez só (mesmo com dois toques juntos) e desfaz", async () => {
+    const { confirmBill, createRecurring } = await import("@/lib/assistant/tools");
+    const { toResolve } = await import("@/lib/domain/resolve");
+    const now = new Date();
+    const today = now.toISOString().slice(0, 10);
+    const day = Number(today.slice(8, 10));
+    const past = day > 2 ? day - 1 : 1;  // um dia que já passou neste mês (ou o dia 1)
+    const rent = await createRecurring(a, { kind: "bill", description: "Aluguel", amountCents: 180_000, dayOfMonth: past, categoryId: null, paymentMethod: "pix", fromThisMonth: false });
+    expect(rent).toMatchObject({ kind: "recurring", title: "Aluguel", valueTone: "expense" });
+    const fixed = (await a.listRecurrences()).find((r) => r.description === "Aluguel")!;
+    expect(fixed).toMatchObject({ dayOfMonth: past, amountCents: 180_000, active: true });
+    // cadastrado hoje: o vencimento que já passou não aparece como atrasado
+    expect(toResolve(await a.listRecurrences(), await a.listTransactions(), today).some((p) => p.description === "Aluguel" && p.status === "late")).toBe(false);
+
+    // "este mês ainda em aberto": o vencimento que passou conta como atrasado
+    const light = await createRecurring(a, { kind: "bill", description: "Luz", amountCents: 20_000, dayOfMonth: past, categoryId: null, paymentMethod: null, fromThisMonth: true });
+    expect(light.meta).toContain("este mês ainda em aberto");
+    const lightId = (await a.listRecurrences()).find((r) => r.description === "Luz")!.id;
+    const late = toResolve(await a.listRecurrences(), await a.listTransactions(), today).find((p) => p.recurrenceId === lightId)!;
+    expect(late).toMatchObject({ status: "late", dueOn: `${today.slice(0, 7)}-${String(past).padStart(2, "0")}` });
+
+    // dois toques juntos em "paguei": um lançamento só
+    const [r1, r2] = await Promise.all([confirmBill(a, lightId, late.dueOn, now), confirmBill(a, lightId, late.dueOn, now)]);
+    expect([r1.ok, r2.ok].filter(Boolean)).toHaveLength(1);
+    const failed = [r1, r2].find((r) => !r.ok)!;
+    expect(failed).toMatchObject({ ok: false, text: expect.stringMatching(/já (estava confirmada|está resolvida)/) });
+    const okRes = [r1, r2].find((r) => r.ok)! as Extract<typeof r1, { ok: true }>;
+    expect(okRes.card).toMatchObject({ kind: "transaction", title: "Luz", href: "/dinheiro/extrato" });
+    const txs = (await a.listTransactions()).filter((t) => t.recurrenceId === lightId);
+    expect(txs).toHaveLength(1);
+    expect(txs[0]).toMatchObject({ type: "expense", amountCents: 20_000, occurredOn: late.dueOn });
+    expect(toResolve(await a.listRecurrences(), await a.listTransactions(), today).some((p) => p.recurrenceId === lightId)).toBe(false);
+    expect(await confirmBill(a, lightId, null, now)).toMatchObject({ ok: false });
+
+    // desfazer o lançamento reabre a conta; confirmar a conta de outra pessoa não funciona
+    await a.undoAction(okRes.card.actionId);
+    expect(toResolve(await a.listRecurrences(), await a.listTransactions(), today).some((p) => p.recurrenceId === lightId)).toBe(true);
+    expect(await confirmBill(b, lightId, null, now)).toEqual({ ok: false, text: "Não achei essa conta fixa." });
+
+    // desfazer o cadastro e remover
+    await a.undoAction((await a.recordAction("recurrence", fixed.id)).id);
+    expect((await a.listRecurrences()).some((r) => r.id === fixed.id)).toBe(false);
+    expect(await a.removeItem("recurring", lightId)).toBe(true);
+    expect(await a.removeItem("recurring", lightId)).toBe(false);
+  });
+
+  it("memória: guarda, não repete, respeita o limite, esquece um ou todos e é de cada conta", async () => {
+    const first = await a.addMemory("Recebe o salário no dia 5");
+    expect(first).toMatchObject({ ok: true, memory: { fact: "Recebe o salário no dia 5" } });
+    expect(await a.addMemory("  recebe o SALÁRIO no dia 5. ")).toEqual({ ok: false, reason: "duplicate" });  // mesmo fato, outra escrita
+    await a.addMemory("É vegetariana");
+    expect((await a.listMemories()).map((m) => m.fact)).toEqual(["É vegetariana", "Recebe o salário no dia 5"]);  // o mais novo primeiro
+    expect(await b.listMemories()).toEqual([]);
+    const mine = (await a.listMemories())[0];
+    expect(await b.removeItem("memory", mine.id)).toBe(false);  // de outra conta
+    expect(await a.removeItem("memory", mine.id)).toBe(true);
+    expect(await a.removeItem("memory", mine.id)).toBe(false);
+    expect(await a.clearMemories()).toBe(1);
+    expect(await a.listMemories()).toEqual([]);
+    for (let i = 0; i < 100; i++) expect((await a.addMemory(`Fato número ${i}`)).ok).toBe(true);
+    expect(await a.addMemory("Mais um")).toEqual({ ok: false, reason: "full" });
+    expect(await a.clearMemories()).toBe(100);
+    // só o servidor lê: a chave pública e quem está logado não enxergam a tabela dos outros
+    await a.addMemory("Segredo da conta A");
+    const logged = createClient<Database>(URL, PUBLISHABLE, { auth: { persistSession: false } });
+    await logged.auth.signInWithPassword({ email: `b-${stamp}@teste.local`, password });
+    expect(((await logged.from("memories").select("fact")).data ?? [])).toEqual([]);
+    await a.clearMemories();
+  });
+
   it("custo da IA: grava por modelo, soma no período e só o servidor enxerga", async () => {
     await a.recordAiUsage([
       { model: "claude-sonnet-5-5", calls: 2, inputTokens: 100, outputTokens: 20, cacheReadTokens: 50, cacheWriteTokens: 10 },

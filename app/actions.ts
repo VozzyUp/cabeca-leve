@@ -9,6 +9,7 @@ import { currentUser } from "@/lib/supabase/server";
 import { startLink } from "@/lib/whatsapp/link";
 import { answerTicket, isSupportAdmin } from "@/lib/support";
 import { sendTestNotice } from "@/lib/deliveries";
+import { confirmBill } from "@/lib/assistant/tools";
 import { CONFIG_FIELDS, CONFIG_KEYS, loadAppConfig, saveAppConfig } from "@/lib/app-config";
 import { pingAgent } from "@/lib/assistant/agent";
 import { siteUrl } from "@/lib/public-env";
@@ -130,17 +131,38 @@ export async function setHabitDay(habitId: string, onDay: string, done: boolean)
 export async function exportData() {
   const s = await getStore();
   const [settings, tasks, reminders, habits, habitLogs, transactions, categories, accounts, cards, recurrences, installments,
-    projects, goals, notes, automations, notices, focusSessions, workouts, workoutLogs, meals, mealLogs, measurements, messages] = await Promise.all([
+    projects, goals, notes, automations, notices, focusSessions, workouts, workoutLogs, meals, mealLogs, measurements, messages, memories] = await Promise.all([
     s.getSettings(), s.listTasks(), s.listReminders(), s.listHabits(), s.listHabitLogs(), s.listTransactions(), s.listCategories(),
     s.listAccounts(), s.listCards(), s.listRecurrences(), s.listInstallments(), s.listProjects(), s.listGoals(), s.listNotes(),
     s.listAutomations(), s.listNotices(), s.listFocusSessions(), s.listWorkouts(), s.listWorkoutLogs(), s.listMeals(), s.listMealLogs(),
-    s.listMeasurements(), s.listMessages(),
+    s.listMeasurements(), s.listMessages(), s.listMemories(),
   ]);
   return JSON.stringify({
     exportedAt: new Date().toISOString(), settings, tasks, reminders, habits, habitLogs, transactions, categories, accounts, cards,
     recurrences, installments, projects, goals, notes, automations, notices, focusSessions, workouts, workoutLogs, meals, mealLogs,
-    measurements, messages,
+    measurements, messages, memories,
   }, null, 2);
+}
+
+// Memória do assistente (Ajustes > Jeito do assistente): esquecer um fato ou todos
+// "A resolver" (Dinheiro): confirma uma conta fixa paga ou entrada recebida
+export async function confirmBillAction(recurrenceId: string, dueOn: string) {
+  const store = await getStore();
+  const r = await confirmBill(store, uuid.parse(recurrenceId), day.parse(dueOn), new Date());
+  revalidatePath("/dinheiro", "layout");
+  if (!r.ok) throw new Error(r.text);
+  return { ok: true as const };
+}
+
+export async function deleteMemory(id: string) {
+  const ok = await (await getStore()).removeItem("memory", uuid.parse(id));
+  revalidatePath("/ajustes/assistente");
+  return { ok };
+}
+export async function clearMemories() {
+  const count = await (await getStore()).clearMemories();
+  revalidatePath("/ajustes/assistente");
+  return { count };
 }
 
 export async function deleteAccount(confirmation: string) {

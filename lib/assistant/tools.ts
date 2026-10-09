@@ -1,6 +1,7 @@
 import { budgetAlert, budgetStatus } from "@/lib/domain/finance";
 import { categoryFromWords } from "./rule-parser";
-import type { AutomationInput, DataStore, GoalInput, MealPlanInput, ProjectInput, WorkoutPlanInput } from "@/lib/data/store";
+import type { AutomationInput, DataStore, GoalInput, MealPlanInput, ProjectInput, RecurrenceInput, WorkoutPlanInput } from "@/lib/data/store";
+import { toResolve } from "@/lib/domain/resolve";
 import type { ActionCardData, Task, Transaction } from "@/lib/data/types";
 import { formatDayLabel, formatMoney, formatTime, localDate } from "@/lib/time";
 import { describeRepeat } from "@/lib/domain/recurrence";
@@ -175,5 +176,57 @@ export async function createAutomation(store: DataStore, input: AutomationInput,
   return {
     actionId: action.id, kind: "automation", title: a.title, value: a.time, valueTone: "neutral",
     meta: `${when[0].toUpperCase()}${when.slice(1)} · ${CHANNEL_NAME[a.channel]}`, href: "/automacoes", undone: false,
+  };
+}
+
+// ---- Contas fixas e "a resolver" ----
+
+const FIXED_LABEL = { bill: "conta", subscription: "assinatura", income: "entrada" } as const;
+
+export async function createRecurring(store: DataStore, input: RecurrenceInput): Promise<ActionCardData> {
+  const r = await store.createRecurrence(input);
+  const action = await store.recordAction("recurrence", r.id);
+  return {
+    actionId: action.id, kind: "recurring", title: r.description, value: formatMoney(r.amountCents), valueTone: r.kind === "income" ? "income" : "expense",
+    meta: `${FIXED_LABEL[r.kind][0].toUpperCase()}${FIXED_LABEL[r.kind].slice(1)} fixa · todo dia ${r.dayOfMonth}${input.fromThisMonth ? " · este mês ainda em aberto" : ""}`, href: "/dinheiro/fixos", undone: false,
+  };
+}
+
+// Confirma que a conta fixa foi paga (ou a entrada recebida): lança no vencimento, com o valor combinado.
+// Sem o dia, vale o vencimento em aberto mais antigo. Confirmar duas vezes não duplica.
+export async function confirmBill(store: DataStore, recurrenceId: string, dueOn: string | null, now: Date): Promise<{ ok: true; card: ActionCardData } | { ok: false; text: string }> {
+  const tz = store.timezone();
+  const [recurrences, transactions] = await Promise.all([store.listRecurrences(), store.listTransactions()]);
+  const r = recurrences.find((x) => x.id === recurrenceId);
+  if (!r) return { ok: false, text: "Não achei essa conta fixa." };
+  const today = localDate(now, tz);
+  const open = toResolve(recurrences, transactions, today).filter((p) => p.recurrenceId === r.id);
+  // sem o dia, só vale o que está em aberto neste mês; o do mês que vem (perto da virada) precisa ser pedido pelo dia
+  const target = dueOn ? open.find((p) => p.dueOn === dueOn) : open.find((p) => p.dueOn.startsWith(today.slice(0, 7)));
+  if (!target) return { ok: false, text: `“${r.description}” já está resolvida neste mês.` };
+
+  const categories = await store.listCategories();
+  const byName = (name: string) => categories.find((c) => c.name === name)?.id ?? null;
+  const categoryId = r.categoryId ?? byName(r.kind === "income" ? "Outras entradas" : r.kind === "subscription" ? "Assinaturas" : "Contas da casa");
+  const accounts = await store.listAccounts();
+  let t;
+  try {
+    t = await store.createTransaction({
+      type: r.kind === "income" ? "income" : "expense", amountCents: r.amountCents, occurredOn: target.dueOn, description: r.description,
+      categoryId, accountId: accounts[0]?.id ?? "", paymentMethod: r.paymentMethod, source: "manual", recurrenceId: r.id,
+    });
+  } catch (error) {
+    // duas confirmações juntas: a segunda bate na regra de um lançamento por conta e vencimento
+    if (error instanceof Error && /duplicate key|recurrence_id/.test(error.message)) return { ok: false, text: `“${r.description}” já estava confirmada.` };
+    throw error;
+  }
+  const action = await store.recordAction("transaction", t.id);
+  const sign = t.type === "income" ? "+" : "−";
+  return {
+    ok: true,
+    card: {
+      actionId: action.id, kind: "transaction", title: t.description, value: `${sign}${formatMoney(t.amountCents)}`, valueTone: t.type === "income" ? "income" : "expense",
+      meta: `${r.kind === "income" ? "Entrada" : "Conta"} fixa · vencimento ${formatDayLabel(target.dueOn, now, tz)}`, href: "/dinheiro/extrato", undone: false,
+    },
   };
 }

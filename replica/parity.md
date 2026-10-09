@@ -8,7 +8,7 @@ Rodada de 2026-10-08, depois do /replica-test (commit 000a3e2).
 | --- | --- |
 | obrigatórias (must) | **40 de 40** |
 | bugs S1 ou S2 abertos | **nenhum** (9 achados no /replica-test, todos corrigidos) |
-| pontuação de funções | **68,0** em 2026-10-09 (era 65,2; precisa de 80 para "pronto para vender") |
+| pontuação de funções | **69,5** em 2026-10-09 (era 65,2; precisa de 80 para "pronto para vender") |
 | correções do /replica-entrepreneur | **7 de 7** (do F7, falta ligar a Meta, que depende de você) |
 
 Para chegar a 80 faltam cerca de 41 pontos de peso, o equivalente a umas 21 funções "should" completas. Com todas as "should" prontas, a nota vai a 86,3.
@@ -37,6 +37,8 @@ Para chegar a 80 faltam cerca de 41 pontos de peso, o equivalente a umas 21 fun�
 ## Atualização de 2026-10-09 (de 65,2 para 68,0)
 
 Entraram: criar treino, plano alimentar, projeto com etapas, meta e peso pelo chat; revisões agendadas (criar pelo chat e executar na varredura, com aviso, WhatsApp ou e-mail e custo no painel); e foto no chat e no WhatsApp (comprovante vira lançamento). Seguem de fora, nesta ordem: avisos proativos, "a resolver" e transferência entre contas, memória do assistente, Google Agenda e Outlook (precisa de login no Google e na Microsoft).
+
+Depois disso (69,5): memória do assistente (guardar pelo chat, usar nas próximas conversas, listar e esquecer em Ajustes), a lista "a resolver" em Dinheiro (confirmar conta paga ou entrada recebida, pelo app e pelo chat), cadastro de conta fixa pela conversa e **botões no WhatsApp** (Desfazer e Alterar nos cards, Feito e Adiar nos lembretes, respostas rápidas escolhidas pelo assistente). Seguem: avisos proativos, transferência entre contas e Google Agenda e Outlook.
 
 ## Os 5 próximos a construir
 

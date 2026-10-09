@@ -10,7 +10,7 @@ import { zonedParts } from "@/lib/time";
 const run = process.env.SUPABASE_TEST === "1";
 
 describe.skipIf(!run)("entregas", () => {
-  const sent: Array<{ number: string; text: string }> = [];
+  const sent: Array<{ number: string; text: string; choices?: string[] }> = [];
   let server: http.Server;
   let userId = "";
   const admin = createClient<Database>("http://127.0.0.1:54321", (process.env.SUPABASE_SECRET_KEY ?? ""), { auth: { persistSession: false } });
@@ -19,7 +19,7 @@ describe.skipIf(!run)("entregas", () => {
     server = http.createServer((req, res) => {
       let data = "";
       req.on("data", (c) => (data += c));
-      req.on("end", () => { if (req.url === "/send/text") sent.push(JSON.parse(data)); res.end("{}"); });
+      req.on("end", () => { if (req.url === "/send/text" || req.url === "/send/menu") sent.push(JSON.parse(data)); res.end("{}"); });
     });
     await new Promise<void>((r) => server.listen(0, r));
     Object.assign(process.env, {
@@ -44,6 +44,8 @@ describe.skipIf(!run)("entregas", () => {
     const mine = sent.filter((s) => s.text.includes("Tomar o remédio"));
     expect(mine).toHaveLength(1);
     expect(mine[0].text).toMatch(/^⏰ Lembrete: Tomar o remédio \(\d{2}:\d{2}\)$/);
+    // o lembrete leva Feito e Adiar
+    expect(mine[0].choices).toEqual([`✅ Feito|r:d:${r!.id}`, `⏰ Adiar|r:s:${r!.id}`]);
     await deliverDueReminders();
     expect(sent.filter((s) => s.text.includes("Tomar o remédio"))).toHaveLength(1);
     const { data: after } = await admin.from("reminders").select("last_fired_at").eq("id", r!.id).single();

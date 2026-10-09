@@ -109,7 +109,7 @@ test.describe("F3 falar com uma pessoa", () => {
     expect(protocol).toMatch(/^CL-[A-Z2-9]{6}$/);
     // o time é avisado na hora, por e-mail e WhatsApp
     await expect.poll(async () => (await emailsTo("time@exemplo.com.br")).map((c) => c.body.subject)).toContain(`[Cabeça Leve] Chamado ${protocol}`);
-    expect((await mockCalls()).some((c) => c.url === "/send/text" && c.body.number === "5511988887777" && String(c.body.text).includes(protocol))).toBe(true);
+    expect((await mockCalls()).some((c) => (c.url === "/send/text" || c.url === "/send/menu") && c.body.number === "5511988887777" && String(c.body.text).includes(protocol))).toBe(true);
 
     // painel do time
     const owner = await adminUser();

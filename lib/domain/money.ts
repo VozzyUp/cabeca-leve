@@ -18,7 +18,7 @@ const monthsBetween = (from: string, to: string) => {
   return (ty - fy) * 12 + (tm - fm);
 };
 
-const dayIn = (month: string, day: number) => `${month}-${String(Math.min(day, daysInMonth(month))).padStart(2, "0")}`;
+export const dayIn = (month: string, day: number) => `${month}-${String(Math.min(day, daysInMonth(month))).padStart(2, "0")}`;
 
 // ---- S19: gastos do dia a dia ----
 

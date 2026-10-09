@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { addDays, DEFAULT_TZ, localDate, zonedToUtc } from "@/lib/time";
-import type { DataStore } from "./store";
+import { sameFact } from "@/lib/domain/memory";
+import { MAX_MEMORIES, type DataStore } from "./store";
 import { nextDate, nextFireAt, reopenFireAt } from "@/lib/domain/recurrence";
 import { seedFinance, seedHealth, seedOrganization, seedSettings } from "./seed-extra";
 
@@ -11,7 +12,7 @@ import type {
   Account, ActionRecord, Automation, BodyMeasurement, CalendarEvent, Category, ChatMessage, CreditCard, FocusSession, Goal,
   Habit, HabitLog, InstallmentPurchase, Meal, MealLog, Note, Notice, Project, Recurrence, Reminder, Settings, Task,
   Transaction, Workout, WorkoutLog,
-  Budget,
+  Budget, Memory,
 } from "./types";
 
 // Banco provisório com dados de exemplo, só até o /replica-backend ligar o Supabase.
@@ -47,6 +48,7 @@ type State = {
   measurements: BodyMeasurement[];
   // fichas e planos criados pelo chat: quais itens são de cada um e qual vale agora (os de exemplo não têm grupo)
   plans?: Array<{ id: string; kind: "workout" | "meal"; active: boolean; ids: string[] }>;
+  memories?: Memory[];
   settings: Settings;
 };
 
@@ -345,6 +347,7 @@ export const fakeStore: DataStore = {
         s.habits = s.habits.filter((h) => h.id !== a.entityId);
         s.habitLogs = s.habitLogs.filter((l) => l.habitId !== a.entityId);
       } else if (a.entity === "project") s.projects = s.projects.filter((p) => p.id !== a.entityId);
+      else if (a.entity === "recurrence") s.recurrences = s.recurrences.filter((x) => x.id !== a.entityId);
       else if (a.entity === "goal") s.goals = s.goals.filter((g) => g.id !== a.entityId);
       else if (a.entity === "automation") s.automations = s.automations.filter((x) => x.id !== a.entityId);
       else if (a.entity === "workout_plan" || a.entity === "meal_plan") {
@@ -399,6 +402,12 @@ export const fakeStore: DataStore = {
   },
   async listRecurrences() {
     return load().recurrences.sort((a, b) => a.dayOfMonth - b.dayOfMonth);
+  },
+  async createRecurrence(input) {
+    const r: Recurrence = { id: id(), kind: input.kind, description: input.description, amountCents: input.amountCents, dayOfMonth: input.dayOfMonth,
+      categoryId: input.categoryId, paymentMethod: input.paymentMethod, active: true, createdOn: input.fromThisMonth ? `${localDate(new Date(), DEFAULT_TZ).slice(0, 7)}-01` : localDate(new Date(), DEFAULT_TZ) };
+    mutate((s) => s.recurrences.push(r));
+    return r;
   },
   async setRecurrenceActive(rid, active) {
     return mutate((s) => {
@@ -473,8 +482,26 @@ export const fakeStore: DataStore = {
     mutate((s) => s.automations.push(a));
     return a;
   },
+  async listMemories() {
+    return [...(load().memories ?? [])].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  },
+  async addMemory(fact) {
+    return mutate((s) => {
+      s.memories ??= [];
+      if (s.memories.some((m) => sameFact(m.fact, fact))) return { ok: false as const, reason: "duplicate" as const };
+      if (s.memories.length >= MAX_MEMORIES) return { ok: false as const, reason: "full" as const };
+      const memory: Memory = { id: id(), fact: fact.trim(), createdAt: new Date().toISOString() };
+      s.memories.push(memory);
+      return { ok: true as const, memory };
+    });
+  },
+  async clearMemories() {
+    return mutate((s) => { const n = s.memories?.length ?? 0; s.memories = []; return n; });
+  },
   async removeItem(kind, rid) {
     return mutate((s) => {
+      if (kind === "recurring") { const n = s.recurrences.length; s.recurrences = s.recurrences.filter((x) => x.id !== rid); return s.recurrences.length < n; }
+      if (kind === "memory") { const n = s.memories?.length ?? 0; s.memories = (s.memories ?? []).filter((m) => m.id !== rid); return (s.memories?.length ?? 0) < n; }
       if (kind === "project") { const n = s.projects.length; s.projects = s.projects.filter((p) => p.id !== rid); return s.projects.length < n; }
       if (kind === "goal") { const n = s.goals.length; s.goals = s.goals.filter((g) => g.id !== rid); return s.goals.length < n; }
       if (kind === "automation") { const n = s.automations.length; s.automations = s.automations.filter((x) => x.id !== rid); return s.automations.length < n; }

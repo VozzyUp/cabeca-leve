@@ -3,8 +3,10 @@ import type { Json, TablesUpdate } from "@/lib/supabase/database.types";
 import { nextAutomationRun } from "@/lib/domain/automation";
 import { nextDate, nextFireAt, reopenFireAt } from "@/lib/domain/recurrence";
 import { newProtocol, notifyOwner, supportDueAt } from "@/lib/support";
+import { daysInMonth, shiftMonth } from "@/lib/domain/money";
 import { addDays, localDate, zonedToUtc } from "@/lib/time";
-import type { DataStore } from "./store";
+import { sameFact } from "@/lib/domain/memory";
+import { MAX_MEMORIES, type DataStore } from "./store";
 import type {
   ActionCardData, ActionRecord, Automation, BodyMeasurement, CalendarEvent, ChatMessage, Note, Reminder, Settings, Task, Transaction,
   SupportTicket,
@@ -25,7 +27,7 @@ function must<T>(r: Result<T>): NonNullable<T> {
 
 const ENTITY_TABLE = {
   reminder: "reminders", transaction: "transactions", task: "tasks", habit: "habits",
-  project: "projects", goal: "goals", automation: "automations", workout_plan: "workout_plans", meal_plan: "diet_plans",
+  project: "projects", goal: "goals", automation: "automations", workout_plan: "workout_plans", meal_plan: "diet_plans", recurrence: "recurrences",
 } as const;
 const TABLE_ENTITY = Object.fromEntries(Object.entries(ENTITY_TABLE).map(([k, v]) => [v, k])) as Record<string, ActionRecord["entity"]>;
 const UI_METHODS = new Set(["pix", "debit", "credit", "cash", "other"]);
@@ -358,9 +360,22 @@ export async function createSupabaseStore(db: Admin, userId: string, email: stri
       const rows = must(await db.from("recurrences").select("*").eq("user_id", userId).eq("frequency", "monthly"));
       return rows.map((r) => ({
         id: r.id, kind: r.kind as "bill" | "subscription" | "income", description: r.description, amountCents: r.amount_cents,
-        dayOfMonth: Number(r.anchor_on.slice(8, 10)), categoryId: r.category_id, active: !r.paused,
+        dayOfMonth: Number(r.anchor_on.slice(8, 10)), categoryId: r.category_id, active: !r.paused, createdOn: localDate(new Date(r.created_at), tz),
         paymentMethod: (r.card_id ? "credit" : r.payment_method && UI_METHODS.has(r.payment_method) ? r.payment_method : r.payment_method ? "other" : null) as Transaction["paymentMethod"],
       })).sort((a, b) => a.dayOfMonth - b.dayOfMonth);
+    },
+    async createRecurrence(input) {
+      // o dia do mês vem do anchor_on: num mês curto (dia 31 em novembro), usa o mês anterior que tem esse dia
+      let month = today().slice(0, 7);
+      while (input.dayOfMonth > daysInMonth(month)) month = shiftMonth(month, -1);
+      const anchor = `${month}-${String(input.dayOfMonth).padStart(2, "0")}`;
+      // vencimentos antes do dia de hoje só contam se a pessoa disse que este mês ainda está em aberto
+      const createdAt = input.fromThisMonth ? zonedToUtc(Number(today().slice(0, 4)), Number(today().slice(5, 7)), 1, 0, 0, tz).toISOString() : undefined;
+      const r = must(await db.from("recurrences").insert({
+        user_id: userId, kind: input.kind, description: input.description, amount_cents: input.amountCents, category_id: input.categoryId,
+        frequency: "monthly", interval_count: 1, anchor_on: anchor, payment_method: input.paymentMethod ?? null, ...(createdAt ? { created_at: createdAt } : {}),
+      }).select("id").single());
+      return (await store.listRecurrences()).find((x) => x.id === r.id)!;
     },
     async setRecurrenceActive(id, active) {
       return must(await db.from("recurrences").update({ paused: !active }).eq("id", id).eq("user_id", userId).select("id")).length > 0;
@@ -467,6 +482,8 @@ export async function createSupabaseStore(db: Admin, userId: string, email: stri
     },
     async removeItem(kind, id) {
       if (!/^[0-9a-f-]{36}$/i.test(id)) return false;
+      if (kind === "recurring") return must(await db.from("recurrences").delete().eq("id", id).eq("user_id", userId).select("id")).length > 0;
+      if (kind === "memory") return must(await db.from("memories").delete().eq("id", id).eq("user_id", userId).select("id")).length > 0;
       if (kind === "project") return must(await db.from("projects").update({ status: "archived" }).eq("id", id).eq("user_id", userId).neq("status", "archived").select("id")).length > 0;
       if (kind === "goal") return must(await db.from("goals").update({ status: "archived" }).eq("id", id).eq("user_id", userId).neq("status", "archived").select("id")).length > 0;
       if (kind === "automation") return must(await db.from("automations").delete().eq("id", id).eq("user_id", userId).select("id")).length > 0;
@@ -586,6 +603,26 @@ export async function createSupabaseStore(db: Admin, userId: string, email: stri
         if (before.length) await db.from("diet_plans").update({ active: true }).in("id", before).eq("user_id", userId);
         throw error;
       }
+    },
+    async listMemories() {
+      const rows = must(await db.from("memories").select("id, fact, created_at").eq("user_id", userId).is("archived_at", null).order("created_at", { ascending: false }).limit(MAX_MEMORIES));
+      return rows.map((m) => ({ id: m.id, fact: m.fact, createdAt: m.created_at }));
+    },
+    async addMemory(fact) {
+      const current = await store.listMemories();
+      if (current.some((m) => sameFact(m.fact, fact))) return { ok: false as const, reason: "duplicate" as const };
+      if (current.length >= MAX_MEMORIES) return { ok: false as const, reason: "full" as const };
+      const m = must(await db.from("memories").insert({ user_id: userId, fact: fact.trim() }).select("id, fact, created_at").single());
+      // dois pedidos juntos (ferramentas do mesmo turno) passam pela checagem acima ao mesmo tempo: depois de gravar, fica só o mais antigo
+      const same = (await store.listMemories()).filter((x) => sameFact(x.fact, m.fact)).sort((x, y) => x.createdAt.localeCompare(y.createdAt) || x.id.localeCompare(y.id));
+      if (same[0] && same[0].id !== m.id) {
+        must(await db.from("memories").delete().eq("id", m.id).eq("user_id", userId));
+        return { ok: false as const, reason: "duplicate" as const };
+      }
+      return { ok: true as const, memory: { id: m.id, fact: m.fact, createdAt: m.created_at } };
+    },
+    async clearMemories() {
+      return must(await db.from("memories").delete().eq("user_id", userId).select("id")).length;
     },
     async listWorkouts() {
       const [sessions, sets] = await Promise.all([

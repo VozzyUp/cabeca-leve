@@ -15,8 +15,10 @@ test.describe("F04 lembretes", () => {
     await new Promise((res) => setTimeout(res, 2500));
     expect((await sweep()).status).toBe(200);
     await sweep();  // duas varreduras seguidas não mandam em dobro
-    const sent = (await mockCalls()).filter((c) => c.url === "/send/text" && String(c.body.number) === number);
+    const sent = (await mockCalls()).filter((c) => (c.url === "/send/text" || c.url === "/send/menu") && String(c.body.number) === number);
     expect(sent.map((c) => c.body.text)).toEqual([expect.stringMatching(/⏰ Lembrete: Tomar o remédio/)]);
+    // quando os botões estão ativos, o lembrete traz Feito/Adiar
+    if (sent[0].url === "/send/menu") expect((sent[0].body.choices as string[]).join(" ")).toMatch(/Feito.*Adiar/);
     await page.goto("/avisos");
     await expect(page.getByText(/Tomar o remédio/).first()).toBeVisible();
   });

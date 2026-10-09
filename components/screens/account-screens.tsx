@@ -69,14 +69,14 @@ export async function SettingsScreen() {
 // ---- S30 ----
 export async function AssistantSettingsScreen() {
   const { store } = await serverContext();
-  const settings = await store.getSettings();
+  const [settings, memories] = await Promise.all([store.getSettings(), store.listMemories()]);
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1">
         <Link href="/ajustes" className="text-sm font-medium text-accent hover:underline">← Ajustes</Link>
         <PageHeader id="S30" title="Jeito do assistente" />
       </div>
-      <AssistantForm initial={settings} />
+      <AssistantForm initial={settings} memories={memories} />
     </div>
   );
 }

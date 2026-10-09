@@ -1,7 +1,7 @@
 import type {
   Account, ActionRecord, Automation, BodyMeasurement, CalendarEvent, Category, ChatMessage, CreditCard, FocusSession, Goal,
   Habit, HabitLog, InstallmentPurchase, Meal, MealLog, Note, Notice, Project, Recurrence, Reminder, Settings, Task,
-  Budget, SupportTicket, Transaction, Workout, WorkoutLog,
+  Budget, Memory, SupportTicket, Transaction, Workout, WorkoutLog,
 } from "./types";
 
 export type AiUsageInput = { model: string; calls: number; inputTokens: number; outputTokens: number; cacheReadTokens: number; cacheWriteTokens: number };
@@ -24,7 +24,11 @@ export type AutomationInput = {
   channel: Automation["channel"]; sources: AutomationSource[]; lookbackDays: number;
 };
 export type PlanCreated = { id: string; replaced: string[] };
-export type RemovableKind = "workout" | "meal" | "project" | "goal" | "automation";
+export type RemovableKind = "workout" | "meal" | "project" | "goal" | "automation" | "memory" | "recurring";
+// Conta fixa ou entrada que se repete todo mês. fromThisMonth: o vencimento deste mês ainda vale mesmo que o dia já tenha passado
+export type RecurrenceInput = { kind: Recurrence["kind"]; description: string; amountCents: number; dayOfMonth: number; categoryId: string | null; paymentMethod: Recurrence["paymentMethod"]; fromThisMonth: boolean };
+export const MAX_MEMORIES = 100;
+export type MemoryResult = { ok: true; memory: Memory } | { ok: false; reason: "duplicate" | "full" };
 
 // Mensagem a gravar. `content` são os blocos exatos da API (reenviados byte a byte ao modelo);
 // `visible: false` guarda passos internos do agente (chamadas e resultados de ferramenta).
@@ -89,6 +93,7 @@ export interface DataStore {
   listCards(): Promise<CreditCard[]>;
   listRecurrences(): Promise<Recurrence[]>;
   setRecurrenceActive(id: string, active: boolean): Promise<boolean>;
+  createRecurrence(input: RecurrenceInput): Promise<Recurrence>;
   listInstallments(): Promise<InstallmentPurchase[]>;
 
   // organização (M3)
@@ -115,6 +120,11 @@ export interface DataStore {
   listEvents(): Promise<CalendarEvent[]>;
   listFocusSessions(): Promise<FocusSession[]>;
   saveFocusSession(input: Omit<FocusSession, "id">): Promise<FocusSession>;
+
+  // memória do assistente: fatos que a pessoa pediu para guardar (no máximo 100; o repetido não entra)
+  listMemories(): Promise<Memory[]>;
+  addMemory(fact: string): Promise<MemoryResult>;
+  clearMemories(): Promise<number>;
 
   // saúde (M4)
   // a ficha nova passa a valer; a ativa antes dela fica em `replaced` (o desfazer a reativa)

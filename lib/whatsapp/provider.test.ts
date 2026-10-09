@@ -38,4 +38,26 @@ describe("WhatsApp Cloud API da Meta: mensagens que a pessoa não pediu", () => 
     const { whatsapp } = await import("./provider");
     await expect(whatsapp()!.sendProactive("5511999990000", { template: "resumo", params: ["x"], text: "x" }, null)).rejects.toThrow("META_TEMPLATE_RESUMO");
   });
+
+  it("botões: no máximo 3, título de até 20 caracteres, sem o separador; Meta manda mensagem interativa", async () => {
+    const { cleanButtons, whatsapp } = await import("./provider");
+    expect(cleanButtons([
+      { id: "u:1", title: "↩️ Desfazer" }, { id: "a|b\n:2", title: "Um título bem comprido demais para caber" }, { id: "x", title: "A | B" }, { id: "y", title: "quarto" }, { id: "", title: "sem id" },
+    ])).toEqual([{ id: "u:1", title: "↩️ Desfazer" }, { id: "ab:2", title: "Um título bem compri" }, { id: "x", title: "A / B" }]);
+    await whatsapp()!.sendButtons("5511999990000", "Foi no débito ou no crédito?", [{ id: "q:Débito", title: "Débito" }, { id: "q:Crédito", title: "Crédito" }]);
+    expect(bodies.at(-1)).toEqual({
+      messaging_product: "whatsapp", to: "5511999990000", type: "interactive",
+      interactive: { type: "button", body: { text: "Foi no débito ou no crédito?" }, action: { buttons: [
+        { type: "reply", reply: { id: "q:Débito", title: "Débito" } }, { type: "reply", reply: { id: "q:Crédito", title: "Crédito" } },
+      ] } },
+    });
+    // dentro da janela de 24 h, o lembrete leva os botões; fora dela, só o modelo aprovado
+    await whatsapp()!.sendProactive("5511999990000", { template: "lembrete", params: ["Remédio", "08:00"], text: "⏰ Remédio" }, new Date(Date.now() - 60_000), [{ id: "r:d:1", title: "✅ Feito" }]);
+    expect(bodies.at(-1)).toMatchObject({ type: "interactive" });
+    await whatsapp()!.sendProactive("5511999990000", { template: "lembrete", params: ["Remédio", "08:00"], text: "⏰ Remédio" }, null, [{ id: "r:d:1", title: "✅ Feito" }]);
+    expect(bodies.at(-1)).toMatchObject({ type: "template" });
+    // o toque no botão chega como mensagem interativa
+    const parsed = whatsapp()!.parseWebhook({ entry: [{ changes: [{ value: { messages: [{ id: "wamid.1", from: "5511999990000", timestamp: "1760000000", type: "interactive", interactive: { type: "button_reply", button_reply: { id: "r:d:1", title: "✅ Feito" } } }] } }] }] });
+    expect(parsed).toEqual([expect.objectContaining({ button: { id: "r:d:1" }, text: "✅ Feito" })]);
+  });
 });

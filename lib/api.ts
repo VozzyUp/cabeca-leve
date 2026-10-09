@@ -1,3 +1,4 @@
+import type { ToResolve } from "@/lib/domain/resolve";
 import type { Account, Category, ChatMessage, Habit, Reminder, Task, Transaction } from "@/lib/data/types";
 import type { DayItem } from "@/lib/domain/day";
 import type { BudgetStatus, FinanceSummary } from "@/lib/domain/finance";
@@ -50,7 +51,7 @@ export const api = {
   setHabitDone: (id: string, day: string, done: boolean) =>
     call<{ ok: true }>(`/api/habits/${id}/logs/${day}`, { method: done ? "PUT" : "DELETE" }),
   financeSummary: (month?: string) =>
-    call<FinanceSummary & { balanceCents: number; today: string; budgets: BudgetStatus[]; expenseCategories: Array<{ id: string; name: string; parentId: string | null }> }>(`/api/finance/summary${month ? `?month=${month}` : ""}`),
+    call<FinanceSummary & { balanceCents: number; today: string; budgets: BudgetStatus[]; toResolve: ToResolve[]; expenseCategories: Array<{ id: string; name: string; parentId: string | null }> }>(`/api/finance/summary${month ? `?month=${month}` : ""}`),
   setBudget: (categoryId: string, amountCents: number | null) =>
     call<{ ok: true }>("/api/budgets", { method: "POST", body: JSON.stringify({ categoryId, amountCents }) }),
   day: () => call<{ today: string; timezone: string; items: DayItem[]; next: DayItem | null }>("/api/day"),

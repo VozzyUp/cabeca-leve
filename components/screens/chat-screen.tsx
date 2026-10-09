@@ -24,6 +24,7 @@ const CARD = {
   project: { kind: "Projeto", open: "Ver nos projetos" },
   goal: { kind: "Meta", open: "Ver nas metas" },
   automation: { kind: "Revisão agendada", open: "Ver nas revisões" },
+  recurring: { kind: "Conta fixa", open: "Ver os fixos" },
 } as const;
 
 const SUGGESTIONS = [

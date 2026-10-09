@@ -59,7 +59,7 @@ export type Transaction = {
 // Card que o assistente devolve no chat para cada item que criou
 export type ActionCardData = {
   actionId: string;
-  kind: "reminder" | "transaction" | "task" | "habit" | "workout" | "meal" | "project" | "goal" | "automation";
+  kind: "reminder" | "transaction" | "task" | "habit" | "workout" | "meal" | "project" | "goal" | "automation" | "recurring";
   title: string;
   value: string;
   valueTone: "neutral" | "income" | "expense";
@@ -81,7 +81,7 @@ export type ChatMessage = {
 
 export type ActionRecord = {
   id: string;
-  entity: "reminder" | "transaction" | "task" | "habit" | "workout_plan" | "meal_plan" | "project" | "goal" | "automation";
+  entity: "reminder" | "transaction" | "task" | "habit" | "workout_plan" | "meal_plan" | "project" | "goal" | "automation" | "recurrence";
   entityId: string;
   // o que a criação trocou (ex.: ficha ativa anterior): o desfazer devolve
   replaced?: string[];
@@ -109,6 +109,7 @@ export type Recurrence = {
   categoryId: string | null;
   paymentMethod: Transaction["paymentMethod"];
   active: boolean;
+  createdOn?: string;         // dia (local) em que passou a valer: vencimentos antes dele não entram em "a resolver"
 };
 
 export type InstallmentPurchase = {
@@ -185,6 +186,9 @@ export type CalendarEvent = {
   location: string | null;
   source: "google" | "outlook";
 };
+
+// Fato que a pessoa pediu para o assistente guardar (ou contou e vale lembrar)
+export type Memory = { id: string; fact: string; createdAt: string };
 
 export type FocusSession = { id: string; title: string; minutes: number; startedAt: string; finishedAt: string | null };
 

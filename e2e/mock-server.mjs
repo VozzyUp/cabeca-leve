@@ -18,7 +18,7 @@ http.createServer((req, res) => {
     calls.push({ method: req.method, url: req.url, headers: req.headers, body });
     if (req.url === "/v3/checkouts") return res.end(JSON.stringify({ id: `chk_e2e_${Date.now()}_${++n}` }));
     if (req.url.startsWith("/v3/subscriptions/")) return res.end(JSON.stringify({ deleted: true, id: req.url.split("/").pop() }));
-    if (req.url === "/send/text") return res.end(JSON.stringify({ messageid: `out_${++n}` }));
+    if (req.url === "/send/text" || req.url === "/send/menu") return res.end(JSON.stringify({ messageid: `out_${++n}` }));
     if (/^\/v3\/payments\/[^/]+\/refund$/.test(req.url)) return res.end(JSON.stringify({ status: "REFUNDED" }));
     if (req.url === "/emails") return res.end(JSON.stringify({ id: `email_${++n}` }));
     res.end("{}");
