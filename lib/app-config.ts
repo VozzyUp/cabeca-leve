@@ -9,7 +9,10 @@ export type ConfigField = { key: string; label: string; secret: boolean; hint?: 
 export type ConfigGroup = { title: string; fields: ConfigField[] };
 
 export const CONFIG_GROUPS: ConfigGroup[] = [
-  { title: "Assistente (Anthropic)", fields: [{ key: "ANTHROPIC_API_KEY", label: "Chave da API", secret: true, hint: "console.anthropic.com > API Keys" }] },
+  { title: "Assistente (Anthropic)", fields: [
+    { key: "ANTHROPIC_API_KEY", label: "Chave da API", secret: true, hint: "console.anthropic.com > API Keys" },
+    { key: "ANTHROPIC_WORKSPACE_ID", label: "ID do workspace (só se a chave pedir)", secret: false, hint: "wrkspc_… (console.anthropic.com > Settings > Workspaces)" },
+  ] },
   { title: "Áudio (Groq)", fields: [{ key: "GROQ_API_KEY", label: "Chave da API", secret: true, hint: "console.groq.com > API Keys" }] },
   { title: "WhatsApp", fields: [
     { key: "WHATSAPP_PROVIDER", label: "Provedor", secret: false, options: ["uazapi", "meta"] },

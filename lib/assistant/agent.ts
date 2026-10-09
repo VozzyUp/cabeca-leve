@@ -54,11 +54,16 @@ export type AgentInput = {
 
 export const agentEnabled = () => !!process.env.ANTHROPIC_API_KEY;
 
-// O cliente guarda a chave com que nasceu: se a chave mudar na tela de admin, o próximo uso já pega a nova
-let client: { key: string; api: Anthropic } | null = null;
+// O cliente guarda a chave e o workspace com que nasceu: se mudarem na tela de admin, o próximo uso já pega os novos.
+// Chave que não é de um workspace específico precisa do ID dele no cabeçalho anthropic-workspace-id.
+let client: { id: string; api: Anthropic } | null = null;
 const anthropic = () => {
   const key = process.env.ANTHROPIC_API_KEY ?? "";
-  if (client?.key !== key) client = { key, api: new Anthropic({ apiKey: key || undefined }) };
+  const workspace = process.env.ANTHROPIC_WORKSPACE_ID?.trim() ?? "";
+  const id = `${key}|${workspace}`;
+  if (client?.id !== id) {
+    client = { id, api: new Anthropic({ apiKey: key || undefined, defaultHeaders: workspace ? { "anthropic-workspace-id": workspace } : undefined }) };
+  }
   return client.api;
 };
 
