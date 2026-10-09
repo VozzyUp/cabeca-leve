@@ -9,7 +9,7 @@ import { currentUser } from "@/lib/supabase/server";
 import { startLink } from "@/lib/whatsapp/link";
 import { answerTicket, isSupportAdmin } from "@/lib/support";
 import { sendTestNotice } from "@/lib/deliveries";
-import { CONFIG_KEYS, loadAppConfig, saveAppConfig } from "@/lib/app-config";
+import { CONFIG_FIELDS, CONFIG_KEYS, loadAppConfig, saveAppConfig } from "@/lib/app-config";
 import { pingAgent } from "@/lib/assistant/agent";
 import { siteUrl } from "@/lib/public-env";
 import type { Settings } from "@/lib/data/types";
@@ -249,6 +249,8 @@ export async function saveSystemConfig(changes: Record<string, string | null>) {
     if (!CONFIG_KEYS.has(key)) throw new Error(`Campo desconhecido: ${key}`);
     if (raw === null) { clean[key] = null; continue; }
     const value = z.string().trim().min(1).max(4000).parse(raw);
+    const options = CONFIG_FIELDS.get(key)?.options;
+    if (options && !options.includes(value)) throw new Error(`${key}: escolha uma das opções da lista`);
     if (key.endsWith("_URL") && !/^https?:\/\/\S+$/.test(value)) throw new Error(`${key}: use um endereço que comece com https://`);
     clean[key] = value;
   }

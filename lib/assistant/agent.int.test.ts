@@ -62,9 +62,9 @@ describe.skipIf(!run)("agente", () => {
 
     const first = requests[0];
     expect(first.headers["anthropic-beta"]).toContain("server-side-fallback-2026-07-01");
-    expect(first.body.model).toBe("claude-opus-5-5");
+    expect(first.body.model).toBe("claude-sonnet-5-5");  // padrão sem configuração
     expect(first.body.fallbacks).toBe("default");
-    expect(first.body.output_config).toEqual({ effort: "low" });
+    expect(first.body.output_config).toEqual({ effort: "medium" });
     // sem modo estrito: a API recusa 22 ferramentas estritas (limite de ferramentas, de parâmetros nulos e de gramática)
     const tools = first.body.tools as Array<{ name: string; strict?: boolean }>;
     expect(tools.length).toBeGreaterThanOrEqual(20);
@@ -120,5 +120,36 @@ describe.skipIf(!run)("agente", () => {
     expect(r.text).toMatch(/Não consegui responder/);
     const t = await store.listTodayTranscript();
     expect(t.at(-1)!.role).toBe("assistant");
+  });
+
+  it("o modelo e o nível vêm da configuração; o Haiku vai sem o recurso de reserva", async () => {
+    const { runAgent } = await import("./agent");
+    const ask = async (text: string, now: string) => {
+      replies.push(msg([{ type: "text", text: "ok" }], "end_turn"));
+      const before = requests.length;
+      await runAgent({ store, text, channel: "web", now: new Date(now) });
+      return requests[before];
+    };
+    try {
+      process.env.ANTHROPIC_MODEL = "claude-haiku-5-5"; process.env.ANTHROPIC_EFFORT = "high";
+      const haiku = await ask("oi haiku", "2026-10-08T16:00:00Z");
+      expect(haiku.body.model).toBe("claude-haiku-5-5");
+      expect(haiku.body.output_config).toEqual({ effort: "high" });
+      expect(haiku.body.fallbacks).toBeUndefined();
+      expect(haiku.headers["anthropic-beta"] ?? "").not.toContain("server-side-fallback");
+
+      process.env.ANTHROPIC_MODEL = "claude-opus-5-5"; process.env.ANTHROPIC_EFFORT = "xhigh";
+      const opus = await ask("oi opus", "2026-10-08T16:01:00Z");
+      expect(opus.body.model).toBe("claude-opus-5-5");
+      expect(opus.body.output_config).toEqual({ effort: "xhigh" });
+      expect(opus.body.fallbacks).toBe("default");
+
+      process.env.ANTHROPIC_MODEL = "modelo-que-nao-existe"; process.env.ANTHROPIC_EFFORT = "";  // inválido: volta ao padrão
+      const padrao = await ask("oi padrão", "2026-10-08T16:02:00Z");
+      expect(padrao.body.model).toBe("claude-sonnet-5-5");
+      expect(padrao.body.output_config).toEqual({ effort: "medium" });
+    } finally {
+      delete process.env.ANTHROPIC_MODEL; delete process.env.ANTHROPIC_EFFORT;
+    }
   });
 });

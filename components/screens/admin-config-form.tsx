@@ -12,20 +12,20 @@ function FieldRow({ field, status, value, onChange, onClear, onGenerate, busy }:
   onClear: () => void; onGenerate: () => void; busy: boolean;
 }) {
   const id = useId();
-  const tone = status?.source === "faltando" ? "text-warning" : "text-muted";
+  const tone = status?.source === "faltando" && !field.fallback ? "text-warning" : "text-muted";
   return (
     <div className="flex flex-col gap-1.5 border-b border-border py-3 last:border-0">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <label htmlFor={id} className="text-sm font-medium text-text">{field.label}</label>
         <span className={`text-xs ${tone}`}>
-          {SOURCE[status?.source ?? "faltando"]}{status?.preview ? `: ${status.preview}` : ""}
+          {status?.source === "faltando" && field.fallback ? "padrão" : SOURCE[status?.source ?? "faltando"]}{status?.preview ? `: ${status.preview}` : ""}
         </span>
       </div>
       <div className="flex flex-wrap items-center gap-2">
         {field.options ? (
           <select id={id} value={value} onChange={(e) => onChange(e.target.value)} className="h-10 min-w-0 flex-1 rounded-md border border-border-input bg-bg px-3 text-sm text-text">
-            <option value="">{status?.preview ? "manter como está" : "escolha…"}</option>
-            {field.options.map((o) => <option key={o} value={o}>{o}</option>)}
+            <option value="">{status?.preview ? "manter como está" : field.fallback ?? "escolha…"}</option>
+            {field.options.map((o) => <option key={o} value={o}>{field.labels?.[o] ?? o}</option>)}
           </select>
         ) : (
           <input id={id} type={field.secret ? "password" : "text"} autoComplete="off" spellCheck={false} value={value} onChange={(e) => onChange(e.target.value)}
@@ -67,7 +67,7 @@ export function AdminConfigForm({ group, status }: { group: ConfigGroup; status:
             <Button type="button" variant="secondary" size="sm" loading={pending}
               onClick={() => start(async () => {
                 setMessage(null);
-                try { const r = await testAnthropicKey(); setMessage(r.ok ? { ok: true, text: "A chave funciona." } : { ok: false, text: r.message }); }
+                try { const r = await testAnthropicKey(); setMessage(r.ok ? { ok: true, text: `A chave funciona (${r.model}, nível ${r.effort}).` } : { ok: false, text: r.message }); }
                 catch (e) { setMessage({ ok: false, text: (e as Error).message || "Não deu para testar." }); }
               })}>Testar chave</Button>
           )}

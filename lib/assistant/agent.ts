@@ -9,6 +9,7 @@ import { budgetStatus, financeSummary } from "@/lib/domain/finance";
 import { habitStats } from "@/lib/domain/habits";
 import { describeRepeat, toRRule } from "@/lib/domain/recurrence";
 import { formatDue } from "@/lib/support";
+import { resolveEffort, resolveModel, supportsFallback } from "./models";
 import { formatMoney, localDate, zonedParts, zonedToUtc } from "@/lib/time";
 import { createHabit, createReminder, createTask, recordTransaction, setBudgetByName } from "./tools";
 
@@ -17,7 +18,6 @@ import { createHabit, createReminder, createTask, recordTransaction, setBudgetBy
 // - O que varia (nome, tom, data e hora) entra nas mensagens, nunca no prompt de sistema.
 // - Histórico somente-anexar: cada passo é gravado como a API devolveu e reenviado igual.
 
-export const MODEL = "claude-opus-5-5";
 
 const SYSTEM = `Você é o Cabeça Leve, um assistente pessoal brasileiro que organiza a vida da pessoa pela conversa, no app e no WhatsApp: tarefas, lembretes, dinheiro, hábitos e notas.
 
@@ -397,13 +397,14 @@ async function dayContext(store: DataStore) {
 
 // Os parâmetros do turno do agente: o mesmo formato vale para a conversa e para o teste da tela de admin
 function turnParams(tools: ReturnType<typeof buildTools>, messages: BetaMessageParam[]) {
+  const model = resolveModel();
   return {
-    model: MODEL,
+    model,
     max_tokens: 16000,
     max_iterations: 8,
-    betas: ["server-side-fallback-2026-07-01"],
-    fallbacks: "default" as const,
-    output_config: { effort: "low" as const },
+    // reserva automática se a Anthropic recusar o pedido por política; o Haiku 5.5 não tem esse recurso
+    ...(supportsFallback(model) ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const } : {}),
+    output_config: { effort: resolveEffort() },
     cache_control: { type: "ephemeral" as const },
     system: [{ type: "text" as const, text: SYSTEM, cache_control: { type: "ephemeral" as const } }],
     tools,
@@ -413,11 +414,12 @@ function turnParams(tools: ReturnType<typeof buildTools>, messages: BetaMessageP
 
 // Teste da tela de admin: primeiro uma chamada mínima (chave e modelo), depois um turno com o mesmo formato
 // da conversa (ferramentas, beta, fallback, mensagem de sistema). Diz em qual etapa falhou e por quê.
-export async function pingAgent(): Promise<{ ok: true } | { ok: false; message: string }> {
+export async function pingAgent(): Promise<{ ok: true; model: string; effort: string } | { ok: false; message: string }> {
   if (!agentEnabled()) return { ok: false, message: "Nenhuma chave da Anthropic configurada." };
-  let step = "chave e modelo";
+  const model = resolveModel(), effort = resolveEffort();
+  let step = `chave e modelo (${model})`;
   try {
-    await anthropic().messages.create({ model: MODEL, max_tokens: 16, messages: [{ role: "user", content: "oi" }] });
+    await anthropic().messages.create({ model: resolveModel(), max_tokens: 16, messages: [{ role: "user", content: "oi" }] });
     step = "turno completo (ferramentas e mensagem de sistema)";
     const store = { timezone: () => "America/Sao_Paulo" } as unknown as DataStore;
     const messages: BetaMessageParam[] = [
@@ -425,7 +427,7 @@ export async function pingAgent(): Promise<{ ok: true } | { ok: false; message: 
       { role: "system" as "user", content: "Pessoa: Teste. Fuso: America/Sao_Paulo. Tom pedido: acolhedor." },
     ];
     await anthropic().beta.messages.toolRunner(turnParams(buildTools(store, new Date(), [], "web"), messages)).runUntilDone();
-    return { ok: true };
+    return { ok: true, model, effort };
   } catch (error) {
     const detail = error instanceof Anthropic.APIError ? `${error.status ?? ""} ${error.message}`.trim() : (error as Error).message;
     return { ok: false, message: `Falhou em: ${step}. ${detail}` };

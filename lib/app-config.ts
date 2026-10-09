@@ -1,16 +1,21 @@
 import crypto from "node:crypto";
 import { getAdmin } from "@/lib/supabase/server";
+import { DEFAULT_EFFORT, DEFAULT_MODEL, EFFORT_OPTIONS, MODEL_OPTIONS } from "@/lib/assistant/models";
 
 // Configuração do sistema guardada no banco (tela /admin/configuracoes), criptografada com
 // APP_SECRET_KEY. Ao ler, os valores entram em process.env: todo o resto do app continua lendo
 // process.env.X sem saber de onde veio. O que está no banco vale mais que a variável do stack.
 
-export type ConfigField = { key: string; label: string; secret: boolean; hint?: string; options?: string[]; generate?: "vapid" | "hex32" };
+export type ConfigField = { key: string; label: string; secret: boolean; hint?: string; options?: string[]; labels?: Record<string, string>; fallback?: string; generate?: "vapid" | "hex32" };
 export type ConfigGroup = { title: string; fields: ConfigField[] };
 
 export const CONFIG_GROUPS: ConfigGroup[] = [
   { title: "Assistente (Anthropic)", fields: [
     { key: "ANTHROPIC_API_KEY", label: "Chave da API", secret: true, hint: "console.anthropic.com > API Keys" },
+    { key: "ANTHROPIC_MODEL", label: "Modelo", secret: false, options: MODEL_OPTIONS.map((m) => m.id), labels: Object.fromEntries(MODEL_OPTIONS.map((m) => [m.id, `${m.label} (${m.price})`])),
+      fallback: `usar o padrão (${MODEL_OPTIONS.find((m) => m.id === DEFAULT_MODEL)!.label.split(":")[0]})`, hint: "Vale na hora. Modelo mais capaz responde melhor e custa mais por mensagem." },
+    { key: "ANTHROPIC_EFFORT", label: "Nível de raciocínio", secret: false, options: EFFORT_OPTIONS.map((e) => e.id), labels: Object.fromEntries(EFFORT_OPTIONS.map((e) => [e.id, e.label])),
+      fallback: `usar o padrão (${EFFORT_OPTIONS.find((e) => e.id === DEFAULT_EFFORT)!.label.split(":")[0]})`, hint: "Quanto o modelo pensa antes de responder. Mais alto gasta mais e demora mais." },
     { key: "ANTHROPIC_WORKSPACE_ID", label: "ID do workspace (só se a chave pedir)", secret: false, hint: "wrkspc_… (console.anthropic.com > Settings > Workspaces)" },
   ] },
   { title: "Áudio (Groq)", fields: [{ key: "GROQ_API_KEY", label: "Chave da API", secret: true, hint: "console.groq.com > API Keys" }] },
@@ -49,6 +54,7 @@ export const CONFIG_GROUPS: ConfigGroup[] = [
 ];
 
 export const CONFIG_KEYS = new Set(CONFIG_GROUPS.flatMap((g) => g.fields.map((f) => f.key)));
+export const CONFIG_FIELDS = new Map(CONFIG_GROUPS.flatMap((g) => g.fields.map((f) => [f.key, f] as const)));
 
 // ---- criptografia (AES-256-GCM; a chave vem de APP_SECRET_KEY, qualquer texto longo) ----
 function cipherKey() {

@@ -63,6 +63,32 @@ test("ADM-H1 o dono salva chaves pela tela; segredo não volta inteiro; vale na 
   await admin.from("app_settings").delete().in("key", ["ASAAS_API_KEY", "META_WEBHOOK_VERIFY_TOKEN"]);
 });
 
+test("ADM-H2 o dono escolhe o modelo e o nível do assistente; sem escolha vale o padrão", async ({ page }) => {
+  const owner = await adminUser();
+  await admin.from("app_settings").delete().in("key", ["ANTHROPIC_MODEL", "ANTHROPIC_EFFORT"]);
+  await login(page, owner, "/admin/configuracoes");
+  const form = () => page.locator("form").filter({ hasText: "Assistente (Anthropic)" });
+  // sem escolha: mostra o padrão (Sonnet 5.5, médio)
+  await expect(form().getByLabel("Modelo")).toContainText("usar o padrão (Sonnet 5.5)");
+  await expect(form().getByLabel("Nível de raciocínio")).toContainText("usar o padrão (Médio)");
+  // a lista tem os três modelos e os cinco níveis
+  await expect(form().getByLabel("Modelo").locator("option")).toHaveCount(4);
+  await expect(form().getByLabel("Nível de raciocínio").locator("option")).toHaveCount(6);
+
+  await form().getByLabel("Modelo").selectOption("claude-haiku-5-5");
+  await form().getByLabel("Nível de raciocínio").selectOption("high");
+  await form().getByRole("button", { name: /^Salvar/ }).click();
+  await expect(form().getByRole("status")).toHaveText("Salvo. Já está valendo.");
+  await page.reload();
+  await expect(form().getByText("salvo aqui: claude-haiku-5-5")).toBeVisible();
+  await expect(form().getByText("salvo aqui: high")).toBeVisible();
+
+  // apagar volta ao padrão
+  await form().locator("div").filter({ hasText: /^Modelo/ }).getByRole("button", { name: "Apagar" }).click();
+  await expect(form().getByLabel("Modelo")).toContainText("usar o padrão (Sonnet 5.5)");
+  await admin.from("app_settings").delete().in("key", ["ANTHROPIC_MODEL", "ANTHROPIC_EFFORT"]);
+});
+
 test("ADM-N1 quem não é admin não vê a tela nem o atalho, e não consegue salvar", async ({ page, user }) => {
   await login(page, user, "/ajustes");
   await expect(page.getByRole("link", { name: /Configuração do sistema/ })).toHaveCount(0);
