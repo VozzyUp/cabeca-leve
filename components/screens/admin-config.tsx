@@ -28,7 +28,7 @@ export async function AdminConfigScreen() {
             As chaves ficam no banco, criptografadas, e valem na hora, sem reiniciar. O que estiver aqui vale mais que a variável do stack.
             Segredos aparecem só com os 4 últimos caracteres; para trocar, digite o valor novo.
           </p>
-          <IntegrationInfo />
+          <IntegrationInfo version={status.filter((s) => s.key.endsWith("_SECRET") || s.key.endsWith("_TOKEN")).map((s) => `${s.key}:${s.preview}`).join("|")} />
           {CONFIG_GROUPS.map((g) => <AdminConfigForm key={g.title} group={g} status={status.filter((s) => g.fields.some((f) => f.key === s.key))} />)}
         </>
       )}

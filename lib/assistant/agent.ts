@@ -54,8 +54,32 @@ export type AgentInput = {
 
 export const agentEnabled = () => !!process.env.ANTHROPIC_API_KEY;
 
-let client: Anthropic | null = null;
-const anthropic = () => (client ??= new Anthropic());
+// O cliente guarda a chave com que nasceu: se a chave mudar na tela de admin, o próximo uso já pega a nova
+let client: { key: string; api: Anthropic } | null = null;
+const anthropic = () => {
+  const key = process.env.ANTHROPIC_API_KEY ?? "";
+  if (client?.key !== key) client = { key, api: new Anthropic({ apiKey: key || undefined }) };
+  return client.api;
+};
+
+// Chamada mínima para a tela de admin dizer se a chave e o modelo funcionam (e, se não, por quê)
+export async function pingAgent(): Promise<{ ok: true } | { ok: false; message: string }> {
+  if (!agentEnabled()) return { ok: false, message: "Nenhuma chave da Anthropic configurada." };
+  try {
+    await anthropic().messages.create({ model: MODEL, max_tokens: 16, messages: [{ role: "user", content: "oi" }] });
+    return { ok: true };
+  } catch (error) {
+    if (error instanceof Anthropic.APIError) {
+      const why = error.status === 401 ? "chave recusada (confira se copiou inteira, sem espaços)"
+        : error.status === 402 || /credit|billing/i.test(error.message) ? "sem crédito na conta da Anthropic"
+        : error.status === 404 ? `modelo ${MODEL} indisponível para esta chave`
+        : error.status === 429 ? "limite de uso da conta atingido"
+        : error.message;
+      return { ok: false, message: `Erro ${error.status ?? ""}: ${why}` };
+    }
+    return { ok: false, message: (error as Error).message };
+  }
+}
 
 // "qua., 07/10/2026 21:03" no fuso da pessoa
 function stamp(now: Date, tz: string) {

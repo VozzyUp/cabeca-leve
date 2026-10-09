@@ -10,6 +10,7 @@ import { startLink } from "@/lib/whatsapp/link";
 import { answerTicket, isSupportAdmin } from "@/lib/support";
 import { sendTestNotice } from "@/lib/deliveries";
 import { CONFIG_KEYS, loadAppConfig, saveAppConfig } from "@/lib/app-config";
+import { pingAgent } from "@/lib/assistant/agent";
 import { siteUrl } from "@/lib/public-env";
 import type { Settings } from "@/lib/data/types";
 
@@ -269,6 +270,13 @@ export async function generateSystemSecret(kind: "hex32" | "vapid", key: string)
   }
   revalidatePath("/admin/configuracoes");
   return { ok: true as const };
+}
+
+// Testa a chave da Anthropic com uma chamada mínima e devolve o motivo se falhar
+export async function testAnthropicKey() {
+  await requireAdmin();
+  await loadAppConfig(true);
+  return pingAgent();
 }
 
 // Endereços para colar na UAZAPI, na Asaas e na Meta (com os tokens), só para o admin

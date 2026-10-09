@@ -1,6 +1,6 @@
 "use client";
-import { useId, useState, useTransition } from "react";
-import { generateSystemSecret, revealIntegrationInfo, saveSystemConfig } from "@/app/actions";
+import { useEffect, useId, useRef, useState, useTransition } from "react";
+import { generateSystemSecret, revealIntegrationInfo, saveSystemConfig, testAnthropicKey } from "@/app/actions";
 import { Button } from "@/components/ui/button";
 import { Card, SectionLabel } from "@/components/ui/card";
 import type { ConfigGroup, FieldStatus } from "@/lib/app-config";
@@ -63,6 +63,14 @@ export function AdminConfigForm({ group, status }: { group: ConfigGroup; status:
         ))}
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <Button type="submit" size="sm" loading={pending} disabled={changed.length === 0}>Salvar {group.title.split(" (")[0].toLowerCase()}</Button>
+          {group.fields.some((f) => f.key === "ANTHROPIC_API_KEY") && (
+            <Button type="button" variant="secondary" size="sm" loading={pending}
+              onClick={() => start(async () => {
+                setMessage(null);
+                try { const r = await testAnthropicKey(); setMessage(r.ok ? { ok: true, text: "A chave funciona." } : { ok: false, text: r.message }); }
+                catch (e) { setMessage({ ok: false, text: (e as Error).message || "Não deu para testar." }); }
+              })}>Testar chave</Button>
+          )}
           {message && <p role={message.ok ? "status" : "alert"} className={`text-xs ${message.ok ? "text-success" : "text-danger"}`}>{message.text}</p>}
         </div>
       </form>
@@ -71,9 +79,15 @@ export function AdminConfigForm({ group, status }: { group: ConfigGroup; status:
 }
 
 // Endereços e tokens para colar nos painéis da UAZAPI, da Asaas e da Meta
-export function IntegrationInfo() {
+// `version` muda quando um segredo é salvo ou gerado: com o painel aberto, ele busca de novo,
+// para não ficar mostrando "gere abaixo" depois de gerar.
+export function IntegrationInfo({ version }: { version: string }) {
   const [info, setInfo] = useState<Awaited<ReturnType<typeof revealIntegrationInfo>> | null>(null);
   const [pending, start] = useTransition();
+  const open = useRef(false);
+  useEffect(() => {
+    if (open.current) revealIntegrationInfo().then(setInfo).catch(() => setInfo(null));
+  }, [version]);
   const rows = info ? [
     ["Webhook da UAZAPI (POST /webhook da instância)", info.whatsappWebhook ?? "gere o segredo do webhook da UAZAPI abaixo"],
     ["Webhook da Asaas (Integrações > Webhooks)", info.asaasWebhook],
@@ -85,7 +99,7 @@ export function IntegrationInfo() {
     <Card className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <SectionLabel>Endereços para colar nos serviços</SectionLabel>
-        <Button variant="secondary" size="sm" loading={pending} onClick={() => start(async () => setInfo(info ? null : await revealIntegrationInfo()))}>
+        <Button variant="secondary" size="sm" loading={pending} onClick={() => start(async () => { open.current = !info; setInfo(info ? null : await revealIntegrationInfo()); })}>
           {info ? "Esconder" : "Mostrar"}
         </Button>
       </div>
