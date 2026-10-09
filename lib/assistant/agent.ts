@@ -67,25 +67,6 @@ const anthropic = () => {
   return client.api;
 };
 
-// Chamada mínima para a tela de admin dizer se a chave e o modelo funcionam (e, se não, por quê)
-export async function pingAgent(): Promise<{ ok: true } | { ok: false; message: string }> {
-  if (!agentEnabled()) return { ok: false, message: "Nenhuma chave da Anthropic configurada." };
-  try {
-    await anthropic().messages.create({ model: MODEL, max_tokens: 16, messages: [{ role: "user", content: "oi" }] });
-    return { ok: true };
-  } catch (error) {
-    if (error instanceof Anthropic.APIError) {
-      const why = error.status === 401 ? "chave recusada (confira se copiou inteira, sem espaços)"
-        : error.status === 402 || /credit|billing/i.test(error.message) ? "sem crédito na conta da Anthropic"
-        : error.status === 404 ? `modelo ${MODEL} indisponível para esta chave`
-        : error.status === 429 ? "limite de uso da conta atingido"
-        : error.message;
-      return { ok: false, message: `Erro ${error.status ?? ""}: ${why}` };
-    }
-    return { ok: false, message: (error as Error).message };
-  }
-}
-
 // "qua., 07/10/2026 21:03" no fuso da pessoa
 function stamp(now: Date, tz: string) {
   const p = zonedParts(now, tz);
@@ -432,6 +413,43 @@ async function dayContext(store: DataStore) {
     `Respostas ${s.answerLength === "short" ? "curtas" : "mais detalhadas quando ajudar"}.`;
 }
 
+// Os parâmetros do turno do agente: o mesmo formato vale para a conversa e para o teste da tela de admin
+function turnParams(tools: ReturnType<typeof buildTools>, messages: BetaMessageParam[]) {
+  return {
+    model: MODEL,
+    max_tokens: 16000,
+    max_iterations: 8,
+    betas: ["server-side-fallback-2026-07-01"],
+    fallbacks: "default" as const,
+    output_config: { effort: "low" as const },
+    cache_control: { type: "ephemeral" as const },
+    system: [{ type: "text" as const, text: SYSTEM, cache_control: { type: "ephemeral" as const } }],
+    tools,
+    messages,
+  };
+}
+
+// Teste da tela de admin: primeiro uma chamada mínima (chave e modelo), depois um turno com o mesmo formato
+// da conversa (ferramentas, beta, fallback, mensagem de sistema). Diz em qual etapa falhou e por quê.
+export async function pingAgent(): Promise<{ ok: true } | { ok: false; message: string }> {
+  if (!agentEnabled()) return { ok: false, message: "Nenhuma chave da Anthropic configurada." };
+  let step = "chave e modelo";
+  try {
+    await anthropic().messages.create({ model: MODEL, max_tokens: 16, messages: [{ role: "user", content: "oi" }] });
+    step = "turno completo (ferramentas e mensagem de sistema)";
+    const store = { timezone: () => "America/Sao_Paulo" } as unknown as DataStore;
+    const messages: BetaMessageParam[] = [
+      { role: "user", content: [{ type: "text", text: "oi" }] },
+      { role: "system" as "user", content: "Pessoa: Teste. Fuso: America/Sao_Paulo. Tom pedido: acolhedor." },
+    ];
+    await anthropic().beta.messages.toolRunner(turnParams(buildTools(store, new Date(), [], "web"), messages)).runUntilDone();
+    return { ok: true };
+  } catch (error) {
+    const detail = error instanceof Anthropic.APIError ? `${error.status ?? ""} ${error.message}`.trim() : (error as Error).message;
+    return { ok: false, message: `Falhou em: ${step}. ${detail}` };
+  }
+}
+
 export async function runAgent({ store, text, channel, clientMessageId, externalMessageId, now = new Date() }: AgentInput): Promise<AgentReply> {
   const tz = store.timezone();
   const history = (await store.listTodayTranscript()) as BetaMessageParam[];
@@ -449,18 +467,7 @@ export async function runAgent({ store, text, channel, clientMessageId, external
   let final: BetaMessage;
   let runner: ReturnType<Anthropic["beta"]["messages"]["toolRunner"]>;
   try {
-    runner = anthropic().beta.messages.toolRunner({
-    model: MODEL,
-    max_tokens: 16000,
-    max_iterations: 8,
-    betas: ["server-side-fallback-2026-07-01"],
-    fallbacks: "default",
-    output_config: { effort: "low" },
-    cache_control: { type: "ephemeral" },
-    system: [{ type: "text", text: SYSTEM, cache_control: { type: "ephemeral" } }],
-    tools: buildTools(store, now, cards, channel),
-    messages,
-    });
+    runner = anthropic().beta.messages.toolRunner(turnParams(buildTools(store, now, cards, channel), messages));
     final = await runner.runUntilDone();
   } catch (error) {
     // fecha o turno com uma resposta, para o histórico continuar válido na próxima mensagem
