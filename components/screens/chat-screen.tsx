@@ -81,6 +81,22 @@ export function ChatScreen() {
     } catch { setAudioError("Não deu para enviar o áudio. Confira a conexão."); }
     finally { setTranscribing(false); }
   }
+  // foto anexada (comprovante, fatura, plano): o servidor reduz e o assistente lê
+  async function sendImage(file: File) {
+    setAudioError(null);
+    if (file.size > 12 * 1024 * 1024) { setAudioError("Foto grande demais (até 12 MB)."); return; }
+    const clientId = crypto.randomUUID();
+    const temp: Local = { id: clientId, role: "user", text: "📷 Foto", cards: [], createdAt: new Date().toISOString(), status: "sending" };
+    setMessages((m) => [...(m ?? []), temp]);
+    setSending(true);
+    try {
+      const { messages: fresh } = await api.sendImage(clientId, file);
+      setMessages((m) => merge((m ?? []).filter((x) => x.id !== clientId), fresh));
+    } catch (e) {
+      setMessages((m) => (m ?? []).filter((x) => x.id !== clientId));
+      setAudioError((e as Error).message || "Não deu para enviar a foto. Confira a conexão.");
+    } finally { setSending(false); }
+  }
   const offline = !useOnline();
   const bottom = useRef<HTMLDivElement>(null);
   useEffect(() => { bottom.current?.scrollIntoView({ block: "end" }); }, [messages?.length, sending]);
@@ -178,8 +194,8 @@ export function ChatScreen() {
         <div ref={bottom} className="scroll-mb-40 lg:scroll-mb-28" />
       </div>
       <div className="sticky bottom-20 -mx-4 bg-bg px-4 pb-4 pt-2 lg:bottom-0 lg:mx-0 lg:px-0 lg:pb-6">
-        <input ref={fileInput} type="file" accept="audio/*" className="sr-only" tabIndex={-1} aria-hidden
-          onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void sendAudio(f); }} />
+        <input ref={fileInput} type="file" accept="audio/*,image/*" className="sr-only" tabIndex={-1} aria-hidden
+          onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (!f) return; void (f.type.startsWith("image/") ? sendImage(f) : sendAudio(f)); }} />
         <Composer onSend={(t) => send(t)} sending={sending || transcribing} offline={offline} onVoiceMode={() => router.push("/conversa/voz")}
           onAttach={() => fileInput.current?.click()} />
       </div>

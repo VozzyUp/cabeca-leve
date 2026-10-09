@@ -1,4 +1,4 @@
--- Cabeça Leve, passo 12 de 21: banco principal (tabelas workout_logs, workout_sets, diet_plans, diet_meals, food_logs).
+-- Cabeça Leve, passo 12 de 22: banco principal (tabelas workout_logs, workout_sets, diet_plans, diet_meals, food_logs).
 -- Supabase > SQL Editor > New query > cole TUDO > Run. Rode os passos em ordem, uma vez cada.
 -- Deve terminar com: Success. No rows returned.
 

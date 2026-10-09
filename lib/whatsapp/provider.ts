@@ -9,6 +9,7 @@ export type Inbound = {
   from: string;                  // número em dígitos, com DDI
   text: string | null;
   audio: { ref: string } | null; // referência para baixar o áudio depois, na fila
+  image?: { ref: string; caption: string | null } | null;  // foto (comprovante, fatura...): baixada e reduzida na fila
   at: Date;
 };
 
@@ -32,6 +33,7 @@ export interface WhatsAppProvider {
   // 24 h desde a última mensagem dela, só sai por modelo aprovado; dentro da janela, texto livre.
   sendProactive(to: string, msg: Proactive, lastInboundAt: Date | null): Promise<void>;
   downloadAudio(ref: string): Promise<{ data: ArrayBuffer; mimeType: string }>;
+  downloadImage(ref: string): Promise<{ data: ArrayBuffer; mimeType: string }>;
 }
 
 const safeEqual = (a: string, b: string) => {
@@ -50,6 +52,12 @@ function uazapi(): WhatsAppProvider {
   const token = process.env.UAZAPI_INSTANCE_TOKEN ?? "";
   const secret = process.env.UAZAPI_WEBHOOK_SECRET ?? "";
   const headers = { "Content-Type": "application/json", token };
+  const download = async (ref: string, extra: Record<string, unknown>, fallbackType: string) => {
+    const res = await ok(await fetch(`${base}/message/download`, { method: "POST", headers, body: JSON.stringify({ id: ref, ...extra }) }), "uazapi download");
+    const { fileURL, mimetype } = (await res.json()) as { fileURL: string; mimetype?: string };
+    const file = await ok(await fetch(fileURL), "uazapi fileURL");
+    return { data: await file.arrayBuffer(), mimeType: mimetype ?? file.headers.get("content-type") ?? fallbackType };
+  };
   return {
     name: "uazapi",
     // a UAZAPI não assina o webhook: exigimos o segredo na URL E o token da instância no corpo
@@ -69,11 +77,13 @@ function uazapi(): WhatsAppProvider {
       if (!jid.endsWith("@s.whatsapp.net")) return [];
       const type = String(m.messageType ?? "");
       const isAudio = /audio|ptt/i.test(type);
+      const isImage = /image/i.test(type);  // figurinha (sticker) não entra
       const text = typeof m.text === "string" && m.text.trim() ? m.text.trim() : null;
-      if (!text && !isAudio) return [];
+      if (!text && !isAudio && !isImage) return [];
       const id = String(m.messageid ?? m.id ?? "");
-      return [{ externalId: id, from: digitsOnly(jid.split("@")[0]), text: isAudio ? null : text,
-        audio: isAudio ? { ref: String(m.id ?? id) } : null, at: new Date(Number(m.messageTimestamp) || Date.now()) }];
+      return [{ externalId: id, from: digitsOnly(jid.split("@")[0]), text: isAudio || isImage ? null : text,
+        audio: isAudio ? { ref: String(m.id ?? id) } : null, image: isImage ? { ref: String(m.id ?? id), caption: text } : null,
+        at: new Date(Number(m.messageTimestamp) || Date.now()) }];
     },
     async sendText(to, text) {
       await ok(await fetch(`${base}/send/text`, { method: "POST", headers, body: JSON.stringify({ number: digitsOnly(to), text, linkPreview: false }) }), "uazapi send/text");
@@ -82,10 +92,10 @@ function uazapi(): WhatsAppProvider {
       await this.sendText(to, msg.text);  // a UAZAPI não tem janela nem modelos
     },
     async downloadAudio(ref) {
-      const res = await ok(await fetch(`${base}/message/download`, { method: "POST", headers, body: JSON.stringify({ id: ref, generate_mp3: true }) }), "uazapi download");
-      const { fileURL, mimetype } = (await res.json()) as { fileURL: string; mimetype?: string };
-      const file = await ok(await fetch(fileURL), "uazapi fileURL");
-      return { data: await file.arrayBuffer(), mimeType: mimetype ?? file.headers.get("content-type") ?? "audio/mpeg" };
+      return download(ref, { generate_mp3: true }, "audio/mpeg");
+    },
+    async downloadImage(ref) {
+      return download(ref, {}, "image/jpeg");
     },
   };
 }
@@ -113,9 +123,10 @@ function meta(): WhatsAppProvider {
         const type = m.type as string;
         const text = type === "text" ? ((m.text as { body?: string })?.body ?? "").trim() : "";
         const audio = type === "audio" ? (m.audio as { id: string }) : null;
-        if (!text && !audio) continue;
+        const image = type === "image" ? (m.image as { id: string; caption?: string }) : null;
+        if (!text && !audio && !image) continue;
         out.push({ externalId: String(m.id), from: digitsOnly(String(m.from)), text: text || null, audio: audio ? { ref: audio.id } : null,
-          at: new Date(Number(m.timestamp) * 1000) });
+          image: image ? { ref: image.id, caption: image.caption?.trim() || null } : null, at: new Date(Number(m.timestamp) * 1000) });
       }
       return out;
     },
@@ -141,6 +152,9 @@ function meta(): WhatsAppProvider {
       }), "meta template");
     },
     async downloadAudio(ref) {
+      return this.downloadImage(ref);  // na Meta, áudio e foto baixam do mesmo jeito (id da mídia)
+    },
+    async downloadImage(ref) {
       const info = (await (await ok(await fetch(`${graph}/${ref}`, { headers: auth }), "meta media")).json()) as { url: string; mime_type: string };
       const file = await ok(await fetch(info.url, { headers: auth }), "meta media file");
       return { data: await file.arrayBuffer(), mimeType: info.mime_type };

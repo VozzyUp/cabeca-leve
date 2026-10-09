@@ -1,4 +1,4 @@
--- Cabeça Leve, passo 5 de 21: banco principal (tabelas tasks, reminders, scheduled_deliveries).
+-- Cabeça Leve, passo 5 de 22: banco principal (tabelas tasks, reminders, scheduled_deliveries).
 -- Supabase > SQL Editor > New query > cole TUDO > Run. Rode os passos em ordem, uma vez cada.
 -- Deve terminar com: Success. No rows returned.
 

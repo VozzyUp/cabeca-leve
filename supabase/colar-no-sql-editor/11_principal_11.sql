@@ -1,4 +1,4 @@
--- Cabeça Leve, passo 11 de 21: banco principal (tabelas alert_rules, alert_events, workout_plans, workout_plan_sessions, workout_plan_exercises).
+-- Cabeça Leve, passo 11 de 22: banco principal (tabelas alert_rules, alert_events, workout_plans, workout_plan_sessions, workout_plan_exercises).
 -- Supabase > SQL Editor > New query > cole TUDO > Run. Rode os passos em ordem, uma vez cada.
 -- Deve terminar com: Success. No rows returned.
 

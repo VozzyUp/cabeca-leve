@@ -20,7 +20,7 @@ Datas e horas relativas no fuso do usuário,assistente,must,yes,yes,"data, hora 
 Pergunta de volta quando falta informação no pedido,assistente,must,yes,yes,"instrução do assistente (valor de gasto, horário de lembrete)"
 Indicador das etapas enquanto o assistente trabalha,assistente,should,yes,partial,passo genérico 'Entendendo o pedido' / 'Ouvindo o áudio'; etapas reais de cada ferramenta exigem streaming
 Histórico da conversa com filtro por dia semana e mês,assistente,should,yes,no,S02
-Enviar foto ou documento no chat e usar o conteúdo,assistente,should,yes,no,App Store 3.0
+Enviar foto ou documento no chat e usar o conteúdo,assistente,should,yes,partial,"foto sim (JPEG, PNG, WebP; reduzida a 1280 px e lida pelo Claude); PDF e outros documentos ainda não | /api/chat/image"
 Memória de preferências e fatos do usuário,assistente,should,yes,no,site [conferir]
 Briefing diário em texto,assistente,should,yes,yes,S04 e entrega no horário por push e WhatsApp; texto montado por regras (Claude depois)
 Briefing do dia em áudio,assistente,could,yes,partial,S04: botão Ouvir com a voz do navegador; áudio gerado no servidor depois
@@ -34,7 +34,7 @@ Conversar com o assistente pelo WhatsApp em texto,whatsapp,must,yes,yes,"UAZAPI 
 Mandar áudio pelo WhatsApp e ter tudo organizado,whatsapp,must,yes,yes,transcrição pela Groq e o mesmo assistente
 Receber lembretes e avisos pelo WhatsApp,whatsapp,must,yes,yes,varredura de cada minuto; resumo da manhã também; na Meta exigirá modelos aprovados
 Mesmos dados e histórico entre app e WhatsApp,whatsapp,must,yes,yes,"mesma conversa do dia, mesmo banco"
-Mandar foto pelo WhatsApp (comprovante ou fatura),whatsapp,should,yes,no,site [conferir]
+Mandar foto pelo WhatsApp (comprovante ou fatura),whatsapp,should,yes,yes,foto pelo WhatsApp vai com a legenda; comprovante vira lançamento | lib/whatsapp/inbound.ts
 Conversar e receber lembretes pelo Telegram,telegram,could,yes,no,site [conferir]
 Notificação push de lembretes no navegador e no celular,notificações,must,yes,yes,"Web Push com o app fechado (no iPhone, com o app na tela inicial)"
 "Preferências de notificação: canais, silêncio e limite por dia",notificações,should,yes,partial,S29: canais liga/desliga e horário do resumo; silêncio e limite por dia depois
@@ -70,15 +70,15 @@ Marcar lembrete como importante,lembretes,could,yes,no,site [conferir]
 Criar hábito com dias da semana e horário,hábitos,must,yes,yes,pela conversa com dias escolhidos; pela tela só diário
 Marcar hábito como feito inclusive em dia anterior,hábitos,must,yes,yes,S12 marca hoje; S13 marca e desmarca qualquer dia planejado do mês atual e do anterior
 Sequência atual e recorde,hábitos,must,yes,yes,dias não planejados não quebram a sequência
-Meta por tempo quantidade ou ação simples,hábitos,should,yes,no,site [conferir]
+Meta por tempo quantidade ou ação simples,hábitos,should,yes,yes,"meta de dinheiro ou de contagem (ler 12 livros), criada pela conversa | create_goal"
 Constância do mês em calendário,hábitos,should,yes,yes,S13: mês atual e anterior; S12: últimos 7 dias
 Cobrança quando o hábito passa do horário,hábitos,should,yes,no,App Store 3.0: avisos proativos
 Cor por hábito,hábitos,could,yes,no,novidades Google Play
 Análise de padrões (melhores dias e ranking),hábitos,could,yes,partial,S13: taxa por dia da semana (90 dias) e melhor e pior dia; ranking entre hábitos depois
-Ficha de treino com exercícios séries e carga,saúde,could,yes,yes,"S15: séries × repetições, carga e dias da semana"
+Ficha de treino com exercícios séries e carga,saúde,could,yes,yes,"S15: séries × repetições, carga e dias da semana; criada pela conversa (create_workout_plan)"
 Registrar treino série a série com descanso,saúde,could,yes,partial,S14/S15 marcam o treino do dia; série a série com descanso depois
 Última execução e recorde por exercício,saúde,could,yes,yes,S15: último treino e recorde por exercício
-Plano de dieta com refeições e metas de macros,saúde,could,yes,partial,"S16: refeições, itens e calorias; macros depois"
+Plano de dieta com refeições e metas de macros,saúde,could,yes,partial,"S16: refeições, itens, calorias e metas diárias; criado pela conversa (create_meal_plan)"
 Registrar refeições e ver calorias e macros do dia,saúde,could,yes,partial,S14/S16: marcar refeição do plano e calorias do dia; refeição fora do plano depois
 Medidas corporais com gráfico e histórico,saúde,could,yes,yes,"S17: peso, cintura e quadril; linha do peso com tabela"
 Sincronizar treinos passos e sono do Apple Saúde e Health Connect,saúde,could,yes,no,exige app nativo
@@ -96,7 +96,7 @@ Previsão do mês (realizado mais previsto) e projeção do saldo,finanças,shou
 Gastos por dia e por categoria com média diária,finanças,should,yes,yes,"S19: gráfico por dia (com tabela), por categoria, média, projeção e mês anterior"
 Lista 'a resolver' com contas atrasadas e próximas e botão confirmar,finanças,should,yes,no,S18
 Transferência entre contas e ajuste de saldo fora de gasto e receita,finanças,should,yes,no,site [conferir]
-Importar fatura ou comprovante por foto sem duplicar,finanças,could,yes,no,site [conferir]
+Importar fatura ou comprovante por foto sem duplicar,finanças,could,yes,partial,a foto do comprovante vira lançamento; falta checar duplicidade com o extrato | foto no chat e no WhatsApp
 Análises de vários meses,finanças,could,yes,yes,"S23: médias de 5 meses, entrou × saiu por mês e categorias contra a média"
 Valores a receber de terceiros,finanças,could,yes,no,site [conferir]
 Teto de gastos por categoria,finanças,should,yes,yes,"F5: tela em Dinheiro (barra, quanto falta), pela conversa ('teto de 500 em alimentação', apelidos como ifood), aviso no card, no WhatsApp e em Avisos ao cruzar 80% e 100%; soma inclui subcategorias (correcoes.spec.ts F5-*)"
@@ -110,8 +110,8 @@ Caixa de entrada de ideias para revisar depois,conhecimento,could,yes,no,site [c
 Mapa de conexões entre ideias,conhecimento,could,yes,no,site [conferir]
 Transformar nota em tarefa,conhecimento,could,yes,no,site [conferir]
 Registro de livros e cursos,conhecimento,could,yes,no,Google Play
-Criar revisão agendada com dia hora fontes e instrução,automações,should,yes,partial,"S27 lista, pausa e descreve; criar pela conversa com o Claude no /replica-backend"
-Revisão entregue no chat com push opcional,automações,should,yes,no,envio pela fila (QStash) no /replica-backend; S28 já guarda o que chegou
+Criar revisão agendada com dia hora fontes e instrução,automações,should,yes,yes,"criar pela conversa (diário, semanal, mensal ou uma vez, fontes e canal) e pela lista | create_automation"
+Revisão entregue no chat com push opcional,automações,should,yes,partial,"entregue nos Avisos e por push, WhatsApp ou e-mail; no chat não (o histórico do dia precisa começar pela pessoa) | lib/automations.ts"
 Histórico de execuções da automação,automações,could,yes,no,site [conferir]
 Prévia da revisão antes de salvar,automações,could,yes,no,site [conferir]
 Aviso de conta a vencer,avisos proativos,should,yes,partial,"o resumo da manhã (push e WhatsApp) cita as contas dos próximos 3 dias; aviso próprio 2 dias antes, não"

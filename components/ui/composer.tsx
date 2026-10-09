@@ -76,7 +76,7 @@ export function Composer({ onSend, sending = false, offline = false, onAttach, o
   }
   return (
     <form onSubmit={submit} className="flex items-end gap-1 rounded-xl border border-border bg-surface p-1.5 shadow-pop has-[textarea:focus-visible]:outline-2 has-[textarea:focus-visible]:outline-offset-2 has-[textarea:focus-visible]:outline-focus">
-      <IconButton label="Enviar um áudio" onClick={onAttach} disabled={blocked || !onAttach}><Paperclip className="size-5" /></IconButton>
+      <IconButton label="Enviar uma foto ou um áudio" onClick={onAttach} disabled={blocked || !onAttach}><Paperclip className="size-5" /></IconButton>
       <label htmlFor="composer" className="sr-only">Mensagem para o assistente</label>
       <textarea
         id="composer"

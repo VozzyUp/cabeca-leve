@@ -1,4 +1,4 @@
--- Cabeça Leve, passo 21 de 21: custo da IA por usuário e modelo (tela /admin/custos).
+-- Cabeça Leve, passo 21 de 22: custo da IA por usuário e modelo (tela /admin/custos).
 -- Supabase > SQL Editor > New query > cole TUDO > Run. Rode uma vez.
 -- Deve terminar com uma linha de conferência: tabela_ai_usage = true, funcao = true, migracoes_no_historico = 10.
 

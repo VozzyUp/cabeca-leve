@@ -12,6 +12,8 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   // imagem Docker enxuta: só o servidor e o que ele usa (Dockerfile)
   output: "standalone",
+  // o proxy.ts passa por todas as rotas e corta o corpo do pedido em 10 MB: foto e áudio vão até 12 MB
+  experimental: { proxyClientMaxBodySize: "13mb" },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

@@ -192,6 +192,42 @@ describe.skipIf(!run)("agente", () => {
     expect((await store.listGoals()).some((g) => g.title === "Meta sem valor")).toBe(false);
   });
 
+  it("foto vai junto da mensagem para o modelo, fica no histórico do dia e as antigas viram texto", async () => {
+    const { runAgent } = await import("./agent");
+    const photo = { mediaType: "image/jpeg" as const, data: Buffer.from("jpeg-de-mentira").toString("base64") };
+    replies.push(
+      msg([{ type: "tool_use", id: "toolu_foto", name: "record_transaction", input: { type: "expense", amount: 87.5, description: "Mercado Bom Preço", category: "Mercado", payment_method: "debit", occurred_on: null } }], "tool_use"),
+      msg([{ type: "text", text: "Registrei o comprovante." }], "end_turn"),
+    );
+    const before = requests.length;
+    const r = await runAgent({ store, text: "📷 Foto", channel: "web", now: new Date("2026-10-09T16:00:00Z"), images: [photo] });
+    expect(r.cards).toHaveLength(1);
+    expect(r.cards[0].value).toMatch(/87,50/);
+    const content = requests[before].body.messages.at(-1)!.content as Array<{ type: string; source?: { type: string; media_type: string; data: string } }>;
+    expect(content.map((b) => b.type)).toEqual(["text", "image"]);
+    expect(content[1].source).toEqual({ type: "base64", media_type: "image/jpeg", data: photo.data });
+    expect(requests[before].body.system as unknown as string).toBeDefined();
+    expect(JSON.stringify(requests[before].body.system)).toContain("Fotos:");
+
+    // na mensagem seguinte do mesmo dia, a foto continua no histórico (igual byte a byte)
+    replies.push(msg([{ type: "text", text: "Foi no débito." }], "end_turn"));
+    const n = requests.length;
+    await runAgent({ store, text: "foi no débito mesmo?", channel: "web", now: new Date("2026-10-09T16:05:00Z") });
+    expect(JSON.stringify(requests[n].body.messages)).toContain(photo.data);
+
+    // limpeza: troca a foto por texto e o resto do histórico continua intacto e somente-anexar
+    const { data: purged, error } = await admin.rpc("purge_old_message_images", { p_days: 0 });
+    expect(error).toBeNull();
+    expect(purged).toBeGreaterThanOrEqual(1);
+    const { data: rows } = await admin.from("messages").select("role, seq, content").eq("user_id", userId).order("seq");
+    expect(JSON.stringify(rows)).not.toContain(photo.data);
+    expect(JSON.stringify(rows)).toContain("[foto removida]");
+    const edit = await admin.from("messages").update({ content: [] }).eq("user_id", userId);
+    expect(edit.error?.message).toMatch(/somente-anexar/);
+    const noAnon = await createClient<Database>("http://127.0.0.1:54321", "sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH", { auth: { persistSession: false } }).rpc("purge_old_message_images", { p_days: 0 });
+    expect(noAnon.error).not.toBeNull();
+  });
+
   it("se a API falhar, fecha o turno com uma resposta e o histórico segue válido", async () => {
     const { runAgent } = await import("./agent");
     replies.push({ type: "error", error: { type: "invalid_request_error", message: "x" } });

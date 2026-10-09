@@ -13,8 +13,8 @@ A imagem não tem nenhuma chave dentro. No stack ficam só **7 valores de base**
 | `deploy/portainer-stack.yml` | o stack, no mesmo formato dos seus outros (rede `cloud`, `websecure`, `letsencryptresolver`) |
 | `.github/workflows/imagem.yml` | migrações, imagem e aviso ao Portainer a cada push |
 | `Dockerfile` | imagem do app (~350 MB, sem root, com checagem de saúde em `/api/health`) |
-| `supabase/migrations/` | as 10 migrações do banco |
-| `supabase/colar-no-sql-editor/` | as mesmas migrações em 21 arquivos pequenos, para colar no SQL Editor (plano C) |
+| `supabase/migrations/` | as 11 migrações do banco |
+| `supabase/colar-no-sql-editor/` | as mesmas migrações em 22 arquivos pequenos, para colar no SQL Editor (plano C) |
 
 ## 1. Supabase (uma vez)
 
@@ -43,8 +43,8 @@ npx supabase db push
 
 ### Caminho C: colando no SQL Editor
 
-Abra `supabase/colar-no-sql-editor/` e rode os **21 arquivos em ordem** (01, 02, 03…). Em cada um: SQL Editor > New query > cole o arquivo inteiro > Run. Cada um deve terminar com "Success. No rows returned"; o 20 mostra uma tabela de conferência (`tabelas_publicas = 57`, `tabelas_no_realtime = 23`, `migracoes_no_historico = 9` e o resto `true`) e o 21 fecha com `tabela_ai_usage = true`, `funcao = true`, `migracoes_no_historico = 10`.
-- **Já rodou os arquivos de 1 a 20 antes?** Rode só o **21** (custo da IA). Com o segredo `SUPABASE_DB_URL` no GitHub (caminho A), as migrações novas entram sozinhas a cada push.
+Abra `supabase/colar-no-sql-editor/` e rode os **22 arquivos em ordem** (01, 02, 03…). Em cada um: SQL Editor > New query > cole o arquivo inteiro > Run. Cada um deve terminar com "Success. No rows returned"; o 20 mostra uma tabela de conferência (`tabelas_publicas = 57`, `tabelas_no_realtime = 23`, `migracoes_no_historico = 9` e o resto `true`) e o 21 mostra `tabela_ai_usage = true`, `funcao = true`, `migracoes_no_historico = 10` e o 22 fecha com `funcao = true`, `indice = true`, `migracoes_no_historico = 11`.
+- **Já rodou os arquivos de 1 a 20 antes?** Rode só o **21** (custo da IA) e o **22** (limpeza das fotos antigas), nessa ordem. Com o segredo `SUPABASE_DB_URL` no GitHub (caminho A), as migrações novas entram sozinhas a cada push.
 
 - Rode cada arquivo **uma vez**. Se um falhar, ele não deixa nada pela metade: corrija e rode só ele de novo.
 - Confira que o projeto aberto é o certo (o ref na URL).

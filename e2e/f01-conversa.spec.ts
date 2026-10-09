@@ -1,3 +1,4 @@
+import sharp from "sharp";
 import { a11y, admin, expect, login, test } from "./fixtures";
 
 // F01: organizar várias coisas numa mensagem (o loop central)
@@ -98,5 +99,26 @@ test.describe("F01 conversa", () => {
     await box(page).press("Enter");
     await expect(page.getByText(/Muitas mensagens em pouco tempo/)).toBeVisible();
     await expect(page.getByText("gastei 7 no chiclete")).toBeVisible();
+  });
+});
+
+// foto: o arquivo inválido é recusado com 400 de propósito
+test.describe("F01 foto no chat", () => {
+  test.use({ allowConsole: [/status of 400/] });
+  test.beforeEach(async ({ page, user }) => { await login(page, user); });
+
+  test("F01-E8 foto anexada aparece na conversa e, sem a IA ligada, a resposta explica; arquivo que não é foto é recusado", async ({ page }) => {
+    await page.waitForLoadState("networkidle");
+    const png = await sharp({ create: { width: 1600, height: 900, channels: 3, background: "#cc3333" } }).png().toBuffer();
+    await page.locator('input[type="file"]').setInputFiles({ name: "comprovante.png", mimeType: "image/png", buffer: png });
+    await expect(page.getByText("📷 Foto")).toBeVisible();
+    await expect(page.getByText(/Ainda não leio fotos/)).toBeVisible();
+    await page.reload({ waitUntil: "networkidle" });
+    await expect(page.getByText("📷 Foto")).toBeVisible();  // ficou gravada
+    expect(await a11y(page)).toEqual([]);
+
+    await page.locator('input[type="file"]').setInputFiles({ name: "falso.png", mimeType: "image/png", buffer: Buffer.from("isto não é uma imagem") });
+    await expect(page.getByText(/Não consegui abrir essa foto/)).toBeVisible();
+    await expect(page.getByText("📷 Foto")).toHaveCount(1);  // a recusada não vira mensagem
   });
 });

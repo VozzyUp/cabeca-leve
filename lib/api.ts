@@ -21,6 +21,13 @@ export const api = {
   chatHistory: () => call<{ messages: ChatMessage[] }>("/api/chat/history"),
   sendMessage: (clientMessageId: string, text: string) =>
     call<{ messages: ChatMessage[] }>("/api/chat", { method: "POST", body: JSON.stringify({ clientMessageId, text }) }),
+  // foto: o corpo é a imagem; o servidor reduz e manda para o assistente
+  sendImage: async (clientMessageId: string, file: File, caption = "") => {
+    const res = await fetch(`/api/chat/image?id=${encodeURIComponent(clientMessageId)}&caption=${encodeURIComponent(caption)}`, { method: "POST", headers: { "Content-Type": file.type }, body: file });
+    const body = (await res.json().catch(() => ({}))) as { messages?: ChatMessage[]; error?: string };
+    if (!res.ok || !body.messages) throw new Error(body.error ?? "Não deu para enviar a foto.");
+    return { messages: body.messages };
+  },
   undo: (actionId: string) => call<{ ok: true }>(`/api/actions/${actionId}/undo`, { method: "POST" }),
   reminders: () => call<{ reminders: Reminder[]; timezone: string }>("/api/reminders"),
   createReminder: (input: { title: string; nextFireAt: string; recurrenceRule: string | null }) =>

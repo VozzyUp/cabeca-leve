@@ -1,4 +1,4 @@
--- Cabeça Leve, passo 19 de 21: confianca e configuracao.
+-- Cabeça Leve, passo 19 de 22: confianca e configuracao.
 -- Supabase > SQL Editor > New query > cole TUDO > Run. Rode os passos em ordem, uma vez cada.
 -- Deve terminar com: Success. No rows returned.
 

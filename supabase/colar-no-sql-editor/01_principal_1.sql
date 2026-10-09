@@ -1,4 +1,4 @@
--- Cabeça Leve, passo 1 de 21: banco principal (tabelas profiles, subscriptions, billing_events, channel_links, push_subscriptions, conversations).
+-- Cabeça Leve, passo 1 de 22: banco principal (tabelas profiles, subscriptions, billing_events, channel_links, push_subscriptions, conversations).
 -- Supabase > SQL Editor > New query > cole TUDO > Run. Rode os passos em ordem, uma vez cada.
 -- Deve terminar com: Success. No rows returned.
 

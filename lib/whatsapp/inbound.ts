@@ -7,6 +7,7 @@ import { findUserByNumber, tryVerify } from "./link";
 import { phoneVariants, toE164 } from "./phone";
 import { whatsapp, type Inbound } from "./provider";
 import { siteUrl } from "@/lib/public-env";
+import { ImageError, normalizeImage, type ChatImage } from "@/lib/image";
 
 const KIND: Record<ActionCardData["kind"], string> = {
   reminder: "Lembrete", transaction: "Lançamento", task: "Tarefa", habit: "Hábito", workout: "Ficha de treino", meal: "Plano alimentar",
@@ -43,9 +44,19 @@ export async function processInbound(msg: Inbound) {
     text = await transcribe(audio.data, audio.mimeType);
     if (!text) { await wa.sendText(msg.from, "Não consegui entender o áudio. Pode mandar de novo?"); return; }
   }
+  // foto (comprovante, fatura, plano): baixa, reduz e segue junto com a legenda
+  let images: ChatImage[] | undefined;
+  if (msg.image) {
+    try { images = [await normalizeImage((await wa.downloadImage(msg.image.ref)).data)]; }
+    catch (error) {
+      if (error instanceof ImageError) { await wa.sendText(msg.from, error.message); return; }
+      throw error;
+    }
+    text = msg.image.caption ?? "";
+  }
   const store = await storeForUser(userId);
   try {
-    const { reply } = await respond(store, text!, { channel: "whatsapp", externalMessageId: msg.externalId, now: msg.at });
+    const { reply } = await respond(store, text ?? "", { channel: "whatsapp", externalMessageId: msg.externalId, now: msg.at, ...(images ? { images } : {}) });
     await wa.sendText(msg.from, formatReply(reply.text, reply.cards));
   } catch (error) {
     // o provedor reenviou a mesma mensagem: já foi processada

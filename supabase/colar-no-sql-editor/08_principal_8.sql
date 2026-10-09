@@ -1,4 +1,4 @@
--- Cabeça Leve, passo 8 de 21: banco principal (tabelas statement_imports, goals, goal_entries, notebooks).
+-- Cabeça Leve, passo 8 de 22: banco principal (tabelas statement_imports, goals, goal_entries, notebooks).
 -- Supabase > SQL Editor > New query > cole TUDO > Run. Rode os passos em ordem, uma vez cada.
 -- Deve terminar com: Success. No rows returned.
 

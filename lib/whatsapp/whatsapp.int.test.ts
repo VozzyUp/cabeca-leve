@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import http from "node:http";
 import type { AddressInfo } from "node:net";
+import sharp from "sharp";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Database } from "@/lib/supabase/database.types";
 
@@ -14,17 +15,23 @@ describe.skipIf(!run)("WhatsApp (UAZAPI)", () => {
   let base = "";
   let userId = "";
   const admin = createClient<Database>("http://127.0.0.1:54321", (process.env.SUPABASE_SECRET_KEY ?? ""), { auth: { persistSession: false } });
+  let png: Buffer = Buffer.alloc(0);
   const number = "+5511987650000";
   const fromWithout9 = "551187650000";  // o WhatsApp às vezes manda sem o 9
 
   beforeAll(async () => {
+    png = await sharp({ create: { width: 2000, height: 1000, channels: 3, background: "#cc3333" } }).png().toBuffer();
     server = http.createServer((req, res) => {
       let data = "";
       req.on("data", (c) => (data += c));
       req.on("end", () => {
         res.setHeader("content-type", "application/json");
         if (req.url === "/send/text") { sent.push(JSON.parse(data)); return res.end("{}"); }
-        if (req.url === "/message/download") return res.end(JSON.stringify({ fileURL: `${base}/file.mp3`, mimetype: "audio/mpeg" }));
+        if (req.url === "/message/download") {
+          const photo = String((JSON.parse(data || "{}") as { id?: string }).id).startsWith("IMG");
+          return res.end(JSON.stringify(photo ? { fileURL: `${base}/foto.png`, mimetype: "image/png" } : { fileURL: `${base}/file.mp3`, mimetype: "audio/mpeg" }));
+        }
+        if (req.url === "/foto.png") { res.setHeader("content-type", "image/png"); return res.end(png); }
         if (req.url === "/file.mp3") { res.setHeader("content-type", "audio/mpeg"); return res.end(Buffer.from("ID3fake")); }
         if (req.url === "/audio/transcriptions") return res.end(JSON.stringify({ text: "me lembra de ligar pra minha mãe amanhã às 10h" }));
         res.statusCode = 404; res.end("{}");
@@ -90,6 +97,24 @@ describe.skipIf(!run)("WhatsApp (UAZAPI)", () => {
     expect(sent.length).toBe(before);
     const { data } = await admin.from("transactions").select("id").eq("user_id", userId);
     expect(data).toHaveLength(1);
+  });
+
+  it("foto chega com legenda: baixa, reduz e segue; sem IA ligada a resposta explica; formato inválido é recusado", async () => {
+    const { whatsapp } = await import("./provider");
+    const { processInbound } = await import("./inbound");
+    // o webhook entende foto (e ignora figurinha)
+    const wa = whatsapp()!;
+    const hook = (messageType: string, extra: object) => ({ EventType: "messages", message: { messageid: "P1", id: "IMG-P1", chatid: `${fromWithout9}@s.whatsapp.net`, fromMe: false, isGroup: false, messageType, messageTimestamp: 1760000000000, ...extra } });
+    expect(wa.parseWebhook(hook("ImageMessage", { text: "comprovante do mercado" }))).toEqual([expect.objectContaining({ text: null, audio: null, image: { ref: "IMG-P1", caption: "comprovante do mercado" } })]);
+    expect(wa.parseWebhook(hook("StickerMessage", {}))).toEqual([]);
+
+    const before = sent.length;
+    await processInbound({ externalId: "P2", from: fromWithout9, text: null, audio: null, image: { ref: "IMG-P2", caption: "comprovante do mercado" }, at: new Date() });
+    expect(sent.length).toBe(before + 1);
+    expect(sent.at(-1)!.text).toMatch(/Ainda não leio fotos/);
+    const { data: msgs } = await admin.from("messages").select("role, text_preview, content").eq("user_id", userId).order("seq", { ascending: false }).limit(2);
+    const user = msgs!.find((m) => m.role === "user")!;
+    expect(user.text_preview).toContain("📷 comprovante do mercado");
   });
 
   it("áudio é transcrito e processado", async () => {

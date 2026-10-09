@@ -1254,6 +1254,9 @@ isOneToOne: false
               "created_at": string,"id": string
             }[]
                            },
+"purge_old_message_images":
+{ Args: { "p_days"?: number }; Returns: number
+                           },
 "release_turn":
 { Args: { "p_conversation": string,"p_user": string }; Returns: undefined
                            },

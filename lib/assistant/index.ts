@@ -5,6 +5,7 @@ import { agentEnabled, runAgent } from "./agent";
 import { siteUrl } from "@/lib/public-env";
 import { formatDue } from "@/lib/support";
 import { parseBudget, parseMessage, wantsHuman } from "./rule-parser";
+import type { ChatImage } from "@/lib/image";
 import { createHabit, createReminder, createTask, recordTransaction, setBudgetByName } from "./tools";
 
 export type AssistantReply = { text: string; cards: ActionCardData[] };
@@ -58,7 +59,9 @@ const LIMIT_PER_DAY = 400;
 // Claude; sem ela, o intérprete de regras (só para testes e demonstração).
 export async function respond(store: DataStore, text: string, opts: {
   channel: "web" | "whatsapp" | "voice"; clientMessageId?: string; externalMessageId?: string; now?: Date;
+  images?: ChatImage[];  // fotos desta mensagem (já reduzidas); o texto pode ser a legenda ou vazio
 }): Promise<{ user: ChatMessage | null; reply: AssistantReply; stored?: false }> {
+  if (opts.images?.length) text = text.trim() ? `📷 ${text.trim()}` : "📷 Foto";
   // teste grátis acabou e não há assinatura: guarda a mensagem e explica, sem rodar o assistente
   if (isSupabaseConfigured() && (await store.getSettings()).plan === "none") {
     const site = siteUrl();
@@ -78,7 +81,7 @@ export async function respond(store: DataStore, text: string, opts: {
 }
 
 async function turn(store: DataStore, text: string, opts: {
-  channel: "web" | "whatsapp" | "voice"; clientMessageId?: string; externalMessageId?: string; now?: Date;
+  channel: "web" | "whatsapp" | "voice"; clientMessageId?: string; externalMessageId?: string; now?: Date; images?: ChatImage[];
 }): Promise<{ user: ChatMessage | null; reply: AssistantReply; stored?: false }> {
   // limite de uso: protege o custo de IA (e o número de WhatsApp) contra abuso
   const [lastMinute, lastDay] = await Promise.all([
@@ -94,7 +97,10 @@ async function turn(store: DataStore, text: string, opts: {
     return { user: null, reply };
   }
   const user = await store.appendMessage({ role: "user", text, cards: [], channel: opts.channel, clientMessageId: opts.clientMessageId, externalMessageId: opts.externalMessageId });
-  const reply = await handleMessage(store, text, opts.now, opts.channel);
+  // sem a IA ligada (demonstração e testes) não há como ler a foto
+  const reply = opts.images?.length
+    ? { text: "Ainda não leio fotos neste app. Escreva o que tem nela, por exemplo “gastei 45 no mercado”.", cards: [] }
+    : await handleMessage(store, text, opts.now, opts.channel);
   await store.appendMessage({ role: "assistant", text: reply.text, cards: reply.cards, channel: opts.channel });
   return { user, reply };
 }

@@ -1,4 +1,4 @@
--- Cabeça Leve, passo 3 de 21: banco principal (tabelas categories, accounts, cards, card_invoices, installment_purchases).
+-- Cabeça Leve, passo 3 de 22: banco principal (tabelas categories, accounts, cards, card_invoices, installment_purchases).
 -- Supabase > SQL Editor > New query > cole TUDO > Run. Rode os passos em ordem, uma vez cada.
 -- Deve terminar com: Success. No rows returned.
 

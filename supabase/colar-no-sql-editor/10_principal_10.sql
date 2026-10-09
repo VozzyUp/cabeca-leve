@@ -1,4 +1,4 @@
--- Cabeça Leve, passo 10 de 21: banco principal (tabelas integration_secrets, calendars, calendar_events, automations, automation_runs).
+-- Cabeça Leve, passo 10 de 22: banco principal (tabelas integration_secrets, calendars, calendar_events, automations, automation_runs).
 -- Supabase > SQL Editor > New query > cole TUDO > Run. Rode os passos em ordem, uma vez cada.
 -- Deve terminar com: Success. No rows returned.
 

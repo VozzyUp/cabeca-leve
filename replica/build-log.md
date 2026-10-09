@@ -156,3 +156,16 @@ Paridade 63,2/100; **40 de 40 obrigatórias completas**.
   - o `.dockerignore` excluía `scripts/`, e o build falhava;
   - a checagem de saúde tinha a porta fixa;
   - o `<script>` da configuração estava fora do lugar, e o React reclamava. A bateria de 60 testes pegou esse.
+
+## 2026-10-09: produção na VPS, painel de admin, custo da IA e as áreas que só existiam como tela
+
+- **Configuração pelo app (`/admin/configuracoes`):** as chaves dos serviços ficam no banco, criptografadas com `APP_SECRET_KEY`, e valem na hora. O stack só leva 7 valores de base.
+- **Atualização automática:** a Action aplica as migrações novas, monta a imagem e avisa o Portainer.
+- **Defeitos de produção que os testes não pegaram (a API real recusa o que a simulada aceita):** 22 ferramentas em modo estrito (limite 20), parâmetros nulos demais (limite 16), gramática grande demais; resolvido tirando o modo estrito (o Zod valida). Lembrete concluído não reabria (o banco exige data no ativo): a data agora fica guardada. Leitura de configuração que se juntava a outra em andamento: agora entra em fila.
+- **Modelo e nível do assistente escolhidos na tela** (Haiku 5.5, Sonnet 5.5 ou Opus 5.5; padrão Sonnet no nível médio) e **Custo da IA por usuário e por modelo** (`/admin/custos`), com o uso somado de todas as chamadas de cada mensagem.
+- **Áreas que só existiam como tela, agora completas:** o chat cria ficha de treino, plano alimentar, projeto com etapas, meta (dinheiro ou contagem) e peso, marca etapa, treino e refeição como feitos, soma progresso e remove (10 ferramentas novas; desfazer de cada criação devolve a ficha ou o plano de antes). Os cards seguem a ordem do pedido.
+- **Revisões agendadas de verdade:** `create_automation` no chat; a varredura de cada minuto monta o texto com os dados da pessoa (tarefas, projetos, hábitos, metas, dinheiro, notas), entrega nos Avisos e por push, WhatsApp ou e-mail, registra cada execução e o custo, pula a que passou de 3 h de atraso e nunca roda duas vezes o mesmo horário. Limite de 10 ativas por pessoa.
+- **Foto no chat e no WhatsApp:** a foto é reduzida a 1280 px no servidor (sharp), sem metadados, vai junto da mensagem para o Claude e fica no histórico do dia; depois de 2 dias vira "[foto removida]" (única exceção ao histórico somente-anexar, por função própria).
+- **Fica para depois:** Google Agenda e Outlook (login no Google e na Microsoft, tokens, sincronização), avisos proativos, memória, PDF no chat.
+- **Migrações novas:** `20261009000100_custo_ia` e `20261009000200_fotos` (arquivos 21 e 22 para colar no SQL Editor).
+

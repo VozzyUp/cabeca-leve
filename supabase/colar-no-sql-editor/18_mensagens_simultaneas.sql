@@ -1,4 +1,4 @@
--- Cabeça Leve, passo 18 de 21: mensagens_simultaneas.
+-- Cabeça Leve, passo 18 de 22: mensagens_simultaneas.
 -- Supabase > SQL Editor > New query > cole TUDO > Run. Rode os passos em ordem, uma vez cada.
 -- Deve terminar com: Success. No rows returned.
 

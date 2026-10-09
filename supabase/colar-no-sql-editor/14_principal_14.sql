@@ -1,4 +1,4 @@
--- Cabeça Leve, passo 14 de 21: banco principal (funções, views, cadastro e segurança).
+-- Cabeça Leve, passo 14 de 22: banco principal (funções, views, cadastro e segurança).
 -- Supabase > SQL Editor > New query > cole TUDO > Run. Rode os passos em ordem, uma vez cada.
 -- Deve terminar com: Success. No rows returned.
 
