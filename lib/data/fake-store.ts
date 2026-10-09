@@ -319,6 +319,7 @@ export const fakeStore: DataStore = {
     }));
   },
 
+  async recordAiUsage() {},  // sem banco, sem painel de custo
   async recordAction(entity, entityId) {
     const a: ActionRecord = { id: id(), entity, entityId, operation: "create", undoneAt: null };
     mutate((s) => s.actions.push(a));

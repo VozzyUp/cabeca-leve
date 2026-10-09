@@ -246,6 +246,14 @@ export async function createSupabaseStore(db: Admin, userId: string, email: stri
       return must(accounts).map((a) => ({ id: a.id, name: a.name, openingBalanceCents: a.opening_balance_cents, balanceCents: bal.get(a.id) ?? a.opening_balance_cents }));
     },
 
+    async recordAiUsage(rows) {
+      if (!rows.length) return;
+      const turn = crypto.randomUUID();
+      must(await db.from("ai_usage").insert(rows.map((r) => ({
+        user_id: userId, turn_id: turn, model: r.model, calls: r.calls, input_tokens: r.inputTokens, output_tokens: r.outputTokens,
+        cache_read_tokens: r.cacheReadTokens, cache_write_tokens: r.cacheWriteTokens,
+      }))));
+    },
     async recordAction(entity, entityId) {
       const a = must(await db.from("actions").insert({
         user_id: userId, tool_name: `create_${entity}`, entity_table: ENTITY_TABLE[entity], entity_id: entityId, operation: "create", after: {},

@@ -1,4 +1,4 @@
--- Cabeça Leve, passo 16 de 20: telas (avisos e cadastro) e conta_inicial.
+-- Cabeça Leve, passo 16 de 21: telas (avisos e cadastro) e conta_inicial.
 -- Supabase > SQL Editor > New query > cole TUDO > Run. Rode os passos em ordem, uma vez cada.
 -- Deve terminar com: Success. No rows returned.
 

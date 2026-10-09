@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { betaZodTool } from "@anthropic-ai/sdk/helpers/beta/zod";
 import type { BetaMessage, BetaMessageParam } from "@anthropic-ai/sdk/resources/beta/messages/messages";
 import { z } from "zod";
-import type { DataStore } from "@/lib/data/store";
+import type { AiUsageInput, DataStore } from "@/lib/data/store";
 import type { ActionCardData } from "@/lib/data/types";
 import { dayItems } from "@/lib/domain/day";
 import { budgetStatus, financeSummary } from "@/lib/domain/finance";
@@ -434,6 +434,21 @@ export async function pingAgent(): Promise<{ ok: true; model: string; effort: st
   }
 }
 
+// Soma os tokens das chamadas da mensagem por modelo e grava para o painel de custos (/admin/custos).
+// Falha ao gravar o custo nunca atrapalha a resposta.
+async function saveUsage(store: DataStore, calls: BetaMessage[]) {
+  const byModel = new Map<string, AiUsageInput>();
+  for (const c of calls) {
+    const r = byModel.get(c.model) ?? { model: c.model, calls: 0, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 };
+    r.calls += 1;
+    r.inputTokens += c.usage.input_tokens; r.outputTokens += c.usage.output_tokens;
+    r.cacheReadTokens += c.usage.cache_read_input_tokens ?? 0; r.cacheWriteTokens += c.usage.cache_creation_input_tokens ?? 0;
+    byModel.set(c.model, r);
+  }
+  try { await store.recordAiUsage([...byModel.values()]); }
+  catch (error) { console.error("custo da IA não gravado", (error as Error).message); }
+}
+
 export async function runAgent({ store, text, channel, clientMessageId, externalMessageId, now = new Date() }: AgentInput): Promise<AgentReply> {
   const tz = store.timezone();
   const history = (await store.listTodayTranscript()) as BetaMessageParam[];
@@ -450,9 +465,12 @@ export async function runAgent({ store, text, channel, clientMessageId, external
 
   let final: BetaMessage;
   let runner: ReturnType<Anthropic["beta"]["messages"]["toolRunner"]>;
+  const calls: BetaMessage[] = [];  // cada chamada à API da mensagem, para somar o custo (também se der erro no meio)
   try {
     runner = anthropic().beta.messages.toolRunner(turnParams(buildTools(store, now, cards, channel), messages));
-    final = await runner.runUntilDone();
+    for await (const call of runner) calls.push(call as BetaMessage);  // sem stream: cada item é uma mensagem completa
+    if (!calls.length) throw new Error("a API não devolveu resposta");
+    final = calls[calls.length - 1];
   } catch (error) {
     // fecha o turno com uma resposta, para o histórico continuar válido na próxima mensagem
     console.error("agente falhou", error instanceof Anthropic.APIError ? `${error.status} ${error.message}` : error);
@@ -460,12 +478,18 @@ export async function runAgent({ store, text, channel, clientMessageId, external
       ? "Salvei o que deu, mas tive um problema no meio. Confira os cards e me peça de novo o que faltou."
       : "Não consegui responder agora. Tente de novo em instantes.";
     await store.appendMessage({ role: "assistant", text, cards, content: [{ type: "text", text }], channel });
+    await saveUsage(store, calls);
     return { text, cards };
   }
+  await saveUsage(store, calls);
 
   // grava cada passo novo como veio (somente-anexar); só a resposta final aparece na tela
   const steps = runner.params.messages.slice(messages.length);
-  const usage = { model: final.model, inputTokens: final.usage.input_tokens, outputTokens: final.usage.output_tokens, cacheReadTokens: final.usage.cache_read_input_tokens ?? 0 };
+  // uso gravado na mensagem: a soma das chamadas do turno (o custo por modelo fica em ai_usage)
+  const usage = {
+    model: final.model, inputTokens: calls.reduce((n, c) => n + c.usage.input_tokens, 0), outputTokens: calls.reduce((n, c) => n + c.usage.output_tokens, 0),
+    cacheReadTokens: calls.reduce((n, c) => n + (c.usage.cache_read_input_tokens ?? 0), 0),
+  };
   const replyText = final.stop_reason === "refusal"
     ? "Não posso ajudar com esse pedido."
     : final.content.filter((b) => b.type === "text").map((b) => b.text).join("\n").trim() || (cards.length ? "Feito." : "Pode repetir de outro jeito?");

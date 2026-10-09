@@ -62,6 +62,30 @@ describe.skipIf(!run)("SupabaseStore", () => {
     expect((await a.listMessages()).at(-1)?.cards[0].undone).toBe(true);
   });
 
+  it("custo da IA: grava por modelo, soma no período e só o servidor enxerga", async () => {
+    await a.recordAiUsage([
+      { model: "claude-sonnet-5-5", calls: 2, inputTokens: 100, outputTokens: 20, cacheReadTokens: 50, cacheWriteTokens: 10 },
+      { model: "claude-opus-5-5", calls: 1, inputTokens: 5, outputTokens: 1, cacheReadTokens: 0, cacheWriteTokens: 0 },
+    ]);  // uma mensagem respondida por dois modelos (reserva automática)
+    await a.recordAiUsage([{ model: "claude-sonnet-5-5", calls: 3, inputTokens: 200, outputTokens: 30, cacheReadTokens: 0, cacheWriteTokens: 5 }]);
+    const { data, error } = await admin.rpc("admin_ai_usage", { p_from: new Date(Date.now() - 3_600_000).toISOString(), p_to: new Date(Date.now() + 60_000).toISOString() });
+    expect(error).toBeNull();
+    const mine = (data ?? []).filter((r) => r.user_id === users[0]);
+    const sonnet = mine.find((r) => r.model === "claude-sonnet-5-5")!;
+    expect(sonnet).toMatchObject({ turns: 2, calls: 5, input_tokens: 300, output_tokens: 50, cache_read_tokens: 50, cache_write_tokens: 15 });
+    expect(mine.find((r) => r.model === "claude-opus-5-5")).toMatchObject({ turns: 1, calls: 1 });
+    // período vazio não devolve nada
+    const old = await admin.rpc("admin_ai_usage", { p_from: "2020-01-01T00:00:00Z", p_to: "2020-01-02T00:00:00Z" });
+    expect((old.data ?? []).filter((r) => r.user_id === users[0])).toEqual([]);
+    // quem usa a chave pública (ou está logado) não lê a tabela nem chama a função
+    const anon = createClient<Database>(URL, PUBLISHABLE, { auth: { persistSession: false } });
+    expect((await anon.from("ai_usage").select("id")).error).not.toBeNull();
+    expect((await anon.rpc("admin_ai_usage", { p_from: "2020-01-01T00:00:00Z", p_to: "2030-01-01T00:00:00Z" })).error).not.toBeNull();
+    const logged = createClient<Database>(URL, PUBLISHABLE, { auth: { persistSession: false } });
+    await logged.auth.signInWithPassword({ email: `a-${stamp}@teste.local`, password });
+    expect((await logged.from("ai_usage").select("id")).error).not.toBeNull();
+  });
+
   it("concluir e reabrir um lembrete funciona, também o que repete e o concluído sem data", async () => {
     const weekly = await a.createReminder({ title: "Terapia", nextFireAt: "2026-10-07T13:30:00Z", recurrenceRule: "FREQ=WEEKLY;INTERVAL=1;BYDAY=WE" });
     const done = await a.updateReminder(weekly.id, { status: "done" });

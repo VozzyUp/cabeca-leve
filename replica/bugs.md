@@ -17,6 +17,7 @@ Só entra aqui o que foi reproduzido. Cada correção tem um teste que falhava a
 | BUG-010 | S4 | mudar dois ajustes seguidos desfaz o primeiro na tela | corrigido |
 | BUG-011 | S1 | a conversa não responde em produção: 22 ferramentas estritas, a API aceita 20; depois 23 parâmetros nulos; depois gramática grande demais | corrigido |
 | BUG-012 | S2 | lembrete concluído não volta a ficar ativo: "Não deu para carregar os lembretes" | corrigido |
+| BUG-013 | S3 | configuração salva ou apagada na tela podia continuar com o valor antigo até 30 s (leitura juntada a outra em andamento) | corrigido |
 | BUG-005 | S4 | criar lembrete antes de a lista carregar diz "Escolha o dia e a hora" com tudo preenchido | corrigido |
 
 ### BUG-002: o login leva para um site de fora (redirecionamento aberto)
@@ -224,6 +225,16 @@ Status: corrigido no commit das correções F5 a F7
 - Atual: volta ao estado de concluído e aparece "Não deu para carregar os lembretes". O banco tem a regra `status <> 'active' or next_fire_at is not null`; ao concluir, o app apagava a data do aviso, então ao reabrir não havia data para devolver e a gravação falhava. Valia para todo lembrete.
 - Por que os testes não pegaram: o banco simulado dos testes de tela não tem essa regra, e nenhum teste reabria um lembrete no banco real.
 - Correção: concluir agora guarda a data do aviso (a varredura só olha os ativos). Reabrir usa a data guardada; se já passou e o lembrete repete, a próxima ocorrência; se não repete, fica como atrasado. Lembrete concluído antes da correção (sem data) reabre na próxima hora cheia, ou na próxima ocorrência da repetição. Testes: `reopenFireAt` (unidade), concluir e reabrir no banco real (integração, falha sem a correção) e F04-E4 (tela).
+- Status: corrigido
+
+### BUG-013: configuração salva ou apagada podia continuar com o valor antigo
+
+- Severidade: S3 (some sozinho em até 30 s; mas "vale na hora" não valia sempre)
+- Fluxo / caso: ADM-H1 e ADM-H2, achado ao rodar a tela de custos
+- Esperado: depois de salvar ou apagar uma chave na tela de admin, o app já usa o valor novo.
+- Atual: se uma leitura periódica da configuração já estava em andamento, a leitura forçada depois da gravação se juntava a ela e devolvia o valor de antes da gravação.
+- Correção: leituras forçadas entram numa fila e começam depois da leitura em andamento; a periódica aproveita a que já está rodando.
+- Observação de teste: dois testes de admin falharam também por causa dos testes, não do app: o F3 apaga e recria a conta "dono" em outro processo (derrubava a sessão do teste de admin), e o login do teste navegava com a conversa ainda carregando. O admin.spec agora tem conta própria e o login espera a página assentar.
 - Status: corrigido
 
 ## Para conferir (não reproduzido como falha visível)

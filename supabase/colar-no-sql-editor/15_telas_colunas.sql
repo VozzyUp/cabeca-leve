@@ -1,4 +1,4 @@
--- Cabeça Leve, passo 15 de 20: telas (colunas novas).
+-- Cabeça Leve, passo 15 de 21: telas (colunas novas).
 -- Supabase > SQL Editor > New query > cole TUDO > Run. Rode os passos em ordem, uma vez cada.
 -- Deve terminar com: Success. No rows returned.
 

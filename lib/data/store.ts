@@ -4,6 +4,8 @@ import type {
   Budget, SupportTicket, Transaction, Workout, WorkoutLog,
 } from "./types";
 
+export type AiUsageInput = { model: string; calls: number; inputTokens: number; outputTokens: number; cacheReadTokens: number; cacheWriteTokens: number };
+
 // Mensagem a gravar. `content` são os blocos exatos da API (reenviados byte a byte ao modelo);
 // `visible: false` guarda passos internos do agente (chamadas e resultados de ferramenta).
 export type AppendMessage = Omit<ChatMessage, "id" | "createdAt" | "role"> & {
@@ -47,6 +49,8 @@ export interface DataStore {
   archiveCategory(id: string): Promise<boolean>;
   listAccounts(): Promise<Array<Account & { balanceCents: number }>>;
   recordAction(entity: ActionRecord["entity"], entityId: string): Promise<ActionRecord>;
+  // custo da IA: tokens de uma mensagem respondida, somados por modelo (tela /admin/custos)
+  recordAiUsage(rows: AiUsageInput[]): Promise<void>;
   undoAction(id: string): Promise<{ ok: true } | { ok: false; reason: "not_found" | "already_undone" }>;
   listMessages(): Promise<ChatMessage[]>;
   appendMessage(msg: AppendMessage): Promise<ChatMessage>;

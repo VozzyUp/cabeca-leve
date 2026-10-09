@@ -1,4 +1,4 @@
-import { Bell, ChevronRight, CreditCard, Inbox, KeyRound, LifeBuoy, Sparkles } from "lucide-react";
+import { Bell, ChevronRight, Coins, CreditCard, Inbox, KeyRound, LifeBuoy, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { cancelPlan } from "@/app/actions";
 import { Card } from "@/components/ui/card";
@@ -44,6 +44,7 @@ export async function SettingsScreen() {
         <LinkRow href="/ajustes/assistente" icon={Sparkles} title="Jeito do assistente" hint="tom, voz, memória e tema" />
         <LinkRow href="/ajustes/suporte" icon={LifeBuoy} title="Falar com uma pessoa" hint="resposta de alguém do time em até 1 dia útil" />
         {admin && <LinkRow href="/admin/configuracoes" icon={KeyRound} title="Configuração do sistema" hint="chaves dos serviços (só para o time)" />}
+        {admin && <LinkRow href="/admin/custos" icon={Coins} title="Custo da IA" hint="gasto por usuário e por modelo (só para o time)" />}
         {admin && <LinkRow href="/suporte/painel" icon={Inbox} title="Chamados de suporte" hint="responder quem pediu uma pessoa (só para o time)" />}
         <LinkRow href="/avisos" icon={Bell} title="Avisos" hint={unread ? `${unread} novo${unread === 1 ? "" : "s"}` : "tudo lido"} />
       </Card>

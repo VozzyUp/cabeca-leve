@@ -57,6 +57,20 @@ isOneToOne: false
       referencedColumns: ["id","user_id"]
     }
                   ]
+                },"ai_usage": {
+                  Row: {
+                    "cache_read_tokens": number,"cache_write_tokens": number,"calls": number,"created_at": string,"id": number,"input_tokens": number,"model": string,"output_tokens": number,"turn_id": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "cache_read_tokens"?: number,"cache_write_tokens"?: number,"calls": number,"created_at"?: string,"id"?: never,"input_tokens"?: number,"model": string,"output_tokens"?: number,"turn_id": string,"user_id": string
+                  }
+                  Update: {
+                    "cache_read_tokens"?: number,"cache_write_tokens"?: number,"calls"?: number,"created_at"?: string,"id"?: never,"input_tokens"?: number,"model"?: string,"output_tokens"?: number,"turn_id"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"alert_events": {
                   Row: {
                     "created_at": string,"dedupe_key": string,"fired_at": string,"id": string,"payload": NonNullable<Json>,"rule_id": string,"updated_at": string,"user_id": string
@@ -1229,6 +1243,11 @@ isOneToOne: false
           Functions: {
             "acquire_turn":
 { Args: { "p_conversation": string,"p_seconds": number,"p_user": string }; Returns: boolean
+                           },
+"admin_ai_usage":
+{ Args: { "p_from": string,"p_to": string }; Returns: {
+              "cache_read_tokens": number,"cache_write_tokens": number,"calls": number,"input_tokens": number,"model": string,"output_tokens": number,"turns": number,"user_id": string
+            }[]
                            },
 "append_message":
 { Args: { "p_cache_read_tokens": number,"p_cards": Json,"p_channel": string,"p_client_message_id": string,"p_content": Json,"p_conversation": string,"p_external_message_id": string,"p_input_tokens": number,"p_model": string,"p_output_tokens": number,"p_role": string,"p_text_preview": string,"p_user": string,"p_visible": boolean }; Returns: {

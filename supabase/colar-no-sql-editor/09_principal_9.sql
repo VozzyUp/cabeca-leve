@@ -1,4 +1,4 @@
--- Cabeça Leve, passo 9 de 20: banco principal (tabelas notes, note_links, journal_entries, embeddings, integrations).
+-- Cabeça Leve, passo 9 de 21: banco principal (tabelas notes, note_links, journal_entries, embeddings, integrations).
 -- Supabase > SQL Editor > New query > cole TUDO > Run. Rode os passos em ordem, uma vez cada.
 -- Deve terminar com: Success. No rows returned.
 

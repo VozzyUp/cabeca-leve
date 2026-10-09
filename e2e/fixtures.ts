@@ -24,7 +24,10 @@ export async function login(page: Page, user: TestUser, path = "/conversa") {
   await page.getByLabel("Senha").fill(PASSWORD);
   await page.getByRole("button", { name: "Entrar", exact: true }).last().click();
   await page.waitForURL("**/conversa");
-  if (path !== "/conversa") await page.goto(path);
+  if (path !== "/conversa") {
+    await page.waitForLoadState("networkidle");  // a conversa ainda carrega: navegar agora aborta a página
+    await page.goto(path);
+  }
   await page.waitForLoadState("networkidle");  // só mexe depois da hidratação
 }
 

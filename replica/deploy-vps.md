@@ -13,8 +13,8 @@ A imagem não tem nenhuma chave dentro. No stack ficam só **7 valores de base**
 | `deploy/portainer-stack.yml` | o stack, no mesmo formato dos seus outros (rede `cloud`, `websecure`, `letsencryptresolver`) |
 | `.github/workflows/imagem.yml` | migrações, imagem e aviso ao Portainer a cada push |
 | `Dockerfile` | imagem do app (~350 MB, sem root, com checagem de saúde em `/api/health`) |
-| `supabase/migrations/` | as 9 migrações do banco |
-| `supabase/colar-no-sql-editor/` | as mesmas migrações em 20 arquivos pequenos, para colar no SQL Editor (plano C) |
+| `supabase/migrations/` | as 10 migrações do banco |
+| `supabase/colar-no-sql-editor/` | as mesmas migrações em 21 arquivos pequenos, para colar no SQL Editor (plano C) |
 
 ## 1. Supabase (uma vez)
 
@@ -43,7 +43,8 @@ npx supabase db push
 
 ### Caminho C: colando no SQL Editor
 
-Abra `supabase/colar-no-sql-editor/` e rode os **20 arquivos em ordem** (01, 02, 03…). Em cada um: SQL Editor > New query > cole o arquivo inteiro > Run. Cada um deve terminar com "Success. No rows returned"; o último mostra uma tabela de conferência (`tabelas_publicas = 57`, `tabelas_no_realtime = 23`, `migracoes_no_historico = 9` e o resto `true`).
+Abra `supabase/colar-no-sql-editor/` e rode os **21 arquivos em ordem** (01, 02, 03…). Em cada um: SQL Editor > New query > cole o arquivo inteiro > Run. Cada um deve terminar com "Success. No rows returned"; o 20 mostra uma tabela de conferência (`tabelas_publicas = 57`, `tabelas_no_realtime = 23`, `migracoes_no_historico = 9` e o resto `true`) e o 21 fecha com `tabela_ai_usage = true`, `funcao = true`, `migracoes_no_historico = 10`.
+- **Já rodou os arquivos de 1 a 20 antes?** Rode só o **21** (custo da IA). Com o segredo `SUPABASE_DB_URL` no GitHub (caminho A), as migrações novas entram sozinhas a cada push.
 
 - Rode cada arquivo **uma vez**. Se um falhar, ele não deixa nada pela metade: corrija e rode só ele de novo.
 - Confira que o projeto aberto é o certo (o ref na URL).
@@ -105,6 +106,7 @@ Sem eles a imagem é publicada do mesmo jeito; só as etapas correspondentes avi
    | WhatsApp | provedor, número do assistente, endereço e token da UAZAPI; use **Gerar** no segredo do webhook |
    | Cobrança | ambiente (sandbox ou produção), chave da Asaas; use **Gerar** no token do webhook |
    | E-mail | chave da Resend e remetente |
+   | Custos (painel) | cotação do dólar, só para converter os valores da tela **Custo da IA** (padrão R$ 5,50) |
    | Notificações | **Gerar** cria o par de chaves do push |
    | Suporte | e-mail e WhatsApp que recebem os chamados |
 

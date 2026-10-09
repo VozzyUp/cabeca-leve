@@ -1,8 +1,9 @@
-import { admin, expect, login, mockCalls, PASSWORD, test, type TestUser } from "./fixtures";
+import { randomUUID } from "node:crypto";
+import { a11y, admin, expect, login, mockCalls, PASSWORD, test, type TestUser } from "./fixtures";
 
 // Tela de configuração do sistema (/admin/configuracoes): as chaves dos serviços no banco,
 // criptografadas, valendo na hora. Usa campos que os outros testes não leem (rodam em paralelo).
-const ADMIN = "dono-e2e@exemplo.com.br";
+const ADMIN = "config-e2e@exemplo.com.br";  // conta própria: o F3 (confianca.spec) apaga e recria o dono-e2e em paralelo
 async function adminUser(): Promise<TestUser> {
   const { data } = await admin.auth.admin.listUsers({ perPage: 1000 });
   const old = data.users.find((u) => u.email === ADMIN);
@@ -89,11 +90,42 @@ test("ADM-H2 o dono escolhe o modelo e o nível do assistente; sem escolha vale 
   await admin.from("app_settings").delete().in("key", ["ANTHROPIC_MODEL", "ANTHROPIC_EFFORT"]);
 });
 
+test("ADM-H3 o dono vê o custo da IA por usuário e por modelo, em dólar e em real", async ({ page, user }) => {
+  const owner = await adminUser();
+  const row = (model: string, turn: string, input: number, output: number, calls = 2) =>
+    ({ user_id: user.id, turn_id: turn, model, calls, input_tokens: input, output_tokens: output, cache_read_tokens: 0, cache_write_tokens: 0 });
+  const t1 = randomUUID(), t2 = randomUUID(), t3 = randomUUID();
+  const { error } = await admin.from("ai_usage").insert([
+    row("claude-sonnet-5-5", t1, 600_000, 60_000), row("claude-sonnet-5-5", t2, 400_000, 40_000),  // Sonnet: 1M entrada + 100 mil saída = US$ 3,00
+    row("claude-haiku-5-5", t3, 1_000_000, 0),                                                      // Haiku: US$ 0,10
+  ]);
+  expect(error).toBeNull();
+  await login(page, owner, "/ajustes");
+  await page.getByRole("link", { name: /Custo da IA/ }).click();
+  await expect(page.getByRole("heading", { name: "Custo da IA" })).toBeVisible();
+  await page.getByRole("link", { name: "Hoje" }).click();
+  await expect(page).toHaveURL(/periodo=hoje/);
+
+  const mine = page.getByRole("row", { name: new RegExp(user.email) });
+  await expect(mine).toContainText("3");          // mensagens: 2 do Sonnet + 1 do Haiku
+  await expect(mine).toContainText(/US\$\s3,10/);  // US$ 3,00 + US$ 0,10
+  await expect(mine).toContainText(/R\$\s17,05/);  // a US$ 1 = R$ 5,50
+  await expect(mine).toContainText(/Sonnet 5\.5: 2 msg · US\$\s3,00/);
+  await expect(mine).toContainText(/Haiku 5\.5: 1 msg · US\$\s0,10/);
+  await expect(page.getByRole("row", { name: /^Sonnet 5.5/ })).toBeVisible();
+  await expect(page.getByRole("row", { name: /^Haiku 5.5/ })).toBeVisible();
+  expect(await a11y(page)).toEqual([]);
+  await admin.from("ai_usage").delete().eq("user_id", user.id);
+});
+
 test("ADM-N1 quem não é admin não vê a tela nem o atalho, e não consegue salvar", async ({ page, user }) => {
   await login(page, user, "/ajustes");
   await expect(page.getByRole("link", { name: /Configuração do sistema/ })).toHaveCount(0);
   await page.goto("/admin/configuracoes");
   await expect(page.getByRole("heading", { name: "Configuração do sistema" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: /Custo da IA/ })).toHaveCount(0);
+  await page.goto("/admin/custos");
+  await expect(page.getByRole("heading", { name: "Custo da IA" })).toHaveCount(0);
   const { count } = await admin.from("app_settings").select("key", { count: "exact", head: true });
   expect(count).toBe(0);
 });

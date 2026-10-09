@@ -1,4 +1,4 @@
--- Cabeça Leve, passo 7 de 20: banco principal (tabelas transactions, budgets).
+-- Cabeça Leve, passo 7 de 21: banco principal (tabelas transactions, budgets).
 -- Supabase > SQL Editor > New query > cole TUDO > Run. Rode os passos em ordem, uma vez cada.
 -- Deve terminar com: Success. No rows returned.
 

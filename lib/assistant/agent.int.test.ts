@@ -60,6 +60,11 @@ describe.skipIf(!run)("agente", () => {
     expect(reply.cards).toHaveLength(1);
     expect(reply.cards[0].value).toMatch(/35,90/);
 
+    // custo: as duas chamadas da mensagem viram uma linha em ai_usage, com os tokens somados
+    const { data: usage } = await admin.from("ai_usage").select("*").eq("user_id", userId);
+    expect(usage).toHaveLength(1);
+    expect(usage![0]).toMatchObject({ model: "claude-opus-5-5", calls: 2, input_tokens: 200, output_tokens: 40, cache_read_tokens: 160, cache_write_tokens: 0 });
+
     const first = requests[0];
     expect(first.headers["anthropic-beta"]).toContain("server-side-fallback-2026-07-01");
     expect(first.body.model).toBe("claude-sonnet-5-5");  // padrão sem configuração

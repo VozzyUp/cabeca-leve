@@ -1,4 +1,4 @@
--- Cabeça Leve, passo 17 de 20: checkout, exclusao_conta e realtime.
+-- Cabeça Leve, passo 17 de 21: checkout, exclusao_conta e realtime.
 -- Supabase > SQL Editor > New query > cole TUDO > Run. Rode os passos em ordem, uma vez cada.
 -- Deve terminar com: Success. No rows returned.
 

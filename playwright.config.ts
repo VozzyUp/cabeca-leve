@@ -23,7 +23,7 @@ export const E2E_ENV = {
   EMAIL_FROM: "Cabeça Leve <oi@exemplo.com.br>",
   SUPPORT_EMAIL: "time@exemplo.com.br",
   SUPPORT_WHATSAPP: "5511988887777",
-  ADMIN_EMAILS: "dono-e2e@exemplo.com.br",
+  ADMIN_EMAILS: "dono-e2e@exemplo.com.br,config-e2e@exemplo.com.br",  // o 2º é só do admin.spec: o F3 apaga e recria o 1º
   APP_SECRET_KEY: "chave-de-criptografia-dos-testes-e2e-com-mais-de-32",
   NEXT_PUBLIC_SITE_URL: "http://localhost:3000",
   ANTHROPIC_API_KEY: "",

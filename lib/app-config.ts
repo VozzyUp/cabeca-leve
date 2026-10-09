@@ -47,6 +47,9 @@ export const CONFIG_GROUPS: ConfigGroup[] = [
     { key: "VAPID_PRIVATE_KEY", label: "Chave privada", secret: true },
     { key: "VAPID_SUBJECT", label: "Contato", secret: false, hint: "mailto:contato@seudominio.com.br" },
   ] },
+  { title: "Custos (painel)", fields: [
+    { key: "COST_USD_BRL", label: "Cotação do dólar (R$)", secret: false, hint: "ex.: 5.50. Só converte os valores da tela de custos; padrão 5,50" },
+  ] },
   { title: "Suporte", fields: [
     { key: "SUPPORT_EMAIL", label: "E-mail que recebe os chamados", secret: false },
     { key: "SUPPORT_WHATSAPP", label: "WhatsApp que recebe os chamados (com DDI)", secret: false },
@@ -83,28 +86,33 @@ type State = { fromEnv: Map<string, string | undefined>; loadedAt: number; loadi
 const g = globalThis as typeof globalThis & { __appConfig?: State };
 const state: State = (g.__appConfig ??= { fromEnv: new Map([...CONFIG_KEYS].map((k) => [k, process.env[k]])), loadedAt: 0, loading: null });
 
+async function readFromDb() {
+  try {
+    const { data, error } = await getAdmin().from("app_settings").select("key, value_encrypted");
+    if (error) throw new Error(error.message);
+    const inDb = new Map((data ?? []).filter((r) => CONFIG_KEYS.has(r.key)).map((r) => [r.key, r.value_encrypted]));
+    for (const key of CONFIG_KEYS) {
+      const enc = inDb.get(key);
+      let value = state.fromEnv.get(key);
+      if (enc) { try { value = decrypt(enc); } catch { console.error("config: não deu para abrir", key); } }
+      if (value === undefined || value === "") delete process.env[key]; else process.env[key] = value;
+    }
+    state.loadedAt = Date.now();
+  } catch (e) {
+    console.error("config: leitura falhou", (e as Error).message);
+  }
+}
+
+// Leituras forçadas (depois de gravar ou apagar) entram na fila e rodam depois da leitura em andamento: juntar-se a uma
+// leitura que começou antes da gravação devolveria o valor antigo. A leitura periódica aproveita a que já está rodando.
 export async function loadAppConfig(force = false) {
   if (!process.env.APP_SECRET_KEY || !process.env.SUPABASE_SECRET_KEY && !process.env["SUPABASE_SERVICE_ROLE_KEY"]) return;
   if (!force && Date.now() - state.loadedAt < 30_000) return;
-  state.loading ??= (async () => {
-    try {
-      const { data, error } = await getAdmin().from("app_settings").select("key, value_encrypted");
-      if (error) throw new Error(error.message);
-      const inDb = new Map((data ?? []).filter((r) => CONFIG_KEYS.has(r.key)).map((r) => [r.key, r.value_encrypted]));
-      for (const key of CONFIG_KEYS) {
-        const enc = inDb.get(key);
-        let value = state.fromEnv.get(key);
-        if (enc) { try { value = decrypt(enc); } catch { console.error("config: não deu para abrir", key); } }
-        if (value === undefined || value === "") delete process.env[key]; else process.env[key] = value;
-      }
-      state.loadedAt = Date.now();
-    } catch (e) {
-      console.error("config: leitura falhou", (e as Error).message);
-    } finally {
-      state.loading = null;
-    }
-  })();
-  await state.loading;
+  if (!force && state.loading) return state.loading;
+  const previous = state.loading ?? Promise.resolve();
+  const mine: Promise<void> = previous.then(readFromDb).finally(() => { if (state.loading === mine) state.loading = null; });
+  state.loading = mine;
+  await mine;
 }
 
 export type FieldStatus = { key: string; source: "banco" | "stack" | "faltando"; preview: string | null };
