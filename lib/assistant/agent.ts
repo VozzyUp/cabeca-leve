@@ -113,6 +113,7 @@ function toRule(r: z.infer<typeof RepeatInput>, firstDay: string): string | null
 function buildTools(store: DataStore, now: Date, cards: ActionCardData[], channel: "web" | "whatsapp" | "voice") {
   const tz = store.timezone();
   const today = localDate(now, tz);
+  // A API aceita no máximo 20 ferramentas estritas: ficam de fora as sem parâmetro (nada a validar)
   const strict = <T extends object>(tool: T): T =>
     ({ ...tool, ...("input_schema" in tool ? { input_schema: strictSchema(tool.input_schema) } : {}), strict: true });
   const json = (v: unknown) => JSON.stringify(v);
@@ -288,7 +289,7 @@ function buildTools(store: DataStore, now: Date, cards: ActionCardData[], channe
         }));
       },
     })),
-    strict(betaZodTool({
+    betaZodTool({
       name: "get_day_overview",
       description: "Tudo de um dia: compromissos, lembretes, tarefas (inclusive atrasadas) e hábitos planejados, em ordem de horário.",
       inputSchema: z.object({}),
@@ -298,7 +299,7 @@ function buildTools(store: DataStore, now: Date, cards: ActionCardData[], channe
         return json(dayItems({ reminders, tasks, habits, logs, events, now, tz })
           .map((i) => ({ kind: i.kind, title: i.title, time: i.time, done: i.done, overdue: i.overdue })));
       },
-    })),
+    }),
     strict(betaZodTool({
       name: "delete_task",
       description: "Apaga uma tarefa de vez. Só use quando a pessoa pedir para apagar ou excluir; para 'feito', use update_task.",
@@ -311,7 +312,7 @@ function buildTools(store: DataStore, now: Date, cards: ActionCardData[], channe
       inputSchema: z.object({ reminder_id: z.string() }),
       run: async ({ reminder_id }) => ((await store.deleteReminder(reminder_id)) ? json({ ok: true }) : "Erro: lembrete não encontrado."),
     })),
-    strict(betaZodTool({
+    betaZodTool({
       name: "query_categories",
       description: "Lista as categorias e subcategorias da pessoa, de gastos e de entradas.",
       inputSchema: z.object({}),
@@ -320,7 +321,7 @@ function buildTools(store: DataStore, now: Date, cards: ActionCardData[], channe
         const name = new Map(cats.map((c) => [c.id, c.name]));
         return json(cats.map((c) => ({ name: c.name, kind: c.kind, inside: c.parentId ? name.get(c.parentId) ?? null : null })));
       },
-    })),
+    }),
     strict(betaZodTool({
       name: "query_transactions",
       description: "Busca lançamentos (gastos e entradas) com id, para corrigir ou apagar. Filtra por texto na descrição e por período.",

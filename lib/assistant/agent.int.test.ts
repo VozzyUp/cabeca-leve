@@ -65,7 +65,10 @@ describe.skipIf(!run)("agente", () => {
     expect(first.body.model).toBe("claude-opus-5-5");
     expect(first.body.fallbacks).toBe("default");
     expect(first.body.output_config).toEqual({ effort: "low" });
-    expect((first.body.tools as Array<{ strict?: boolean }>).every((t) => t.strict)).toBe(true);
+    // a API recusa mais de 20 ferramentas estritas; só as sem parâmetro ficam de fora
+    const tools = first.body.tools as Array<{ strict?: boolean; input_schema?: { properties?: object } }>;
+    expect(tools.filter((t) => t.strict).length).toBeLessThanOrEqual(20);
+    expect(tools.filter((t) => !t.strict).every((t) => Object.keys(t.input_schema?.properties ?? {}).length === 0)).toBe(true);
     // nenhum limite que as ferramentas estritas não aceitam vai no esquema
     expect(JSON.stringify(first.body.tools)).not.toMatch(/"(minimum|maximum|minLength|maxLength|maxItems)"/);
     // 1ª mensagem do dia: usuário com data e hora, depois o contexto como mensagem de sistema

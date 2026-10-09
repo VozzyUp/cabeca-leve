@@ -15,6 +15,7 @@ Só entra aqui o que foi reproduzido. Cada correção tem um teste que falhava a
 | BUG-003 | S3 | dias fora do mês no calendário sem contraste suficiente | corrigido |
 | BUG-006 | S3 | sessão vencida com a tela aberta: a pessoa fica presa vendo "Sessão expirada" | corrigido |
 | BUG-010 | S4 | mudar dois ajustes seguidos desfaz o primeiro na tela | corrigido |
+| BUG-011 | S1 | a conversa não responde em produção: 22 ferramentas estritas, a API aceita 20 | corrigido |
 | BUG-005 | S4 | criar lembrete antes de a lista carregar diz "Escolha o dia e a hora" com tudo preenchido | corrigido |
 
 ### BUG-002: o login leva para um site de fora (redirecionamento aberto)
@@ -200,6 +201,17 @@ Atual: "Divertido" volta para o tom anterior na tela, porque cada mudança parti
 Evidência: F19-H1 falhou na bateria completa (`toBeChecked` em "Claro" depois de recarregar).
 Correção: o estado é atualizado a partir do mais novo, e reverter um erro volta só os campos daquela mudança. O teste agora confere os dois marcados na hora e espera as duas gravações no banco.
 Status: corrigido no commit das correções F5 a F7
+
+### BUG-011: a conversa não responde em produção (22 ferramentas estritas, o limite é 20)
+
+- Severidade: S1 (nenhuma mensagem é respondida com a chave real da Anthropic)
+- Fluxo / caso: F01 (conversa), achado no primeiro uso em produção
+- Build: f3d27df. Ambiente: VPS, chave real
+- Esperado: o assistente responde.
+- Atual: "Não consegui responder agora". O log do servidor trazia `400 invalid_request_error: Too many strict tools (22). The maximum number of strict tools supported is 20.`
+- Por que os testes não pegaram: eles usam uma resposta simulada da Anthropic, que não conhece o limite. A afirmação do teste era "todas as ferramentas são estritas", o que escondia o problema.
+- Correção: `get_day_overview` e `query_categories`, que não têm parâmetros (nada a validar), deixam de ser estritas, e sobram 20. O teste agora confere no máximo 20 estritas e que só as sem parâmetro ficam de fora. A tela de admin ganhou "Testar chave", que reproduz o turno real e mostra o erro da Anthropic.
+- Status: corrigido
 
 ## Para conferir (não reproduzido como falha visível)
 
