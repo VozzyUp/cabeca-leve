@@ -110,7 +110,7 @@ export function RemindersScreen() {
             {items.map((r) => {
               const overdue = r.status === "active" && !!r.nextFireAt && new Date(r.nextFireAt) < now;
               const repeats = describeRepeat(r.recurrenceRule);
-              const meta = [r.nextFireAt ? formatTime(r.nextFireAt, data.timezone) : "concluído", repeats && `repete ${repeats}`].filter(Boolean).join(" · ");
+              const meta = [r.status === "done" ? "concluído" : r.nextFireAt ? formatTime(r.nextFireAt, data.timezone) : null, repeats && `repete ${repeats}`].filter(Boolean).join(" · ");
               return (
                 <div key={r.id} className="flex items-center gap-1">
                   <div className="min-w-0 flex-1"><CheckItem title={r.title} meta={meta} done={r.status === "done"} overdue={overdue} onToggle={() => toggle(r)} /></div>

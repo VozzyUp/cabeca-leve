@@ -58,6 +58,25 @@ test.describe("F04 lembretes", () => {
     await expect(page.getByText("Levar o carro na revisão")).toHaveCount(0);
   });
 
+  test("F04-E4 concluir sem querer e desmarcar: volta para os próximos, sem erro (também o que repete)", async ({ page, user }) => {
+    await login(page, user, "/lembretes");
+    const at = new Date(Date.now() + 3 * 86_400_000).toISOString();
+    const r = await page.request.post("/api/reminders", { data: { title: "Levar o filho na terapia", nextFireAt: at, recurrenceRule: "FREQ=WEEKLY;BYDAY=WE" } });
+    expect(r.status()).toBe(201);
+    await page.reload({ waitUntil: "networkidle" });
+    const box = page.getByRole("checkbox", { name: /Levar o filho na terapia/ });
+    await box.click();  // ao concluir, o item sai de "Próximos"
+    await page.getByRole("radio", { name: "Concluídos" }).click();
+    await expect(page.getByText(/concluído · repete/)).toBeVisible();
+    await page.getByRole("checkbox", { name: /Levar o filho na terapia/ }).click();
+    await expect(page.getByText("Não deu para carregar os lembretes.")).toHaveCount(0);
+    await page.getByRole("radio", { name: "Próximos" }).click();
+    await expect(page.getByRole("checkbox", { name: /Levar o filho na terapia/ })).not.toBeChecked();
+    const { data } = await admin.from("reminders").select("status, next_fire_at").eq("user_id", user.id).single();
+    expect(data!.status).toBe("active");
+    expect(new Date(data!.next_fire_at!).getTime()).toBeGreaterThan(Date.now());
+  });
+
   test("F04-N1 varredura sem o segredo é recusada", async () => {
     expect((await sweep("errado")).status).toBe(401);
   });

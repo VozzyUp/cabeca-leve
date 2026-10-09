@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { describeRepeat, nextDate, nextFireAt, parseRRule, toRRule } from "./recurrence";
+import { describeRepeat, nextDate, nextFireAt, parseRRule, reopenFireAt, toRRule } from "./recurrence";
 
 describe("repetição", () => {
   it("converte para RRULE e de volta", () => {
@@ -29,5 +29,15 @@ describe("repetição", () => {
     // todo dia às 08:00 em São Paulo; o último foi em 01/10 e agora é 08/10 10:00
     const next = nextFireAt("FREQ=DAILY;INTERVAL=1", "2026-10-01T11:00:00.000Z", "America/Sao_Paulo", new Date("2026-10-08T13:00:00Z"));
     expect(next).toBe("2026-10-09T11:00:00.000Z");
+  });
+  it("reabrir um lembrete sempre dá uma data de aviso (o banco não aceita ativo sem data)", () => {
+    const now = new Date("2026-10-08T13:00:00Z");  // quinta 10:00 em São Paulo
+    const tz = "America/Sao_Paulo";
+    expect(reopenFireAt(null, "2026-10-09T20:00:00.000Z", tz, now)).toBe("2026-10-09T20:00:00.000Z");  // ainda no futuro: vale
+    expect(reopenFireAt("FREQ=WEEKLY;INTERVAL=1;BYDAY=WE", "2026-10-07T13:30:00.000Z", tz, now)).toBe("2026-10-14T13:30:00.000Z");  // repete: próxima quarta, mesmo horário
+    expect(reopenFireAt(null, "2026-10-07T13:30:00.000Z", tz, now)).toBe("2026-10-07T13:30:00.000Z");  // passou e não repete: fica atrasado
+    expect(reopenFireAt(null, null, tz, now)).toBe("2026-10-08T14:00:00.000Z");  // sem data guardada: próxima hora cheia
+    const rec = reopenFireAt("FREQ=WEEKLY;INTERVAL=1;BYDAY=WE", null, tz, now);
+    expect(new Date(rec).getTime()).toBeGreaterThan(now.getTime());
   });
 });

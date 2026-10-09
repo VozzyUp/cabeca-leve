@@ -1,6 +1,6 @@
 import type { Admin } from "@/lib/supabase/server";
 import type { Json, TablesUpdate } from "@/lib/supabase/database.types";
-import { nextDate, nextFireAt } from "@/lib/domain/recurrence";
+import { nextDate, nextFireAt, reopenFireAt } from "@/lib/domain/recurrence";
 import { newProtocol, notifyOwner, supportDueAt } from "@/lib/support";
 import { addDays, localDate, zonedToUtc } from "@/lib/time";
 import type { DataStore } from "./store";
@@ -90,7 +90,14 @@ export async function createSupabaseStore(db: Admin, userId: string, email: stri
       if (patch.nextFireAt !== undefined) row.next_fire_at = patch.nextFireAt;
       if (patch.lastFiredAt !== undefined) row.last_fired_at = patch.lastFiredAt;
       if (patch.recurrenceRule !== undefined) row.recurrence_rule = patch.recurrenceRule;
-      if (patch.status !== undefined) { row.status = patch.status; if (patch.status !== "active") row.next_fire_at = null; }
+      // concluir guarda a data do aviso (a varredura só olha os ativos); reabrir precisa de uma data, que o banco exige
+      if (patch.status !== undefined) {
+        row.status = patch.status;
+        if (patch.status === "active" && patch.nextFireAt === undefined) {
+          const cur = must(await db.from("reminders").select("recurrence_rule, next_fire_at").eq("id", id).eq("user_id", userId).maybeSingle() as Result<{ recurrence_rule: string | null; next_fire_at: string | null } | null>);
+          if (cur) row.next_fire_at = reopenFireAt(patch.recurrenceRule ?? cur.recurrence_rule, cur.next_fire_at, tz, new Date());
+        }
+      }
       // avisou um recorrente: já fica marcado para a próxima vez
       if (patch.lastFiredAt) {
         const cur = must(await db.from("reminders").select("recurrence_rule, next_fire_at, status").eq("id", id).eq("user_id", userId).maybeSingle() as Result<{ recurrence_rule: string | null; next_fire_at: string | null; status: string } | null>);

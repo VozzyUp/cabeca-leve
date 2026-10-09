@@ -16,6 +16,7 @@ Só entra aqui o que foi reproduzido. Cada correção tem um teste que falhava a
 | BUG-006 | S3 | sessão vencida com a tela aberta: a pessoa fica presa vendo "Sessão expirada" | corrigido |
 | BUG-010 | S4 | mudar dois ajustes seguidos desfaz o primeiro na tela | corrigido |
 | BUG-011 | S1 | a conversa não responde em produção: 22 ferramentas estritas, a API aceita 20; depois 23 parâmetros nulos; depois gramática grande demais | corrigido |
+| BUG-012 | S2 | lembrete concluído não volta a ficar ativo: "Não deu para carregar os lembretes" | corrigido |
 | BUG-005 | S4 | criar lembrete antes de a lista carregar diz "Escolha o dia e a hora" com tudo preenchido | corrigido |
 
 ### BUG-002: o login leva para um site de fora (redirecionamento aberto)
@@ -211,6 +212,18 @@ Status: corrigido no commit das correções F5 a F7
 - Atual: "Não consegui responder agora". O log do servidor trazia `400 invalid_request_error: Too many strict tools (22). The maximum number of strict tools supported is 20.`
 - Por que os testes não pegaram: eles usam uma resposta simulada da Anthropic, que não conhece o limite. A afirmação do teste era "todas as ferramentas são estritas", o que escondia o problema.
 - Correção: `get_day_overview` e `query_categories`, que não têm parâmetros (nada a validar), deixam de ser estritas, e sobram 20. O teste agora confere no máximo 20 estritas e que só as sem parâmetro ficam de fora. Em seguida a API recusou 23 parâmetros "pode ser nulo" nas ferramentas estritas (limite 16): `update_transaction`, `update_task` e `query_transactions` deixam de ser estritas (o zod continua validando a entrada) e o teste confere os dois limites. Por fim a API recusou a gramática compilada (grande demais). Como cada ajuste revelava um limite novo, o modo estrito saiu de todas as ferramentas: o Zod confere a entrada antes de cada uma rodar e o erro volta para o modelo corrigir (o SDK faz isso). A tela de admin ganhou "Testar chave", que reproduz o turno real e mostra o erro da Anthropic.
+- Status: corrigido
+
+### BUG-012: lembrete concluído não volta a ficar ativo
+
+- Severidade: S2 (concluir sem querer não tem volta; a tela mostra erro)
+- Fluxo / caso: F04 / F04-E4, achado no primeiro uso em produção
+- Tela: S11 (/lembretes)
+- Passos: 1. Ter um lembrete (o do caso repete toda quarta). 2. Marcar como concluído. 3. Em "Concluídos", desmarcar.
+- Esperado: o lembrete volta para "Próximos".
+- Atual: volta ao estado de concluído e aparece "Não deu para carregar os lembretes". O banco tem a regra `status <> 'active' or next_fire_at is not null`; ao concluir, o app apagava a data do aviso, então ao reabrir não havia data para devolver e a gravação falhava. Valia para todo lembrete.
+- Por que os testes não pegaram: o banco simulado dos testes de tela não tem essa regra, e nenhum teste reabria um lembrete no banco real.
+- Correção: concluir agora guarda a data do aviso (a varredura só olha os ativos). Reabrir usa a data guardada; se já passou e o lembrete repete, a próxima ocorrência; se não repete, fica como atrasado. Lembrete concluído antes da correção (sem data) reabre na próxima hora cheia, ou na próxima ocorrência da repetição. Testes: `reopenFireAt` (unidade), concluir e reabrir no banco real (integração, falha sem a correção) e F04-E4 (tela).
 - Status: corrigido
 
 ## Para conferir (não reproduzido como falha visível)

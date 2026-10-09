@@ -78,6 +78,16 @@ export function nextDate(rule: string, after: string, anchor: string): string | 
   return null;
 }
 
+// Data de aviso de um lembrete que volta a ficar ativo. O banco não aceita lembrete ativo sem data.
+// Com a data guardada ao concluir: vale ela, se ainda está no futuro; se já passou e repete, a próxima ocorrência;
+// se já passou e não repete, continua a mesma (aparece como atrasado). Sem data guardada (concluído antes de
+// guardarmos): a próxima hora cheia, ou a próxima ocorrência da repetição a partir dela.
+export function reopenFireAt(rule: string | null, current: string | null, tz: string, now: Date): string {
+  if (current && new Date(current) > now) return current;
+  const base = current ?? new Date(Math.ceil((now.getTime() + 60_000) / 3_600_000) * 3_600_000).toISOString();
+  return (rule ? nextFireAt(rule, base, tz, now) : null) ?? base;
+}
+
 // Próximo aviso de um lembrete recorrente: mesmo horário local, primeira ocorrência depois de `now`
 // (ocorrências perdidas, com o app desligado, não se acumulam).
 export function nextFireAt(rule: string, currentFireAt: string, tz: string, now: Date): string | null {

@@ -62,6 +62,23 @@ describe.skipIf(!run)("SupabaseStore", () => {
     expect((await a.listMessages()).at(-1)?.cards[0].undone).toBe(true);
   });
 
+  it("concluir e reabrir um lembrete funciona, também o que repete e o concluído sem data", async () => {
+    const weekly = await a.createReminder({ title: "Terapia", nextFireAt: "2026-10-07T13:30:00Z", recurrenceRule: "FREQ=WEEKLY;INTERVAL=1;BYDAY=WE" });
+    const done = await a.updateReminder(weekly.id, { status: "done" });
+    expect(done?.status).toBe("done");
+    expect(done?.nextFireAt).toBe("2026-10-07T13:30:00+00:00");  // a data fica guardada
+    const reopened = await a.updateReminder(weekly.id, { status: "active" });
+    expect(reopened?.status).toBe("active");
+    expect(new Date(reopened!.nextFireAt!).getTime()).toBeGreaterThan(Date.now());
+    // concluído antes de guardarmos a data (sem data): reabre com uma nova
+    const old = await a.createReminder({ title: "Antigo", nextFireAt: "2026-10-07T13:30:00Z" });
+    await admin.from("reminders").update({ status: "done", next_fire_at: null }).eq("id", old.id);
+    const back = await a.updateReminder(old.id, { status: "active" });
+    expect(back?.status).toBe("active");
+    expect(back?.nextFireAt).not.toBeNull();
+    await a.deleteReminder(weekly.id); await a.deleteReminder(old.id);
+  });
+
   it("tarefa recorrente: concluir cria a próxima, uma vez só", async () => {
     const t = await a.createTask({ title: "Pagar a diarista", dueOn: "2026-10-09", recurrenceRule: "FREQ=WEEKLY;INTERVAL=1;BYDAY=FR", notes: "R$ 150 no Pix" });
     await a.updateTask(t.id, { status: "done" });

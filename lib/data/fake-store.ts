@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { addDays, DEFAULT_TZ, localDate, zonedToUtc } from "@/lib/time";
 import type { DataStore } from "./store";
-import { nextDate, nextFireAt } from "@/lib/domain/recurrence";
+import { nextDate, nextFireAt, reopenFireAt } from "@/lib/domain/recurrence";
 import { seedFinance, seedHealth, seedOrganization, seedSettings } from "./seed-extra";
 
 // demonstração: um turno por vez no mesmo processo
@@ -184,7 +184,8 @@ export const fakeStore: DataStore = {
       const r = s.reminders.find((x) => x.id === rid);
       if (!r) return null;
       Object.assign(r, patch);
-      if (patch.status && patch.status !== "active") r.nextFireAt = null;
+      // concluir guarda a data do aviso; reabrir precisa de uma (como no banco)
+      if (patch.status === "active" && patch.nextFireAt === undefined) r.nextFireAt = reopenFireAt(r.recurrenceRule, r.nextFireAt, DEFAULT_TZ, new Date());
       // avisou um recorrente: já fica marcado para a próxima vez
       if (patch.lastFiredAt && r.recurrenceRule && r.nextFireAt && r.status === "active") {
         r.nextFireAt = nextFireAt(r.recurrenceRule, r.nextFireAt, DEFAULT_TZ, new Date(patch.lastFiredAt)) ?? r.nextFireAt;
