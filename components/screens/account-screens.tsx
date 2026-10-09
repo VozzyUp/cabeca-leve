@@ -1,4 +1,4 @@
-import { Bell, ChevronRight, CreditCard, LifeBuoy, Sparkles } from "lucide-react";
+import { Bell, ChevronRight, CreditCard, Inbox, KeyRound, LifeBuoy, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { cancelPlan } from "@/app/actions";
 import { Card } from "@/components/ui/card";
@@ -8,6 +8,8 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { serverContext } from "@/lib/server";
 import { formatMoney, formatShortDate } from "@/lib/time";
 import { AssistantForm, SettingsForm } from "./settings-forms";
+import { isSupportAdmin } from "@/lib/support";
+import { currentUser } from "@/lib/supabase/server";
 
 function LinkRow({ href, icon: Icon, title, hint }: { href: string; icon: typeof Bell; title: string; hint: string }) {
   return (
@@ -23,6 +25,7 @@ function LinkRow({ href, icon: Icon, title, hint }: { href: string; icon: typeof
 export async function SettingsScreen() {
   const { store, today } = await serverContext();
   const [settings, notices] = await Promise.all([store.getSettings(), store.listNotices()]);
+  const admin = isSupabaseConfigured() && isSupportAdmin((await currentUser())?.email);
   const unread = notices.filter((n) => !n.readAt).length;
   const end = settings.billing?.periodEnd ? formatShortDate(settings.billing.periodEnd.slice(0, 10)) : null;
   const plan = settings.billing?.confirming ? "Pagamento em confirmação: tudo liberado enquanto a Asaas confirma"
@@ -40,6 +43,8 @@ export async function SettingsScreen() {
         <LinkRow href="/planos" icon={CreditCard} title="Assinatura" hint={plan} />
         <LinkRow href="/ajustes/assistente" icon={Sparkles} title="Jeito do assistente" hint="tom, voz, memória e tema" />
         <LinkRow href="/ajustes/suporte" icon={LifeBuoy} title="Falar com uma pessoa" hint="resposta de alguém do time em até 1 dia útil" />
+        {admin && <LinkRow href="/admin/configuracoes" icon={KeyRound} title="Configuração do sistema" hint="chaves dos serviços (só para o time)" />}
+        {admin && <LinkRow href="/suporte/painel" icon={Inbox} title="Chamados de suporte" hint="responder quem pediu uma pessoa (só para o time)" />}
         <LinkRow href="/avisos" icon={Bell} title="Avisos" hint={unread ? `${unread} novo${unread === 1 ? "" : "s"}` : "tudo lido"} />
       </Card>
       {settings.billing?.canceledAt && (

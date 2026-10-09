@@ -9,6 +9,8 @@ import { currentUser } from "@/lib/supabase/server";
 import { startLink } from "@/lib/whatsapp/link";
 import { answerTicket, isSupportAdmin } from "@/lib/support";
 import { sendTestNotice } from "@/lib/deliveries";
+import { CONFIG_KEYS, loadAppConfig, saveAppConfig } from "@/lib/app-config";
+import { siteUrl } from "@/lib/public-env";
 import type { Settings } from "@/lib/data/types";
 
 // Ações de servidor das telas do M3 e M4. Cada uma valida a entrada, grava pelo DataStore
@@ -230,4 +232,56 @@ export async function testNotice() {
   const user = await currentUser();
   if (!user) throw new Error("Sessão expirada");
   return sendTestNotice(user.id);
+}
+
+// ---- Configuração do sistema (/admin/configuracoes): só ADMIN_EMAILS ----
+async function requireAdmin() {
+  const user = await currentUser();
+  if (!user || !isSupportAdmin(user.email)) throw new Error("Sem permissão");
+  return user.email!;
+}
+
+export async function saveSystemConfig(changes: Record<string, string | null>) {
+  const by = await requireAdmin();
+  const clean: Record<string, string | null> = {};
+  for (const [key, raw] of Object.entries(changes)) {
+    if (!CONFIG_KEYS.has(key)) throw new Error(`Campo desconhecido: ${key}`);
+    if (raw === null) { clean[key] = null; continue; }
+    const value = z.string().trim().min(1).max(4000).parse(raw);
+    if (key.endsWith("_URL") && !/^https?:\/\/\S+$/.test(value)) throw new Error(`${key}: use um endereço que comece com https://`);
+    clean[key] = value;
+  }
+  await saveAppConfig(clean, by);
+  revalidatePath("/admin/configuracoes");
+  return { ok: true as const };
+}
+
+// Gera e grava um segredo aleatório (tokens de webhook) ou o par de chaves do push
+export async function generateSystemSecret(kind: "hex32" | "vapid", key: string) {
+  const by = await requireAdmin();
+  if (kind === "vapid") {
+    const { default: webpush } = await import("web-push");
+    const k = webpush.generateVAPIDKeys();
+    await saveAppConfig({ VAPID_PUBLIC_KEY: k.publicKey, VAPID_PRIVATE_KEY: k.privateKey }, by);
+  } else {
+    if (!CONFIG_KEYS.has(key)) throw new Error("Campo desconhecido");
+    await saveAppConfig({ [key]: (await import("node:crypto")).randomBytes(24).toString("hex") }, by);
+  }
+  revalidatePath("/admin/configuracoes");
+  return { ok: true as const };
+}
+
+// Endereços para colar na UAZAPI, na Asaas e na Meta (com os tokens), só para o admin
+export async function revealIntegrationInfo() {
+  await requireAdmin();
+  await loadAppConfig(true);
+  const site = siteUrl();
+  const e = process.env;
+  return {
+    whatsappWebhook: e.UAZAPI_WEBHOOK_SECRET ? `${site}/api/webhooks/whatsapp?secret=${e.UAZAPI_WEBHOOK_SECRET}` : null,
+    asaasWebhook: `${site}/api/webhooks/asaas`,
+    asaasToken: e.ASAAS_WEBHOOK_TOKEN ?? null,
+    metaCallback: `${site}/api/webhooks/whatsapp`,
+    metaVerifyToken: e.META_WEBHOOK_VERIFY_TOKEN ?? null,
+  };
 }

@@ -1,5 +1,10 @@
-# Monta a imagem Docker a cada push na main e publica no GitHub Container Registry.
-# O Portainer puxa ghcr.io/vozzyup/cabeca-leve:latest (passo a passo: replica/deploy-vps.md).
+# A cada push na main: aplica as migrações no Supabase, monta a imagem, publica no GitHub
+# Container Registry e manda o Portainer atualizar o serviço. Passo a passo: replica/deploy-vps.md.
+#
+# Segredos do repositório (Settings > Secrets and variables > Actions), os dois opcionais:
+#   SUPABASE_DB_URL        string de conexão do Supabase (Session pooler, porta 5432)
+#   PORTAINER_WEBHOOK_URL  webhook do serviço cabeca-leve_app no Portainer
+# Sem eles, a imagem é publicada do mesmo jeito e as etapas que dependem deles só avisam.
 name: imagem
 
 on:
@@ -11,9 +16,30 @@ permissions:
   contents: read
   packages: write
 
+concurrency:
+  group: producao
+  cancel-in-progress: false
+
 jobs:
-  imagem:
+  migracoes:
     runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: aplicar migrações novas no Supabase
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            echo "::notice::SUPABASE_DB_URL não configurado: migrações não aplicadas (rode npx supabase db push no seu computador)"
+            exit 0
+          fi
+          npx --yes supabase@2.120.0 db push --db-url "$SUPABASE_DB_URL"
+
+  imagem:
+    needs: migracoes
+    runs-on: ubuntu-latest
+    outputs:
+      imagem: ${{ steps.nome.outputs.imagem }}
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
@@ -33,3 +59,19 @@ jobs:
             ${{ steps.nome.outputs.imagem }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  atualizar:
+    needs: imagem
+    runs-on: ubuntu-latest
+    steps:
+      - name: avisar o Portainer
+        env:
+          PORTAINER_WEBHOOK_URL: ${{ secrets.PORTAINER_WEBHOOK_URL }}
+        run: |
+          if [ -z "$PORTAINER_WEBHOOK_URL" ]; then
+            echo "::notice::PORTAINER_WEBHOOK_URL não configurado: atualize o serviço no Portainer à mão"
+            exit 0
+          fi
+          # tag=<commit>: o Portainer troca a imagem do serviço por exatamente esta versão
+          curl -fsS -X POST "${PORTAINER_WEBHOOK_URL}?tag=${GITHUB_SHA}"
+          echo "Portainer avisado: ${{ needs.imagem.outputs.imagem }}:${GITHUB_SHA}"

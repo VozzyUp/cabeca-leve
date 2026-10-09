@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { siteUrl } from "@/lib/public-env";
 import { supabaseEnv } from "@/lib/supabase/env";
 
 // Rotas abertas: login, planos, confirmação de e-mail e quem se autentica de outro jeito
@@ -28,9 +29,9 @@ export async function proxy(request: NextRequest) {
   if (user || PUBLIC.some((r) => r.test(path))) return response;
 
   if (path.startsWith("/api/")) return NextResponse.json({ error: "Sessão expirada. Entre de novo." }, { status: 401 });
-  const url = request.nextUrl.clone();
-  url.pathname = "/entrar";
-  url.search = path === "/" ? "" : `?voltar=${encodeURIComponent(path)}`;
+  // endereço público (SITE_URL): atrás do Traefik o app recebe http e o host interno
+  const url = new URL("/entrar", siteUrl());
+  if (path !== "/") url.search = `?voltar=${encodeURIComponent(path)}`;
   return NextResponse.redirect(url);
 }
 

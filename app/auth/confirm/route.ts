@@ -2,11 +2,13 @@ import type { EmailOtpType } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 import { createSessionClient } from "@/lib/supabase/server";
 import { safeAppPath } from "@/lib/validation";
+import { siteUrl } from "@/lib/public-env";
 
 // Link dos e-mails de confirmação e de nova senha. Aceita o fluxo PKCE (?code=) e o de
 // token (?token_hash=&type=), e só redireciona para caminhos do próprio app.
 export async function GET(request: NextRequest) {
-  const { searchParams, origin } = request.nextUrl;
+  const { searchParams } = request.nextUrl;
+  const origin = siteUrl();  // atrás do Traefik, request.nextUrl teria http e o host interno
   const next = safeAppPath(searchParams.get("next"));
   const supabase = await createSessionClient();
   const code = searchParams.get("code");

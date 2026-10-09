@@ -91,6 +91,20 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"app_settings": {
+                  Row: {
+                    "key": string,"updated_at": string,"updated_by": string | null,"value_encrypted": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "key": string,"updated_at"?: string,"updated_by"?: string | null,"value_encrypted": string
+                  }
+                  Update: {
+                    "key"?: string,"updated_at"?: string,"updated_by"?: string | null,"value_encrypted"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"attachments": {
                   Row: {
                     "created_at": string,"duration_ms": number | null,"error": string | null,"id": string,"kind": string,"message_id": string | null,"mime_type": string,"size_bytes": number,"status": string,"storage_path": string,"transcript": string | null,"updated_at": string,"user_id": string
