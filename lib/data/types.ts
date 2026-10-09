@@ -59,7 +59,7 @@ export type Transaction = {
 // Card que o assistente devolve no chat para cada item que criou
 export type ActionCardData = {
   actionId: string;
-  kind: "reminder" | "transaction" | "task" | "habit";
+  kind: "reminder" | "transaction" | "task" | "habit" | "workout" | "meal" | "project" | "goal" | "automation";
   title: string;
   value: string;
   valueTone: "neutral" | "income" | "expense";
@@ -81,8 +81,10 @@ export type ChatMessage = {
 
 export type ActionRecord = {
   id: string;
-  entity: "reminder" | "transaction" | "task" | "habit";
+  entity: "reminder" | "transaction" | "task" | "habit" | "workout_plan" | "meal_plan" | "project" | "goal" | "automation";
   entityId: string;
+  // o que a criação trocou (ex.: ficha ativa anterior): o desfazer devolve
+  replaced?: string[];
   operation: "create";
   undoneAt: string | null;
 };
@@ -156,7 +158,9 @@ export type Automation = {
   id: string;
   title: string;
   prompt: string;
-  weekdays: number[];
+  schedule: "daily" | "weekly" | "monthly" | "once";
+  weekdays: number[];         // só no semanal; no diário vale todos os dias
+  runOn: string | null;       // dia da única execução (schedule = "once")
   time: string;               // "HH:MM"
   channel: "push" | "whatsapp" | "email";
   active: boolean;

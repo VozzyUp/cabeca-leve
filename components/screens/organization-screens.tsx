@@ -150,7 +150,9 @@ export async function NotesScreen() {
 const CHANNEL: Record<Automation["channel"], string> = { push: "notificação", whatsapp: "WhatsApp", email: "e-mail" };
 
 function scheduleText(a: Automation) {
-  const when = a.weekdays.length === 0 ? "todo dia 1" : a.weekdays.length === 1 && a.weekdays[0] === 0 ? "todo domingo" : describeWeekdays(a.weekdays);
+  const when = a.schedule === "monthly" ? "todo dia 1"
+    : a.schedule === "once" ? (a.runOn ? `só em ${formatShortDate(a.runOn)}` : "uma vez")
+    : a.weekdays.length === 1 && a.weekdays[0] === 0 ? "todo domingo" : describeWeekdays(a.weekdays);
   return `${when.charAt(0).toUpperCase()}${when.slice(1)} às ${a.time} · por ${CHANNEL[a.channel]}`;
 }
 

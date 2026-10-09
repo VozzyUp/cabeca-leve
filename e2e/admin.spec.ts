@@ -16,6 +16,7 @@ async function adminUser(): Promise<TestUser> {
 test.describe.configure({ mode: "serial" });
 
 test("ADM-H1 o dono salva chaves pela tela; segredo não volta inteiro; vale na hora; apagar volta ao stack", async ({ page, user }) => {
+  test.setTimeout(120_000);  // compila várias telas na primeira vez
   const owner = await adminUser();
   await admin.from("app_settings").delete().in("key", ["EMAIL_FROM", "ASAAS_API_KEY", "META_WEBHOOK_VERIFY_TOKEN"]);
   await login(page, owner, "/ajustes");

@@ -125,9 +125,9 @@ export function seedOrganization(ctx: { today: string; now: Date; tz: string }) 
     note("Ontem", "Cansado, dormi tarde. Amanhã quero acordar às 6h30.", "Diário", 1, false, "journal"),
   ];
   const automations: Automation[] = [
-    { id: id(), title: "Resumo da manhã", prompt: "Compromissos, tarefas e contas do dia, em poucas linhas.", weekdays: [1, 2, 3, 4, 5], time: "07:00", channel: "whatsapp", active: true, lastRunAt: at(0, 7) },
-    { id: id(), title: "Revisão da semana", prompt: "O que foi feito, o que ficou e quanto gastei na semana.", weekdays: [0], time: "19:00", channel: "push", active: true, lastRunAt: at(-3, 19) },
-    { id: id(), title: "Fechamento do mês", prompt: "Quanto entrou, saiu e sobrou, comparado ao mês anterior.", weekdays: [], time: "09:00", channel: "email", active: false, lastRunAt: null },
+    { id: id(), title: "Resumo da manhã", prompt: "Compromissos, tarefas e contas do dia, em poucas linhas.", schedule: "weekly", runOn: null, weekdays: [1, 2, 3, 4, 5], time: "07:00", channel: "whatsapp", active: true, lastRunAt: at(0, 7) },
+    { id: id(), title: "Revisão da semana", prompt: "O que foi feito, o que ficou e quanto gastei na semana.", schedule: "weekly", runOn: null, weekdays: [0], time: "19:00", channel: "push", active: true, lastRunAt: at(-3, 19) },
+    { id: id(), title: "Fechamento do mês", prompt: "Quanto entrou, saiu e sobrou, comparado ao mês anterior.", schedule: "monthly", runOn: null, weekdays: [], time: "09:00", channel: "email", active: false, lastRunAt: null },
   ];
   const notice = (kind: Notice["kind"], title: string, body: string, hoursAgo: number, read: boolean, href: string | null): Notice =>
     ({ id: id(), kind, title, body, href, createdAt: new Date(now.getTime() - hoursAgo * 3_600_000).toISOString(), readAt: read ? now.toISOString() : null });

@@ -1,11 +1,12 @@
 import type { Admin } from "@/lib/supabase/server";
 import type { Json, TablesUpdate } from "@/lib/supabase/database.types";
+import { nextAutomationRun } from "@/lib/domain/automation";
 import { nextDate, nextFireAt, reopenFireAt } from "@/lib/domain/recurrence";
 import { newProtocol, notifyOwner, supportDueAt } from "@/lib/support";
 import { addDays, localDate, zonedToUtc } from "@/lib/time";
 import type { DataStore } from "./store";
 import type {
-  ActionCardData, ActionRecord, BodyMeasurement, CalendarEvent, ChatMessage, Note, Reminder, Settings, Task, Transaction,
+  ActionCardData, ActionRecord, Automation, BodyMeasurement, CalendarEvent, ChatMessage, Note, Reminder, Settings, Task, Transaction,
   SupportTicket,
   Budget,
 } from "./types";
@@ -22,7 +23,10 @@ function must<T>(r: Result<T>): NonNullable<T> {
   return r.data as NonNullable<T>;
 }
 
-const ENTITY_TABLE = { reminder: "reminders", transaction: "transactions", task: "tasks", habit: "habits" } as const;
+const ENTITY_TABLE = {
+  reminder: "reminders", transaction: "transactions", task: "tasks", habit: "habits",
+  project: "projects", goal: "goals", automation: "automations", workout_plan: "workout_plans", meal_plan: "diet_plans",
+} as const;
 const TABLE_ENTITY = Object.fromEntries(Object.entries(ENTITY_TABLE).map(([k, v]) => [v, k])) as Record<string, ActionRecord["entity"]>;
 const UI_METHODS = new Set(["pix", "debit", "credit", "cash", "other"]);
 const hm = (t: string | null | undefined) => (t ? t.slice(0, 5) : null);
@@ -254,19 +258,24 @@ export async function createSupabaseStore(db: Admin, userId: string, email: stri
         cache_read_tokens: r.cacheReadTokens, cache_write_tokens: r.cacheWriteTokens,
       }))));
     },
-    async recordAction(entity, entityId) {
+    async recordAction(entity, entityId, replaced) {
       const a = must(await db.from("actions").insert({
-        user_id: userId, tool_name: `create_${entity}`, entity_table: ENTITY_TABLE[entity], entity_id: entityId, operation: "create", after: {},
+        user_id: userId, tool_name: `create_${entity}`, entity_table: ENTITY_TABLE[entity], entity_id: entityId, operation: "create", after: replaced?.length ? { replaced } : {},
       }).select("id, entity_id, undone_at").single());
-      return { id: a.id, entity, entityId: a.entity_id, operation: "create", undoneAt: a.undone_at };
+      return { id: a.id, entity, entityId: a.entity_id, operation: "create", undoneAt: a.undone_at, ...(replaced?.length ? { replaced } : {}) };
     },
     async undoAction(id) {
-      const a = must(await db.from("actions").select("*").eq("id", id).eq("user_id", userId).maybeSingle() as Result<{ id: string; entity_table: string; entity_id: string; undone_at: string | null } | null>);
+      const a = must(await db.from("actions").select("*").eq("id", id).eq("user_id", userId).maybeSingle() as Result<{ id: string; entity_table: string; entity_id: string; undone_at: string | null; after: { replaced?: string[] } | null } | null>);
       if (!a || !TABLE_ENTITY[a.entity_table]) return { ok: false, reason: "not_found" };
       if (a.undone_at) return { ok: false, reason: "already_undone" };
       // desfazer uma criação = remover o item criado (hábito leva os registros junto, em cascata)
       const table = a.entity_table as (typeof ENTITY_TABLE)[keyof typeof ENTITY_TABLE];
       must(await db.from(table).delete().eq("id", a.entity_id).eq("user_id", userId));
+      // ficha ou plano alimentar que este trocou: o anterior volta a valer
+      const replaced = a.after?.replaced ?? [];
+      if (replaced.length && (table === "workout_plans" || table === "diet_plans")) {
+        must(await db.from(table).update({ active: true }).in("id", replaced).eq("user_id", userId));
+      }
       must(await db.from("actions").update({ undone_at: new Date().toISOString() }).eq("id", id).eq("user_id", userId));
       await markCards(id);
       return { ok: true };
@@ -390,6 +399,23 @@ export async function createSupabaseStore(db: Admin, userId: string, email: stri
       must(await db.from("goal_entries").insert({ user_id: userId, goal_id: id, value: g.kind === "financial" ? delta / 100 : delta, occurred_on: today() }));
       return (await store.listGoals()).find((x) => x.id === id) ?? null;
     },
+    async createProject(input) {
+      const p = must(await db.from("projects").insert({ user_id: userId, name: input.name, description: input.description || null, starts_on: input.startsOn, due_on: input.dueOn }).select("id").single());
+      if (input.milestones.length) {
+        const { error } = await db.from("milestones").insert(input.milestones.map((m, i) => ({ user_id: userId, project_id: p.id, title: m.title, due_on: m.dueOn, position: i })));
+        if (error) { await db.from("projects").delete().eq("id", p.id).eq("user_id", userId); throw new Error(error.message); }
+      }
+      return (await store.listProjects()).find((x) => x.id === p.id)!;
+    },
+    async createGoal(input) {
+      const money = input.unit === "money";
+      const scale = money ? 100 : 1;  // metas de dinheiro guardam reais; as telas usam centavos
+      const g = must(await db.from("goals").insert({
+        user_id: userId, title: input.title, kind: money ? "financial" : "custom", unit: money ? "BRL" : "itens", target_value: input.targetValue / scale,
+        monthly_plan: input.monthlyPlan === null ? null : input.monthlyPlan / scale, deadline: input.dueOn,
+      }).select("id").single());
+      return (await store.listGoals()).find((x) => x.id === g.id)!;
+    },
     async listNotes() {
       const [notes, journal] = await Promise.all([
         db.from("notes").select("*, notebooks(name)").eq("user_id", userId).is("archived_at", null),
@@ -425,12 +451,48 @@ export async function createSupabaseStore(db: Admin, userId: string, email: stri
       const rows = must(await db.from("automations").select("*, automation_runs(finished_at)").eq("user_id", userId).order("created_at"));
       return rows.map((a) => ({
         id: a.id, title: a.title, prompt: a.instruction, time: hm(a.run_time)!, channel: a.channel as "push" | "whatsapp" | "email", active: a.active,
+        schedule: a.schedule as Automation["schedule"], runOn: a.run_on,
         weekdays: a.schedule === "daily" ? [0, 1, 2, 3, 4, 5, 6] : a.schedule === "weekly" ? a.weekdays : [],
         lastRunAt: a.automation_runs.map((r) => r.finished_at).filter((x): x is string => !!x).sort().pop() ?? null,
       }));
     },
+    async createAutomation(input) {
+      const next = nextAutomationRun({ schedule: input.schedule, weekdays: input.weekdays, runOn: input.runOn, time: input.time }, tz, new Date());
+      const a = must(await db.from("automations").insert({
+        user_id: userId, title: input.title, instruction: input.prompt, sources: input.sources, schedule: input.schedule, weekdays: input.schedule === "weekly" ? input.weekdays : [],
+        run_time: input.time, run_on: input.schedule === "once" ? input.runOn : null, timezone: tz, lookback_days: input.lookbackDays, channel: input.channel,
+        push: true, next_run_at: next?.toISOString() ?? null,
+      }).select("id").single());
+      return (await store.listAutomations()).find((x) => x.id === a.id)!;
+    },
+    async removeItem(kind, id) {
+      if (!/^[0-9a-f-]{36}$/i.test(id)) return false;
+      if (kind === "project") return must(await db.from("projects").update({ status: "archived" }).eq("id", id).eq("user_id", userId).neq("status", "archived").select("id")).length > 0;
+      if (kind === "goal") return must(await db.from("goals").update({ status: "archived" }).eq("id", id).eq("user_id", userId).neq("status", "archived").select("id")).length > 0;
+      if (kind === "automation") return must(await db.from("automations").delete().eq("id", id).eq("user_id", userId).select("id")).length > 0;
+      // ficha de treino e plano alimentar: o item da tela pertence a um plano, que fica inativo (não apaga o histórico)
+      if (kind === "workout") {
+        const s = must(await db.from("workout_plan_sessions").select("plan_id").eq("id", id).eq("user_id", userId).maybeSingle() as Result<{ plan_id: string } | null>);
+        if (!s) return false;
+        must(await db.from("workout_plans").update({ active: false }).eq("id", s.plan_id).eq("user_id", userId));
+        return true;
+      }
+      const m = must(await db.from("diet_meals").select("diet_plan_id").eq("id", id).eq("user_id", userId).maybeSingle() as Result<{ diet_plan_id: string } | null>);
+      if (!m) return false;
+      must(await db.from("diet_plans").update({ active: false }).eq("id", m.diet_plan_id).eq("user_id", userId));
+      return true;
+    },
     async setAutomationActive(id, active) {
-      return must(await db.from("automations").update({ active }).eq("id", id).eq("user_id", userId).select("id")).length > 0;
+      const patch: { active: boolean; next_run_at?: string | null } = { active };
+      if (active) {
+        // ao religar, o próximo horário vale de agora em diante (o guardado pode ter ficado no passado)
+        const a = must(await db.from("automations").select("schedule, weekdays, run_time, run_on").eq("id", id).eq("user_id", userId).maybeSingle() as Result<{ schedule: string; weekdays: number[]; run_time: string; run_on: string | null } | null>);
+        if (!a) return false;
+        const next = nextAutomationRun({ schedule: a.schedule as Automation["schedule"], weekdays: a.weekdays, runOn: a.run_on, time: a.run_time.slice(0, 5) }, tz, new Date());
+        if (!next) return false;  // uma vez só que já passou: não tem como religar
+        patch.next_run_at = next.toISOString();
+      }
+      return must(await db.from("automations").update(patch).eq("id", id).eq("user_id", userId).select("id")).length > 0;
     },
     async addNotice(n) {
       must(await db.from("notices").insert({ user_id: userId, kind: n.kind, title: n.title.slice(0, 120), body: n.body, href: n.href }));
@@ -479,6 +541,52 @@ export async function createSupabaseStore(db: Admin, userId: string, email: stri
       return { ...input, id: f.id };
     },
 
+    async createWorkoutPlan(input) {
+      const before = must(await db.from("workout_plans").select("id").eq("user_id", userId).eq("active", true)).map((p) => p.id);
+      if (before.length) must(await db.from("workout_plans").update({ active: false }).in("id", before).eq("user_id", userId));
+      const undo = async () => {
+        if (before.length) await db.from("workout_plans").update({ active: true }).in("id", before).eq("user_id", userId);
+      };
+      let planId: string | null = null;
+      try {
+        planId = must(await db.from("workout_plans").insert({ user_id: userId, name: input.name, active: true }).select("id").single()).id;
+        for (const [i, sess] of input.sessions.entries()) {
+          const ses = must(await db.from("workout_plan_sessions").insert({ user_id: userId, plan_id: planId, name: sess.name, weekdays: sess.weekdays, position: i }).select("id").single());
+          if (sess.exercises.length) {
+            const { error } = await db.from("workout_plan_exercises").insert(sess.exercises.map((e, j) => ({
+              user_id: userId, plan_session_id: ses.id, exercise_name: e.name, target_sets: e.sets, target_reps: e.reps, target_load_kg: e.loadKg, rest_seconds: e.restSeconds, position: j,
+            })));
+            if (error) throw new Error(error.message);
+          }
+        }
+        return { id: planId, replaced: before };
+      } catch (error) {
+        if (planId) await db.from("workout_plans").delete().eq("id", planId).eq("user_id", userId);
+        await undo();
+        throw error;
+      }
+    },
+    async createMealPlan(input) {
+      const before = must(await db.from("diet_plans").select("id").eq("user_id", userId).eq("active", true)).map((p) => p.id);
+      if (before.length) must(await db.from("diet_plans").update({ active: false }).in("id", before).eq("user_id", userId));
+      let planId: string | null = null;
+      try {
+        planId = must(await db.from("diet_plans").insert({
+          user_id: userId, name: input.name, kcal_training: input.kcalTraining, kcal_rest: input.kcalRest, protein_g: input.proteinG, carbs_g: input.carbsG, fat_g: input.fatG, active: true,
+        }).select("id").single()).id;
+        if (input.meals.length) {
+          const { error } = await db.from("diet_meals").insert(input.meals.map((m, i) => ({
+            user_id: userId, diet_plan_id: planId!, name: m.name, at_time: m.time, items: m.items.join("\n"), kcal: m.kcal, position: i,
+          })));
+          if (error) throw new Error(error.message);
+        }
+        return { id: planId, replaced: before };
+      } catch (error) {
+        if (planId) await db.from("diet_plans").delete().eq("id", planId).eq("user_id", userId);
+        if (before.length) await db.from("diet_plans").update({ active: true }).in("id", before).eq("user_id", userId);
+        throw error;
+      }
+    },
     async listWorkouts() {
       const [sessions, sets] = await Promise.all([
         db.from("workout_plan_sessions").select("*, workout_plans!inner(active), workout_plan_exercises(*)").eq("user_id", userId).order("position"),

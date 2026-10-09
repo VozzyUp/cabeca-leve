@@ -8,7 +8,10 @@ import { phoneVariants, toE164 } from "./phone";
 import { whatsapp, type Inbound } from "./provider";
 import { siteUrl } from "@/lib/public-env";
 
-const KIND: Record<ActionCardData["kind"], string> = { reminder: "Lembrete", transaction: "Lançamento", task: "Tarefa", habit: "Hábito" };
+const KIND: Record<ActionCardData["kind"], string> = {
+  reminder: "Lembrete", transaction: "Lançamento", task: "Tarefa", habit: "Hábito", workout: "Ficha de treino", meal: "Plano alimentar",
+  project: "Projeto", goal: "Meta", automation: "Revisão agendada",
+};
 
 // No WhatsApp não há card: a resposta leva uma linha por item salvo
 export function formatReply(text: string, cards: ActionCardData[]) {

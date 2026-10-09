@@ -118,6 +118,80 @@ describe.skipIf(!run)("agente", () => {
     expect(await store.listTransactions()).toEqual([]);
   });
 
+  it("treino, plano alimentar, projeto, meta e peso pelo chat; depois progresso, etapa, revisão e remoção", async () => {
+    const { runAgent } = await import("./agent");
+    const use = (name: string, input: object, n: number) => ({ type: "tool_use", id: `toolu_${name}_${n}`, name, input });
+    replies.push(
+      msg([
+        use("create_workout_plan", { name: "Hipertrofia", sessions: [
+          { name: "Treino A", weekdays: [1, 4], exercises: [{ name: "Supino reto", sets: 4, reps: 10, load_kg: 40, rest_seconds: 90 }, { name: "Remada", sets: 4, reps: 10, load_kg: null, rest_seconds: null }] },
+          { name: "Treino B", weekdays: [2, 5], exercises: [{ name: "Agachamento", sets: 3, reps: 12, load_kg: 60, rest_seconds: 120 }] },
+        ] }, 1),
+        use("create_meal_plan", { name: "Plano da nutri", kcal_training: 2400, kcal_rest: 2100, protein_g: 160, carbs_g: null, fat_g: null, meals: [
+          { name: "Café da manhã", time: "07:30", items: ["2 ovos", "pão integral"], kcal: 450 }, { name: "Almoço", time: "12:30", items: ["arroz", "feijão", "frango"], kcal: 700 },
+        ] }, 1),
+        use("create_project", { name: "Mudança de apartamento", description: null, starts_on: null, due_on: "2026-10-30", milestones: [{ title: "Visitar", due_on: null }, { title: "Assinar", due_on: "2026-10-20" }] }, 1),
+        use("create_goal", { title: "Juntar 20 mil", unit: "money", target: 20000, monthly_plan: 2000, due_on: "2026-12-31" }, 1),
+        use("log_measurement", { weight_kg: 82.4, waist_cm: null, hip_cm: null, day: null }, 1),
+      ], "tool_use"),
+      msg([{ type: "text", text: "Tudo guardado." }], "end_turn"),
+    );
+    const r1 = await runAgent({ store, text: "monta meu treino, minha dieta, o projeto da mudança, a meta e pesei 82,4", channel: "web", now: new Date("2026-10-09T15:00:00Z") });
+    expect(r1.cards.map((c) => c.kind)).toEqual(["workout", "meal", "project", "goal"]);
+    expect(r1.cards[0]).toMatchObject({ title: "Hipertrofia", value: "2 treinos", href: "/saude/treino" });
+    expect(r1.cards[3].value).toMatch(/20\.000,00/);
+
+    const workouts = await store.listWorkouts();
+    expect(workouts.map((w) => w.name)).toEqual(["Treino A", "Treino B"]);
+    expect(workouts[0].weekdays).toEqual([1, 4]);
+    expect(workouts[0].exercises.map((e) => [e.name, e.sets, e.reps, e.loadKg])).toEqual([["Supino reto", 4, 10, 40], ["Remada", 4, 10, null]]);
+    expect((await store.listMeals()).map((m) => [m.name, m.time, m.kcal])).toEqual([["Café da manhã", "07:30", 450], ["Almoço", "12:30", 700]]);
+    const project = (await store.listProjects()).find((p) => p.name === "Mudança de apartamento")!;
+    expect(project.milestones.map((m) => m.title)).toEqual(["Visitar", "Assinar"]);
+    const goal = (await store.listGoals()).find((g) => g.title === "Juntar 20 mil")!;
+    expect(goal).toMatchObject({ unit: "money", targetValue: 2_000_000, currentValue: 0, dueOn: "2026-12-31" });
+    expect((await store.listMeasurements()).at(-1)).toMatchObject({ weightKg: 82.4 });
+
+    // segunda rodada: usa os ids de verdade
+    replies.push(
+      msg([
+        use("add_goal_progress", { goal_id: goal.id, amount: 1500 }, 2),
+        use("complete_item", { kind: "milestone", id: project.milestones[0].id, done: true, day: null }, 2),
+        use("complete_item", { kind: "workout", id: workouts[0].id, done: true, day: "2026-10-09" }, 2),
+        use("create_automation", { title: "Resumo da manhã", prompt: "Compromissos e tarefas do dia", repeat: "weekly", weekdays: [1, 2, 3, 4, 5], run_on: null, time: "07:00", channel: "push", sources: ["tasks", "habits"] }, 2),
+        use("query_areas", { area: "goals" }, 2),
+      ], "tool_use"),
+      msg([{ type: "text", text: "Feito." }], "end_turn"),
+    );
+    const r2 = await runAgent({ store, text: "guardei 1500 na meta, visitei os apartamentos, treinei hoje e quero um resumo às 7h nos dias úteis", channel: "web", now: new Date("2026-10-09T15:05:00Z") });
+    expect(r2.cards.map((c) => c.kind)).toEqual(["automation"]);
+    expect(r2.cards[0]).toMatchObject({ title: "Resumo da manhã", value: "07:00" });
+    expect((await store.listGoals()).find((g) => g.id === goal.id)!.currentValue).toBe(150_000);
+    expect((await store.listProjects()).find((p) => p.id === project.id)!.milestones[0].done).toBe(true);
+    expect((await store.listWorkoutLogs())).toEqual([{ workoutId: workouts[0].id, day: "2026-10-09" }]);
+    const automation = (await store.listAutomations())[0];
+    expect(automation).toMatchObject({ schedule: "weekly", weekdays: [1, 2, 3, 4, 5], channel: "push", active: true });
+    // o resultado de query_areas (ferramentas do mesmo pedido rodam juntas) levou a meta, com o id, para o modelo
+    expect(JSON.stringify(requests.at(-1)!.body.messages.at(-1))).toContain(goal.id);
+
+    // remover e desfazer
+    replies.push(
+      msg([use("remove_item", { kind: "project", id: project.id }, 3), use("remove_item", { kind: "automation", id: automation.id }, 3)], "tool_use"),
+      msg([{ type: "text", text: "Removi." }], "end_turn"),
+    );
+    await runAgent({ store, text: "tira o projeto da mudança e a revisão da manhã", channel: "web", now: new Date("2026-10-09T15:10:00Z") });
+    expect((await store.listProjects()).some((p) => p.id === project.id)).toBe(false);
+    expect(await store.listAutomations()).toEqual([]);
+    // entrada inválida volta como erro para o modelo corrigir, sem gravar nada
+    replies.push(
+      msg([use("create_goal", { title: "Meta sem valor", unit: "money", target: -5, monthly_plan: null, due_on: null }, 4)], "tool_use"),
+      msg([{ type: "text", text: "Qual o valor da meta?" }], "end_turn"),
+    );
+    const bad = await runAgent({ store, text: "cria uma meta", channel: "web", now: new Date("2026-10-09T15:15:00Z") });
+    expect(bad.cards).toEqual([]);
+    expect((await store.listGoals()).some((g) => g.title === "Meta sem valor")).toBe(false);
+  });
+
   it("se a API falhar, fecha o turno com uma resposta e o histórico segue válido", async () => {
     const { runAgent } = await import("./agent");
     replies.push({ type: "error", error: { type: "invalid_request_error", message: "x" } });

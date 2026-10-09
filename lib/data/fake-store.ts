@@ -45,10 +45,18 @@ type State = {
   meals: Meal[];
   mealLogs: MealLog[];
   measurements: BodyMeasurement[];
+  // fichas e planos criados pelo chat: quais itens são de cada um e qual vale agora (os de exemplo não têm grupo)
+  plans?: Array<{ id: string; kind: "workout" | "meal"; active: boolean; ids: string[] }>;
   settings: Settings;
 };
 
 const id = () => crypto.randomUUID();
+
+// tira da vista as fichas e planos que um novo substituiu (continuam guardados, para o desfazer)
+function hidden(s: State) {
+  const off = new Set((s.plans ?? []).filter((p) => !p.active).flatMap((p) => p.ids));
+  return { workouts: s.workouts.filter((w) => !off.has(w.id)), meals: s.meals.filter((m) => !off.has(m.id)) };
+}
 
 const CATEGORY_NAMES: Array<[string, Category["kind"]]> = [
   ["Alimentação", "expense"], ["Mercado", "expense"], ["Transporte", "expense"], ["Moradia", "expense"],
@@ -320,8 +328,8 @@ export const fakeStore: DataStore = {
   },
 
   async recordAiUsage() {},  // sem banco, sem painel de custo
-  async recordAction(entity, entityId) {
-    const a: ActionRecord = { id: id(), entity, entityId, operation: "create", undoneAt: null };
+  async recordAction(entity, entityId, replaced) {
+    const a: ActionRecord = { id: id(), entity, entityId, operation: "create", undoneAt: null, ...(replaced?.length ? { replaced } : {}) };
     mutate((s) => s.actions.push(a));
     return a;
   },
@@ -336,6 +344,18 @@ export const fakeStore: DataStore = {
       else if (a.entity === "habit") {
         s.habits = s.habits.filter((h) => h.id !== a.entityId);
         s.habitLogs = s.habitLogs.filter((l) => l.habitId !== a.entityId);
+      } else if (a.entity === "project") s.projects = s.projects.filter((p) => p.id !== a.entityId);
+      else if (a.entity === "goal") s.goals = s.goals.filter((g) => g.id !== a.entityId);
+      else if (a.entity === "automation") s.automations = s.automations.filter((x) => x.id !== a.entityId);
+      else if (a.entity === "workout_plan" || a.entity === "meal_plan") {
+        const kind = a.entity === "workout_plan" ? "workout" : "meal";
+        const plan = (s.plans ?? []).find((p) => p.id === a.entityId);
+        if (plan) {
+          const gone = new Set(plan.ids);
+          if (kind === "workout") s.workouts = s.workouts.filter((w) => !gone.has(w.id)); else s.meals = s.meals.filter((m) => !gone.has(m.id));
+          s.plans = (s.plans ?? []).filter((p) => p.id !== plan.id);
+        }
+        for (const p of s.plans ?? []) if (a.replaced?.includes(p.id)) p.active = true;
       } else s.transactions = s.transactions.filter((t) => t.id !== a.entityId);
       a.undoneAt = new Date().toISOString();
       for (const m of s.messages) for (const c of m.cards) if (c.actionId === aid) c.undone = true;
@@ -394,6 +414,19 @@ export const fakeStore: DataStore = {
   async listProjects() {
     return load().projects;
   },
+  async createProject(input) {
+    const p: Project = {
+      id: id(), name: input.name, description: input.description, dueOn: input.dueOn, status: "active",
+      milestones: input.milestones.map((m) => ({ id: id(), title: m.title, done: false })),
+    };
+    mutate((s) => s.projects.push(p));
+    return p;
+  },
+  async createGoal(input) {
+    const g: Goal = { id: id(), title: input.title, unit: input.unit, targetValue: input.targetValue, currentValue: 0, startOn: localDate(new Date(), DEFAULT_TZ), dueOn: input.dueOn };
+    mutate((s) => s.goals.push(g));
+    return g;
+  },
   async setMilestoneDone(projectId, milestoneId, done) {
     return mutate((s) => {
       const m = s.projects.find((p) => p.id === projectId)?.milestones.find((x) => x.id === milestoneId);
@@ -431,6 +464,30 @@ export const fakeStore: DataStore = {
   },
   async listAutomations() {
     return load().automations;
+  },
+  async createAutomation(input) {
+    const a: Automation = {
+      id: id(), title: input.title, prompt: input.prompt, schedule: input.schedule, weekdays: input.schedule === "daily" ? [0, 1, 2, 3, 4, 5, 6] : input.weekdays,
+      runOn: input.runOn, time: input.time, channel: input.channel, active: true, lastRunAt: null,
+    };
+    mutate((s) => s.automations.push(a));
+    return a;
+  },
+  async removeItem(kind, rid) {
+    return mutate((s) => {
+      if (kind === "project") { const n = s.projects.length; s.projects = s.projects.filter((p) => p.id !== rid); return s.projects.length < n; }
+      if (kind === "goal") { const n = s.goals.length; s.goals = s.goals.filter((g) => g.id !== rid); return s.goals.length < n; }
+      if (kind === "automation") { const n = s.automations.length; s.automations = s.automations.filter((x) => x.id !== rid); return s.automations.length < n; }
+      // ficha e plano: tira todo o grupo a que o item pertence
+      const list = kind === "workout" ? s.workouts : s.meals;
+      const item = list.find((x) => x.id === rid);
+      if (!item) return false;
+      const group = (s.plans ?? []).find((p) => p.kind === kind && p.ids.includes(rid));
+      const gone = new Set(group ? group.ids : [rid]);
+      if (kind === "workout") s.workouts = s.workouts.filter((w) => !gone.has(w.id)); else s.meals = s.meals.filter((m) => !gone.has(m.id));
+      if (group) s.plans = (s.plans ?? []).filter((p) => p.id !== group.id);
+      return true;
+    });
   },
   async setAutomationActive(aid, active) {
     return mutate((s) => {
@@ -478,8 +535,36 @@ export const fakeStore: DataStore = {
     return f;
   },
 
+  async createWorkoutPlan(input) {
+    const planId = id();
+    return mutate((s) => {
+      s.plans ??= [];
+      // a ficha nova passa a valer: as sessões da anterior saem da tela e voltam se desfizer
+      const replaced = s.plans.filter((p) => p.kind === "workout" && p.active).map((p) => p.id);
+      const sessions = input.sessions.map((x): Workout => ({
+        id: id(), name: x.name, weekdays: x.weekdays,
+        exercises: x.exercises.map((e) => ({ id: id(), name: e.name, sets: e.sets, reps: e.reps, loadKg: e.loadKg, bestKg: e.loadKg })),
+      }));
+      for (const p of s.plans.filter((p) => replaced.includes(p.id))) p.active = false;
+      s.plans.push({ id: planId, kind: "workout", active: true, ids: sessions.map((x) => x.id) });
+      s.workouts.push(...sessions);
+      return { id: planId, replaced };
+    });
+  },
+  async createMealPlan(input) {
+    const planId = id();
+    return mutate((s) => {
+      s.plans ??= [];
+      const replaced = s.plans.filter((p) => p.kind === "meal" && p.active).map((p) => p.id);
+      const meals = input.meals.map((m): Meal => ({ id: id(), name: m.name, time: m.time ?? "", items: m.items, kcal: m.kcal ?? 0 }));
+      for (const p of s.plans.filter((p) => replaced.includes(p.id))) p.active = false;
+      s.plans.push({ id: planId, kind: "meal", active: true, ids: meals.map((m) => m.id) });
+      s.meals.push(...meals);
+      return { id: planId, replaced };
+    });
+  },
   async listWorkouts() {
-    return load().workouts;
+    return hidden(load()).workouts;
   },
   async listWorkoutLogs() {
     return load().workoutLogs;
@@ -493,7 +578,7 @@ export const fakeStore: DataStore = {
     });
   },
   async listMeals() {
-    return load().meals.sort((a, b) => a.time.localeCompare(b.time));
+    return hidden(load()).meals.sort((a, b) => a.time.localeCompare(b.time));
   },
   async listMealLogs() {
     return load().mealLogs;

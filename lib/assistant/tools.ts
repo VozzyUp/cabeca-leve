@@ -1,6 +1,6 @@
 import { budgetAlert, budgetStatus } from "@/lib/domain/finance";
 import { categoryFromWords } from "./rule-parser";
-import type { DataStore } from "@/lib/data/store";
+import type { AutomationInput, DataStore, GoalInput, MealPlanInput, ProjectInput, WorkoutPlanInput } from "@/lib/data/store";
 import type { ActionCardData, Task, Transaction } from "@/lib/data/types";
 import { formatDayLabel, formatMoney, formatTime, localDate } from "@/lib/time";
 import { describeRepeat } from "@/lib/domain/recurrence";
@@ -115,5 +115,65 @@ export async function setBudgetByName(store: DataStore, categoryName: string, am
     text: amountCents === null
       ? `Pronto, tirei o teto de ${cat.name}.`
       : `Pronto: teto de ${formatMoney(amountCents)} por mês em ${cat.name}. Aviso quando passar de 80% e de 100%.`,
+  };
+}
+
+// ---- Treino, alimentação, projetos, metas e revisões agendadas ----
+
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+
+export async function createWorkoutPlan(store: DataStore, input: WorkoutPlanInput): Promise<ActionCardData> {
+  const created = await store.createWorkoutPlan(input);
+  const action = await store.recordAction("workout_plan", created.id, created.replaced);
+  const exercises = input.sessions.reduce((n, x) => n + x.exercises.length, 0);
+  const days = input.sessions.map((x) => (x.weekdays.length ? `${x.name} (${describeWeekdays(x.weekdays)})` : x.name)).join("; ");
+  return {
+    actionId: action.id, kind: "workout", title: input.name, value: plural(input.sessions.length, "treino", "treinos"), valueTone: "neutral",
+    meta: `${plural(exercises, "exercício", "exercícios")} · ${days}`, href: "/saude/treino", undone: false,
+  };
+}
+
+export async function createMealPlan(store: DataStore, input: MealPlanInput): Promise<ActionCardData> {
+  const created = await store.createMealPlan(input);
+  const action = await store.recordAction("meal_plan", created.id, created.replaced);
+  const kcal = input.kcalTraining ?? input.kcalRest;
+  return {
+    actionId: action.id, kind: "meal", title: input.name, value: plural(input.meals.length, "refeição", "refeições"), valueTone: "neutral",
+    meta: [kcal ? `${kcal} kcal por dia` : null, input.meals.map((m) => (m.time ? `${m.name} ${m.time}` : m.name)).join(", ")].filter(Boolean).join(" · "),
+    href: "/saude/dieta", undone: false,
+  };
+}
+
+export async function createProject(store: DataStore, input: ProjectInput, now: Date): Promise<ActionCardData> {
+  const p = await store.createProject(input);
+  const action = await store.recordAction("project", p.id);
+  const tz = store.timezone();
+  const due = p.dueOn ? `até ${formatDayLabel(p.dueOn, now, tz)}` : "sem prazo";
+  return {
+    actionId: action.id, kind: "project", title: p.name, value: due, valueTone: "neutral",
+    meta: p.milestones.length ? `${plural(p.milestones.length, "etapa", "etapas")}: ${p.milestones.map((m) => m.title).join(", ")}` : "sem etapas ainda", href: "/projetos", undone: false,
+  };
+}
+
+export async function createGoal(store: DataStore, input: GoalInput, now: Date): Promise<ActionCardData> {
+  const g = await store.createGoal(input);
+  const action = await store.recordAction("goal", g.id);
+  const tz = store.timezone();
+  const target = g.unit === "money" ? formatMoney(g.targetValue) : String(g.targetValue);
+  const meta = [g.dueOn ? `até ${formatDayLabel(g.dueOn, now, tz)}` : "sem prazo", input.monthlyPlan ? `ritmo ${g.unit === "money" ? formatMoney(input.monthlyPlan) : input.monthlyPlan} por mês` : null].filter(Boolean).join(" · ");
+  return { actionId: action.id, kind: "goal", title: g.title, value: target, valueTone: "neutral", meta, href: "/metas", undone: false };
+}
+
+const CHANNEL_NAME = { push: "aviso no celular", whatsapp: "WhatsApp", email: "e-mail" } as const;
+const SCHEDULE_NAME = { daily: "todo dia", weekly: "", monthly: "todo dia 1", once: "uma vez" } as const;
+
+export async function createAutomation(store: DataStore, input: AutomationInput, now: Date): Promise<ActionCardData> {
+  const a = await store.createAutomation(input);
+  const action = await store.recordAction("automation", a.id);
+  const tz = store.timezone();
+  const when = a.schedule === "weekly" ? describeWeekdays(a.weekdays) : a.schedule === "once" && a.runOn ? formatDayLabel(a.runOn, now, tz) : SCHEDULE_NAME[a.schedule];
+  return {
+    actionId: action.id, kind: "automation", title: a.title, value: a.time, valueTone: "neutral",
+    meta: `${when[0].toUpperCase()}${when.slice(1)} · ${CHANNEL_NAME[a.channel]}`, href: "/automacoes", undone: false,
   };
 }

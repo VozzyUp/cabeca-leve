@@ -62,6 +62,65 @@ describe.skipIf(!run)("SupabaseStore", () => {
     expect((await a.listMessages()).at(-1)?.cards[0].undone).toBe(true);
   });
 
+  it("ficha e plano alimentar novos trocam os atuais; desfazer devolve os de antes; projeto, meta e revisão se desfazem", async () => {
+    const plan = (name: string) => ({ name, sessions: [{ name: `Treino ${name}`, weekdays: [1], exercises: [{ name: "Supino", sets: 4, reps: 10, loadKg: 40, restSeconds: 90 }] }] });
+    const a1 = await a.createWorkoutPlan(plan("1"));
+    expect(a1.replaced).toEqual([]);
+    const a2 = await a.createWorkoutPlan(plan("2"));
+    expect(a2.replaced).toEqual([a1.id]);
+    expect((await a.listWorkouts()).map((w) => w.name)).toEqual(["Treino 2"]);
+    const act = await a.recordAction("workout_plan", a2.id, a2.replaced);
+    expect(await a.undoAction(act.id)).toEqual({ ok: true });
+    expect((await a.listWorkouts()).map((w) => w.name)).toEqual(["Treino 1"]);
+    // a ficha de outra conta não aparece nem some
+    expect((await b.listWorkouts()).map((w) => w.name)).not.toContain("Treino 1");
+
+    const meal = (name: string) => ({ name, kcalTraining: 2400, kcalRest: null, proteinG: 150, carbsG: null, fatG: null, meals: [{ name: "Almoço", time: "12:30", items: ["arroz", "feijão"], kcal: 700 }] });
+    const m1 = await a.createMealPlan(meal("Plano 1"));
+    const m2 = await a.createMealPlan(meal("Plano 2"));
+    expect(m2.replaced).toEqual([m1.id]);
+    expect((await a.listMeals()).map((m) => m.items)).toEqual([["arroz", "feijão"]]);
+    await a.undoAction((await a.recordAction("meal_plan", m2.id, m2.replaced)).id);
+    expect(await a.listMeals()).toHaveLength(1);
+
+    const project = await a.createProject({ name: "Reforma", description: "", startsOn: null, dueOn: "2026-12-01", milestones: [{ title: "Orçar", dueOn: null }, { title: "Contratar", dueOn: "2026-11-01" }] });
+    expect(project.milestones.map((x) => x.title)).toEqual(["Orçar", "Contratar"]);
+    await a.undoAction((await a.recordAction("project", project.id)).id);
+    expect((await a.listProjects()).some((x) => x.id === project.id)).toBe(false);
+
+    const goal = await a.createGoal({ title: "Viagem", unit: "money", targetValue: 500_000, monthlyPlan: 50_000, dueOn: "2026-12-31" });
+    expect(goal).toMatchObject({ unit: "money", targetValue: 500_000 });
+    expect((await a.addGoalProgress(goal.id, 120_000))!.currentValue).toBe(120_000);
+    const count = await a.createGoal({ title: "Ler", unit: "count", targetValue: 12, monthlyPlan: null, dueOn: null });
+    expect(count).toMatchObject({ unit: "count", targetValue: 12 });
+    expect(await a.removeItem("goal", goal.id)).toBe(true);
+    expect((await a.listGoals()).some((x) => x.id === goal.id)).toBe(false);
+    expect(await a.removeItem("goal", goal.id)).toBe(false);  // já arquivada
+    expect(await b.removeItem("goal", count.id)).toBe(false);  // de outra conta
+
+    const auto = await a.createAutomation({ title: "Semana", prompt: "Resumo da semana", schedule: "weekly", weekdays: [0], runOn: null, time: "19:00", channel: "push", sources: ["tasks", "finance"], lookbackDays: 7 });
+    expect(auto).toMatchObject({ schedule: "weekly", weekdays: [0], time: "19:00", active: true });
+    const { data: row } = await admin.from("automations").select("next_run_at, sources").eq("id", auto.id).single();
+    expect(new Date(row!.next_run_at!).getTime()).toBeGreaterThan(Date.now());
+    expect(row!.sources).toEqual(["tasks", "finance"]);
+    // pausada e religada depois de muito tempo: o próximo horário volta a valer de agora em diante
+    await a.setAutomationActive(auto.id, false);
+    await admin.from("automations").update({ next_run_at: new Date(Date.now() - 5 * 86_400_000).toISOString() }).eq("id", auto.id);
+    expect(await a.setAutomationActive(auto.id, true)).toBe(true);
+    const { data: relit } = await admin.from("automations").select("next_run_at, active").eq("id", auto.id).single();
+    expect(relit!.active).toBe(true);
+    expect(new Date(relit!.next_run_at!).getTime()).toBeGreaterThan(Date.now());
+    await a.undoAction((await a.recordAction("automation", auto.id)).id);
+    expect(await a.listAutomations()).toEqual([]);
+
+    // fichas e planos: remover tira da tela sem apagar o histórico
+    const w = await a.createWorkoutPlan(plan("3"));
+    const sessionId = (await a.listWorkouts())[0].id;
+    expect(await a.removeItem("workout", sessionId)).toBe(true);
+    expect(await a.listWorkouts()).toEqual([]);
+    expect(w.id).toBeTruthy();
+  });
+
   it("custo da IA: grava por modelo, soma no período e só o servidor enxerga", async () => {
     await a.recordAiUsage([
       { model: "claude-sonnet-5-5", calls: 2, inputTokens: 100, outputTokens: 20, cacheReadTokens: 50, cacheWriteTokens: 10 },

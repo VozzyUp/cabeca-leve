@@ -19,6 +19,11 @@ const CARD = {
   transaction: { kind: "Lançamento", open: "Ver no extrato" },
   task: { kind: "Tarefa", open: "Ver nas tarefas" },
   habit: { kind: "Hábito", open: "Ver nos hábitos" },
+  workout: { kind: "Ficha de treino", open: "Ver no treino" },
+  meal: { kind: "Plano alimentar", open: "Ver na alimentação" },
+  project: { kind: "Projeto", open: "Ver nos projetos" },
+  goal: { kind: "Meta", open: "Ver nas metas" },
+  automation: { kind: "Revisão agendada", open: "Ver nas revisões" },
 } as const;
 
 const SUGGESTIONS = [

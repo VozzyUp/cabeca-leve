@@ -3,6 +3,7 @@ import { buildBriefing } from "@/lib/domain/briefing";
 import { dayItems } from "@/lib/domain/day";
 import { nextFireAt } from "@/lib/domain/recurrence";
 import { variableSpending } from "@/lib/domain/money";
+import { emailEnabled, sendEmail } from "@/lib/email";
 import { pushEnabled, sendPush } from "@/lib/push";
 import { getAdmin } from "@/lib/supabase/server";
 import { formatTime, localDate, zonedParts } from "@/lib/time";
@@ -12,9 +13,9 @@ import { whatsapp, type Proactive } from "@/lib/whatsapp/provider";
 // Cada envio reserva antes uma linha em scheduled_deliveries com chave única: se a varredura
 // rodar duas vezes ao mesmo tempo, só uma manda.
 
-type Channel = "push" | "whatsapp";
+type Channel = "push" | "whatsapp" | "email";
 
-async function claim(userId: string, source: "reminder" | "briefing", sourceId: string | null, channel: Channel, key: string, payload: Record<string, string>) {
+async function claim(userId: string, source: "reminder" | "briefing" | "automation", sourceId: string | null, channel: Channel, key: string, payload: Record<string, string>) {
   const { error } = await getAdmin().from("scheduled_deliveries").insert({
     user_id: userId, source_type: source, source_id: sourceId, channel, send_at: new Date().toISOString(), payload, dedupe_key: key, status: "scheduled",
   });
@@ -120,4 +121,43 @@ export async function sendTestNotice(userId: string): Promise<TestResult> {
   }
   await getAdmin().from("notices").insert({ user_id: userId, kind: "system", title: msg.title, body: msg.body, href: "/avisos" });
   return { push, devices, whatsapp: whatsappStatus, number: ch.whatsapp };
+}
+
+// Revisão agendada pronta: vai para os Avisos sempre e pelo canal escolhido. Se o WhatsApp ou o e-mail
+// não estiver pronto, cai no aviso do celular. Devolve o que aconteceu, para o registro da execução.
+const oneLine = (text: string) => text.replace(/\s*\n+\s*/g, " · ").trim();
+const firstLine = (text: string, max: number) => { const l = text.split("\n").find((x) => x.trim()) ?? ""; return l.length > max ? `${l.slice(0, max - 1)}…` : l; };
+
+export async function deliverReview(userId: string, automationId: string, scheduledFor: string, channel: "push" | "whatsapp" | "email", { title, text }: { title: string; text: string }) {
+  const db = getAdmin();
+  const key = `automation:${automationId}:${scheduledFor}`;
+  const msg = { title, body: firstLine(text, 140), url: "/avisos" };
+  const notes: string[] = [];
+  await db.from("notices").insert({ user_id: userId, kind: "automation", title: title.slice(0, 120), body: text, href: "/avisos" });
+  const ch = await channelsFor(userId);
+  let via: Channel = channel;
+
+  if (channel === "whatsapp") {
+    const wa = whatsapp();
+    if (ch.whatsapp && wa) {
+      if (await claim(userId, "automation", automationId, "whatsapp", `${key}:whatsapp`, { text })) {
+        try { await wa.sendProactive(ch.whatsapp, { template: "resumo", params: [oneLine(`${title}: ${text}`)], text: `*${title}*\n${text}` }, ch.lastInbound); await finish(`${key}:whatsapp`, null); }
+        catch (e) { await finish(`${key}:whatsapp`, String(e)); notes.push("WhatsApp falhou"); via = "push"; }
+      }
+    } else { notes.push("WhatsApp não vinculado"); via = "push"; }
+  } else if (channel === "email") {
+    const { data } = await db.auth.admin.getUserById(userId);
+    if (data.user?.email && emailEnabled()) {
+      if (await claim(userId, "automation", automationId, "email", `${key}:email`, { text })) {
+        const ok = await sendEmail(data.user.email, title, text);
+        await finish(`${key}:email`, ok ? null : "falhou");
+        if (!ok) { notes.push("e-mail falhou"); via = "push"; }
+      }
+    } else { notes.push("e-mail indisponível"); via = "push"; }
+  }
+
+  if (via === "push" && ch.push && (await claim(userId, "automation", automationId, "push", `${key}:push`, msg))) {
+    try { await sendPush(userId, msg); await finish(`${key}:push`, null); } catch (e) { await finish(`${key}:push`, String(e)); }
+  }
+  return notes;
 }

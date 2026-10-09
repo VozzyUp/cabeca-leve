@@ -6,6 +6,26 @@ import type {
 
 export type AiUsageInput = { model: string; calls: number; inputTokens: number; outputTokens: number; cacheReadTokens: number; cacheWriteTokens: number };
 
+// Criação pelo chat (treino, alimentação, projetos, metas e revisões agendadas)
+export type WorkoutPlanInput = {
+  name: string;
+  sessions: Array<{ name: string; weekdays: number[]; exercises: Array<{ name: string; sets: number; reps: number; loadKg: number | null; restSeconds: number | null }> }>;
+};
+export type MealPlanInput = {
+  name: string; kcalTraining: number | null; kcalRest: number | null; proteinG: number | null; carbsG: number | null; fatG: number | null;
+  meals: Array<{ name: string; time: string | null; items: string[]; kcal: number | null }>;
+};
+export type ProjectInput = { name: string; description: string; startsOn: string | null; dueOn: string | null; milestones: Array<{ title: string; dueOn: string | null }> };
+// targetValue e monthlyPlan em centavos quando unit = "money"
+export type GoalInput = { title: string; unit: "money" | "count"; targetValue: number; monthlyPlan: number | null; dueOn: string | null };
+export type AutomationSource = "tasks" | "projects" | "habits" | "goals" | "finance" | "notes";
+export type AutomationInput = {
+  title: string; prompt: string; schedule: Automation["schedule"]; weekdays: number[]; runOn: string | null; time: string;
+  channel: Automation["channel"]; sources: AutomationSource[]; lookbackDays: number;
+};
+export type PlanCreated = { id: string; replaced: string[] };
+export type RemovableKind = "workout" | "meal" | "project" | "goal" | "automation";
+
 // Mensagem a gravar. `content` são os blocos exatos da API (reenviados byte a byte ao modelo);
 // `visible: false` guarda passos internos do agente (chamadas e resultados de ferramenta).
 export type AppendMessage = Omit<ChatMessage, "id" | "createdAt" | "role"> & {
@@ -48,7 +68,7 @@ export interface DataStore {
   updateCategory(id: string, patch: { name: string }): Promise<Category | null>;
   archiveCategory(id: string): Promise<boolean>;
   listAccounts(): Promise<Array<Account & { balanceCents: number }>>;
-  recordAction(entity: ActionRecord["entity"], entityId: string): Promise<ActionRecord>;
+  recordAction(entity: ActionRecord["entity"], entityId: string, replaced?: string[]): Promise<ActionRecord>;
   // custo da IA: tokens de uma mensagem respondida, somados por modelo (tela /admin/custos)
   recordAiUsage(rows: AiUsageInput[]): Promise<void>;
   undoAction(id: string): Promise<{ ok: true } | { ok: false; reason: "not_found" | "already_undone" }>;
@@ -79,8 +99,13 @@ export interface DataStore {
   listNotes(): Promise<Note[]>;
   createNote(input: Pick<Note, "title" | "body" | "notebook" | "kind">): Promise<Note>;
   updateNote(id: string, patch: Partial<Pick<Note, "title" | "body" | "pinned" | "notebook">>): Promise<Note | null>;
+  createProject(input: ProjectInput): Promise<Project>;
+  createGoal(input: GoalInput): Promise<Goal>;
   listAutomations(): Promise<Automation[]>;
+  createAutomation(input: AutomationInput): Promise<Automation>;
   setAutomationActive(id: string, active: boolean): Promise<boolean>;
+  // tira da tela: projeto e meta vão para arquivados, a ficha e o plano ficam inativos, a revisão é apagada
+  removeItem(kind: RemovableKind, id: string): Promise<boolean>;
   listNotices(): Promise<Notice[]>;
   addNotice(n: { kind: Notice["kind"]; title: string; body: string; href: string | null }): Promise<void>;
   // tetos de gastos (F5): null tira o teto
@@ -92,6 +117,9 @@ export interface DataStore {
   saveFocusSession(input: Omit<FocusSession, "id">): Promise<FocusSession>;
 
   // saúde (M4)
+  // a ficha nova passa a valer; a ativa antes dela fica em `replaced` (o desfazer a reativa)
+  createWorkoutPlan(input: WorkoutPlanInput): Promise<PlanCreated>;
+  createMealPlan(input: MealPlanInput): Promise<PlanCreated>;
   listWorkouts(): Promise<Workout[]>;
   listWorkoutLogs(): Promise<WorkoutLog[]>;
   setWorkoutDone(workoutId: string, day: string, done: boolean): Promise<boolean>;
