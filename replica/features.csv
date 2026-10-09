@@ -150,3 +150,6 @@ Nunca pedir acesso ao WhatsApp da pessoa e dizer isso no cadastro,privacidade,sh
 Migrar o número do assistente para a API oficial da Meta (modelos aprovados),whatsapp,should,no,partial,envio por modelo aprovado fora da janela de 24 h pronto e testado (provider.test.ts); falta criar os modelos na Meta e ligar WHATSAPP_PROVIDER=meta
 "Botões de resposta no WhatsApp (desfazer, alterar, feito, adiar e respostas rápidas escolhidas pelo assistente)",whatsapp,should,no,yes,UAZAPI /send/menu e Meta interativo; chave para desligar na tela de admin | lib/whatsapp/buttons.ts
 "Cadastrar conta fixa, assinatura e entrada fixa pela conversa",dinheiro,should,no,yes,create_recurring; aparece em a resolver perto do vencimento
+Limite diário de mensagens por plano e teto de custo de IA,cobrança,should,no,yes,"lib/limits.ts; configurável em Admin > Configurações"
+Páginas de privacidade e termos de uso,legal,must,yes,yes,"/privacidade e /termos; revisão jurídica pendente"
+Página inicial pública com preço e teste grátis,marketing,should,yes,yes,"/ (quem já entrou vai para /conversa)"

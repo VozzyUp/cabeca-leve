@@ -83,6 +83,7 @@ export interface DataStore {
   listTodayTranscript(): Promise<TranscriptEntry[]>;
   // mensagens que a pessoa mandou desde um instante (limite de uso)
   countUserMessagesSince(iso: string): Promise<number>;
+  aiCostSince(iso: string): Promise<number>;  // US$ gastos com a IA desde o instante (0 na demonstração)
   // falar com uma pessoa (F3): null no modo de demonstração
   openSupportTicket(message: string, channel: "web" | "whatsapp" | "voice"): Promise<{ protocol: string; dueAt: string } | null>;
   listSupportTickets(): Promise<SupportTicket[]>;

@@ -388,6 +388,7 @@ export const fakeStore: DataStore = {
   async countUserMessagesSince(iso) {
     return load().messages.filter((m) => m.role === "user" && !m.system && m.createdAt >= iso).length;
   },
+  async aiCostSince() { return 0; },
   async listTodayTranscript() {
     const today = localDate(new Date(), DEFAULT_TZ);
     return load().messages.filter((m) => localDate(new Date(m.createdAt), DEFAULT_TZ) === today)

@@ -21,8 +21,8 @@ test("X-H1 todas as telas abrem, sem violações de acessibilidade @celular", as
   }
 });
 
-test("X-H2 telas públicas: entrar e planos", async ({ page }) => {
-  for (const path of ["/entrar", "/planos"]) {
+test("X-H2 telas públicas: início, entrar, planos, privacidade e termos", async ({ page }) => {
+  for (const path of ["/", "/entrar", "/planos", "/privacidade", "/termos"]) {
     await page.goto(path, { waitUntil: "networkidle" });
     expect.soft(await a11y(page), `acessibilidade em ${path}`).toEqual([]);
   }

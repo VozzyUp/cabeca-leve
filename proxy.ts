@@ -3,9 +3,9 @@ import { NextResponse, type NextRequest } from "next/server";
 import { siteUrl } from "@/lib/public-env";
 import { supabaseEnv } from "@/lib/supabase/env";
 
-// Rotas abertas: login, planos, confirmação de e-mail e quem se autentica de outro jeito
+// Rotas abertas: início, login, planos, termos e privacidade, confirmação de e-mail e quem se autentica de outro jeito
 // (webhooks com assinatura, filas com assinatura do QStash, varreduras com CRON_SECRET).
-const PUBLIC = [/^\/entrar/, /^\/planos/, /^\/auth\//, /^\/design/, /^\/api\/webhooks\//, /^\/api\/jobs\//, /^\/api\/cron\//, /^\/api\/health/];
+const PUBLIC = [/^\/$/, /^\/entrar/, /^\/planos/, /^\/privacidade/, /^\/termos/, /^\/auth\//, /^\/design/, /^\/api\/webhooks\//, /^\/api\/jobs\//, /^\/api\/cron\//, /^\/api\/health/];
 
 // Renova a sessão (cookies) a cada pedido e barra quem não entrou. É a checagem
 // otimista; cada rota e tela confere o usuário de novo ao ler os dados.

@@ -53,6 +53,16 @@ export const CONFIG_GROUPS: ConfigGroup[] = [
   { title: "Custos (painel)", fields: [
     { key: "COST_USD_BRL", label: "Cotação do dólar (R$)", secret: false, hint: "ex.: 5.50. Só converte os valores da tela de custos; padrão 5,50" },
   ] },
+  { title: "Dados da empresa (termos e privacidade)", fields: [
+    { key: "LEGAL_COMPANY_NAME", label: "Razão social ou nome", secret: false, hint: "aparece nas páginas /termos e /privacidade" },
+    { key: "LEGAL_COMPANY_DOCUMENT", label: "CNPJ ou CPF", secret: false },
+    { key: "LEGAL_CONTACT_EMAIL", label: "E-mail para assuntos de dados pessoais", secret: false, hint: "sem isso, usa o e-mail do suporte" },
+  ] },
+  { title: "Limites de uso (por dia)", fields: [
+    { key: "LIMIT_DAILY_MESSAGES_TRIAL", label: "Mensagens por dia no teste grátis", secret: false, hint: "padrão 40" },
+    { key: "LIMIT_DAILY_MESSAGES_PAID", label: "Mensagens por dia nos planos pagos", secret: false, hint: "padrão 200" },
+    { key: "LIMIT_DAILY_COST_USD", label: "Teto de custo de IA por pessoa por dia (US$)", secret: false, hint: "padrão 2. Use 0 para desligar" },
+  ] },
   { title: "Suporte", fields: [
     { key: "SUPPORT_EMAIL", label: "E-mail que recebe os chamados", secret: false },
     { key: "SUPPORT_WHATSAPP", label: "WhatsApp que recebe os chamados (com DDI)", secret: false },

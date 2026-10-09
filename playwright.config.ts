@@ -27,6 +27,8 @@ export const E2E_ENV = {
   APP_SECRET_KEY: "chave-de-criptografia-dos-testes-e2e-com-mais-de-32",
   NEXT_PUBLIC_SITE_URL: "http://localhost:3000",
   ANTHROPIC_API_KEY: "",
+  LIMIT_DAILY_MESSAGES_TRIAL: "100000",  // os testes dividem contas e mandam muitas mensagens
+  LIMIT_DAILY_MESSAGES_PAID: "100000",
   GROQ_API_KEY: "",
 };
 

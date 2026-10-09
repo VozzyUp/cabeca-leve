@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { requestPasswordReset, signIn, signUp, updatePassword } from "@/app/auth-actions";
@@ -86,6 +87,7 @@ export function SignIn({ initialMode, notice, demo, next, plan }: {
           {serverError && <p role="alert" className="text-sm text-danger">{serverError}</p>}
           <Button type="submit" size="lg" loading={pending}>{SUBMIT[mode]}</Button>
           {mode === "signup" && <p className="text-xs text-muted">{WHATSAPP_PROMISE}</p>}
+          {mode === "signup" && <p className="text-xs text-muted">Ao criar a conta, você concorda com os <Link href="/termos" className="underline">Termos de uso</Link> e a <Link href="/privacidade" className="underline">Política de privacidade</Link>.</p>}
           {mode === "signin" && <button type="button" onClick={() => go("reset")} className="text-sm font-medium text-accent hover:underline">Esqueci a senha</button>}
           {mode === "reset" && <button type="button" onClick={() => go("signin")} className="text-sm font-medium text-accent hover:underline">Lembrei a senha</button>}
         </form>

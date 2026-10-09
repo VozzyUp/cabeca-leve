@@ -107,6 +107,8 @@ Sem eles a imagem é publicada do mesmo jeito; só as etapas correspondentes avi
    | Cobrança | ambiente (sandbox ou produção), chave da Asaas; use **Gerar** no token do webhook |
    | E-mail | chave da Resend e remetente |
    | Custos (painel) | cotação do dólar, só para converter os valores da tela **Custo da IA** (padrão R$ 5,50) |
+   | Dados da empresa | razão social (ou nome), CNPJ/CPF e e-mail para assuntos de dados pessoais. Aparecem em `/termos` e `/privacidade`. **Preencha antes de cobrar de alguém** |
+   | Limites de uso (por dia) | mensagens por dia no teste (padrão 40) e nos planos pagos (padrão 200), e teto de custo de IA por pessoa por dia em US$ (padrão 2; `0` desliga). Passou do limite, o assistente avisa e volta no dia seguinte (o dia vira à meia-noite do fuso da pessoa) |
    | Notificações | **Gerar** cria o par de chaves do push |
    | Suporte | e-mail e WhatsApp que recebem os chamados |
 

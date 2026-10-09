@@ -14,7 +14,7 @@ const INCLUDED = [
   "Tarefas, lembretes, agenda e resumo da manhã",
   "Gastos, contas fixas, parcelas e cartões",
   "Hábitos, metas, notas e diário",
-  "Sem limite de mensagens",
+  "Uso generoso todos os dias, sem contar mensagem por mensagem",
 ];
 const FAQ = [
   ["Posso cancelar quando quiser?", "Pode, em Ajustes, com um toque. Você recebe um comprovante com protocolo, nenhuma cobrança nova é feita e o acesso continua até o fim do período já pago."],

@@ -1,3 +1,4 @@
+import { costUsd } from "@/lib/assistant/models";
 import type { Admin } from "@/lib/supabase/server";
 import type { Json, TablesUpdate } from "@/lib/supabase/database.types";
 import { nextAutomationRun } from "@/lib/domain/automation";
@@ -344,6 +345,11 @@ export async function createSupabaseStore(db: Admin, userId: string, email: stri
       const r = await db.from("messages").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("role", "user").gte("created_at", iso);
       if (r.error) throw new Error(r.error.message);
       return r.count ?? 0;
+    },
+    async aiCostSince(iso) {
+      const r = await db.from("ai_usage").select("model, input_tokens, output_tokens, cache_read_tokens, cache_write_tokens").eq("user_id", userId).gte("created_at", iso);
+      if (r.error) throw new Error(r.error.message);
+      return (r.data ?? []).reduce((sum, u) => sum + (costUsd(u.model, { input: Number(u.input_tokens), output: Number(u.output_tokens), cacheRead: Number(u.cache_read_tokens), cacheWrite: Number(u.cache_write_tokens) }) ?? 0), 0);
     },
     async listTodayTranscript() {
       const conv = must(await db.from("conversations").select("id").eq("user_id", userId).eq("local_date", today()).maybeSingle() as Result<{ id: string } | null>);

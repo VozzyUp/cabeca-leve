@@ -1,3 +1,4 @@
+import { costUsd } from "@/lib/assistant/models";
 import { createClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Database } from "@/lib/supabase/database.types";
@@ -203,6 +204,11 @@ describe.skipIf(!run)("SupabaseStore", () => {
     const sonnet = mine.find((r) => r.model === "claude-sonnet-5-5")!;
     expect(sonnet).toMatchObject({ turns: 2, calls: 5, input_tokens: 300, output_tokens: 50, cache_read_tokens: 50, cache_write_tokens: 15 });
     expect(mine.find((r) => r.model === "claude-opus-5-5")).toMatchObject({ turns: 1, calls: 1 });
+    // custo de hoje (base do teto diário): Sonnet 300 in + 50 out + cache, Opus 5 in + 1 out
+    const spent = await a.aiCostSince(new Date(Date.now() - 3_600_000).toISOString());
+    expect(spent).toBeGreaterThan(0);
+    expect(spent).toBeCloseTo(costUsd("claude-sonnet-5-5", { input: 300, output: 50, cacheRead: 50, cacheWrite: 15 })! + costUsd("claude-opus-5-5", { input: 5, output: 1, cacheRead: 0, cacheWrite: 0 })!, 10);
+    expect(await a.aiCostSince(new Date(Date.now() + 3_600_000).toISOString())).toBe(0);
     // período vazio não devolve nada
     const old = await admin.rpc("admin_ai_usage", { p_from: "2020-01-01T00:00:00Z", p_to: "2020-01-02T00:00:00Z" });
     expect((old.data ?? []).filter((r) => r.user_id === users[0])).toEqual([]);

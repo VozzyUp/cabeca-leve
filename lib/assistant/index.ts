@@ -2,6 +2,8 @@ import type { DataStore } from "@/lib/data/store";
 import type { ActionCardData, ChatMessage } from "@/lib/data/types";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { agentEnabled, runAgent } from "./agent";
+import { limitReply, limitsFor } from "@/lib/limits";
+import { periodRange } from "@/lib/ai-costs";
 import { siteUrl } from "@/lib/public-env";
 import { formatDue } from "@/lib/support";
 import { parseBudget, parseMessage, wantsHuman } from "./rule-parser";
@@ -52,9 +54,6 @@ async function callHuman(store: DataStore, text: string, channel: "web" | "whats
     : "No modo de demonstração não há time de suporte.";
 }
 
-const LIMIT_PER_MINUTE = 12;
-const LIMIT_PER_DAY = 400;
-
 // Ponto único de entrada da conversa (app, voz e WhatsApp). Com ANTHROPIC_API_KEY, o agente
 // Claude; sem ela, o intérprete de regras (só para testes e demonstração).
 export async function respond(store: DataStore, text: string, opts: {
@@ -83,15 +82,18 @@ export async function respond(store: DataStore, text: string, opts: {
 async function turn(store: DataStore, text: string, opts: {
   channel: "web" | "whatsapp" | "voice"; clientMessageId?: string; externalMessageId?: string; now?: Date; images?: ChatImage[];
 }): Promise<{ user: ChatMessage | null; reply: AssistantReply; stored?: false }> {
-  // limite de uso: protege o custo de IA (e o número de WhatsApp) contra abuso
-  const [lastMinute, lastDay] = await Promise.all([
-    store.countUserMessagesSince(new Date(Date.now() - 60_000).toISOString()),
-    store.countUserMessagesSince(new Date(Date.now() - 86_400_000).toISOString()),
+  // limite de uso por plano: protege o custo de IA (e o número de WhatsApp) contra abuso
+  const settings = await store.getSettings();
+  const limits = limitsFor(settings.plan);
+  const now = new Date();
+  const dayStart = periodRange("hoje", now, store.timezone()).from.toISOString();
+  const [lastMinute, today, costTodayUsd] = await Promise.all([
+    store.countUserMessagesSince(new Date(now.getTime() - 60_000).toISOString()),
+    store.countUserMessagesSince(dayStart),
+    limits.costUsdPerDay === null ? Promise.resolve(0) : store.aiCostSince(dayStart),
   ]);
-  if (lastMinute >= LIMIT_PER_MINUTE || lastDay >= LIMIT_PER_DAY) {
-    const reply = { text: lastMinute >= LIMIT_PER_MINUTE ? "Muitas mensagens em pouco tempo. Espere um minutinho e mande de novo." : "Você chegou ao limite de mensagens de hoje. Amanhã eu volto com tudo.", cards: [] };
-    return { user: null, reply, stored: false };  // não grava: a resposta volta só para quem mandou
-  }
+  const blocked = limitReply(settings.plan, { lastMinute, today, costTodayUsd }, limits);
+  if (blocked) return { user: null, reply: { text: blocked, cards: [] }, stored: false };  // não grava: a resposta volta só para quem mandou
   if (agentEnabled()) {
     const reply = await runAgent({ store, text, ...opts });
     return { user: null, reply };

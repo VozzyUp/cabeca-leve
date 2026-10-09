@@ -175,3 +175,10 @@ Paridade 63,2/100; **40 de 40 obrigatórias completas**.
 - **Memória do assistente:** `remember` guarda fatos ditos pela pessoa (nunca o que veio de foto ou mensagem encaminhada, para ninguém plantar instruções), os fatos entram no começo do dia como dados, ficam listados em Ajustes com "Esquecer" e "Esquecer tudo", no máximo 100, e saem na exportação de dados. Dois pedidos iguais no mesmo turno ficam em um.
 - **A resolver (Dinheiro):** contas fixas e entradas esperadas que venceram sem lançamento ou vencem em 7 dias. "Paguei" e "Recebi" lançam no vencimento, com o valor combinado, uma vez só (dois toques juntos não duplicam). Conta cadastrada hoje não nasce atrasada, a menos que a pessoa diga que este mês ainda está em aberto. A tela de Fixos prometia cadastro pelo chat que não existia: agora existe (`create_recurring`).
 
+
+## 2026-10-09 (noite): limites por plano, páginas legais e página inicial
+
+- **Limites de uso por plano** (`lib/limits.ts`): mensagens por dia no teste e nos planos pagos, mais um teto de custo de IA por pessoa por dia (soma do `ai_usage` do dia, com a tabela de preços do app). Tudo configurável em Admin > Configurações. O limite por minuto (12) continua. Substitui o limite fixo de 400 mensagens em 24 h; o dia agora vai da meia-noite à meia-noite do fuso da pessoa. A página de planos deixou de prometer "sem limite de mensagens".
+- **Páginas legais** `/privacidade` e `/termos` (`lib/legal.ts`), públicas, com a empresa e o contato vindos da configuração. Cobrem: dados tratados, bases legais, fornecedores (Supabase, Anthropic, Groq, WhatsApp, Asaas, Resend), fotos apagadas em 2 dias, direitos da LGPD, cancelamento com comprovante, arrependimento de 7 dias, IA que pode errar e não substitui profissional. Links no rodapé, no cadastro e em Ajustes. **São uma base: peça a revisão de um advogado antes de cobrar.**
+- **Página inicial** (`/`) para quem não entrou: título, exemplo de conversa, funções, como começa, preço e botão de teste grátis; sem depoimentos inventados. Quem já entrou segue para a conversa.
+- **Teste de aviso** não falha por inteiro se o push der erro; mostra o detalhe técnico de cada canal.
