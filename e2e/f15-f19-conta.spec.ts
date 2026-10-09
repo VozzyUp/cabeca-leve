@@ -69,6 +69,8 @@ test.describe("F15 entrar", () => {
     await context.clearCookies();
     const api = await page.request.get("/api/tasks");
     expect(api.status()).toBe(401);
+    // a tela aberta também recebe 401 e manda para o login sozinha (lib/api.ts): sai dela antes, sem corrida
+    await page.goto("about:blank");
     await page.goto("/tarefas");
     await page.waitForURL(/\/entrar\?voltar=%2Ftarefas/);
     await page.getByLabel("E-mail").fill(user.email);

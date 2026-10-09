@@ -328,6 +328,19 @@ describe.skipIf(!run)("agente", () => {
     } finally { await admin.auth.admin.deleteUser(uid); }
   });
 
+  it("conta dividida: a mensagem diz quem falou e o gasto fica marcado com o nome", async () => {
+    const { runAgent } = await import("./agent");
+    replies.push(
+      msg([{ type: "tool_use", id: "toolu_author", name: "record_transaction", input: { type: "expense", amount: 18, description: "Feira", category: "Mercado", payment_method: null, occurred_on: null } }], "tool_use"),
+      msg([{ type: "text", text: "Anotado, Ana!" }], "end_turn"),
+    );
+    const n = requests.length;
+    const reply = await runAgent({ store, text: "gastei 18 na feira", channel: "whatsapp", sender: "Ana", now: new Date("2026-10-08T16:00:00Z") });
+    expect(JSON.stringify(requests[n].body.messages.at(-1)!.content)).toContain("De: Ana]");
+    expect(reply.cards[0].meta).toContain("por Ana");
+    expect((await store.listTransactions()).find((t) => t.description === "Feira")!.author).toBe("Ana");
+  });
+
   it("conta fixa pelo chat: cadastra, aparece em a resolver e paguei confirma no vencimento (sem lançar gasto avulso)", async () => {
     const { runAgent } = await import("./agent");
     const call = (name: string, input: object, n: string) => ({ type: "tool_use", id: `toolu_${name}_${n}`, name, input });

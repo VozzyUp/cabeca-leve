@@ -5,8 +5,9 @@ import { billingEnabled, cancelSubscription, createCheckout } from "@/lib/billin
 import { z } from "zod";
 import { getStore } from "@/lib/data";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import { currentUser } from "@/lib/supabase/server";
-import { startLink } from "@/lib/whatsapp/link";
+import { currentUser, getAdmin } from "@/lib/supabase/server";
+import { LinkLimitError, startLink } from "@/lib/whatsapp/link";
+import { whatsappLimit } from "@/lib/limits";
 import { answerTicket, isSupportAdmin } from "@/lib/support";
 import { sendTestNotice } from "@/lib/deliveries";
 import { confirmBill } from "@/lib/assistant/tools";
@@ -173,10 +174,13 @@ export async function deleteAccount(confirmation: string) {
   return { ok: true as const };
 }
 
-// Vincular o WhatsApp: com Supabase, gera o código que a pessoa manda do próprio celular;
-// no modo de demonstração, só guarda o número.
-export async function linkWhatsApp(number: string) {
+// Vincular um WhatsApp: com Supabase, gera o código que a pessoa manda do próprio celular;
+// no modo de demonstração, só guarda o número. A conta pode ter vários (casal, família),
+// até o limite do plano, cada um com o nome de quem usa.
+const waLabel = z.string().trim().min(1).max(40).nullable().optional();
+export async function linkWhatsApp(number: string, label?: string | null) {
   const n = z.string().regex(/^\+\d{12,13}$/).parse(number);
+  const name = waLabel.parse(label ?? null);
   if (!isSupabaseConfigured()) {
     const store = await getStore();
     const { channels } = await store.getSettings();
@@ -186,9 +190,36 @@ export async function linkWhatsApp(number: string) {
   }
   const user = await currentUser();
   if (!user) throw new Error("Sessão expirada");
-  const result = await startLink(user.id, n);
-  revalidatePath("/ajustes");
-  return result;
+  const { plan } = await (await getStore()).getSettings();
+  try {
+    const result = await startLink(user.id, n, { label: name, limit: whatsappLimit(plan) });
+    revalidatePath("/", "layout");
+    return result;
+  } catch (error) {
+    if (error instanceof LinkLimitError) return { limitReached: error.limit };
+    throw error;
+  }
+}
+
+// Nome de quem usa o número e se ele recebe os avisos (lembretes, resumo, suporte)
+export async function updateWhatsApp(id: string, patch: { label?: string | null; receivesNotices?: boolean }) {
+  const user = await currentUser();
+  if (!user) throw new Error("Sessão expirada");
+  const row: { label?: string | null; receives_notices?: boolean } = {};
+  if (patch.label !== undefined) row.label = waLabel.parse(patch.label);
+  if (patch.receivesNotices !== undefined) row.receives_notices = z.boolean().parse(patch.receivesNotices);
+  const { error } = await getAdmin().from("channel_links").update(row).eq("id", uuid.parse(id)).eq("user_id", user.id).eq("channel", "whatsapp");
+  if (error) throw new Error(error.message);
+  revalidatePath("/", "layout");
+}
+
+// Desvincular: o número para de falar com a conta na hora
+export async function unlinkWhatsApp(id: string) {
+  const user = await currentUser();
+  if (!user) throw new Error("Sessão expirada");
+  const { error } = await getAdmin().from("channel_links").delete().eq("id", uuid.parse(id)).eq("user_id", user.id).eq("channel", "whatsapp");
+  if (error) throw new Error(error.message);
+  revalidatePath("/", "layout");
 }
 
 // Abre a página de pagamento da Asaas para o plano escolhido

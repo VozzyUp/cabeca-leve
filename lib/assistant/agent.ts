@@ -42,6 +42,7 @@ Como trabalhar:
 - Cada revisão agendada gasta IA a cada envio: crie só o que a pessoa pediu, uma por pedido.
 - Tom: siga sempre o "Tom pedido" do contexto mais recente, em todas as respostas, inclusive nas confirmações curtas. Se o contexto mudar no meio do dia, vale o novo a partir dali. Em qualquer tom: nada de ofensa sobre corpo, peso, aparência, saúde, dinheiro curto ou qualquer característica pessoal, nada de humilhar, e se a pessoa parecer triste, ansiosa ou em dificuldade de verdade, deixe a zoeira de lado e acolha.
 - Comentários sobre gastos: o resultado de record_transaction pode trazer "termometro" com sinais já calculados (categoria bem acima do mês passado, muitos lançamentos na semana, muitas assinaturas). Quando houver sinal, comente em uma frase no tom pedido (no Sem filtro, puxe a orelha: "pô, terceiro iFood da semana? Bora cozinhar"); no Direto, só o fato. Sem sinais, não comente. Fale do gasto, nunca do que a pessoa come ou do corpo dela. No máximo um comentário por resposta.
+- Conta dividida: a mensagem pode trazer "De: Nome" no carimbo. É quem está falando agora (casal, família ou sócios usam a mesma conta por WhatsApps diferentes): chame essa pessoa pelo nome dela, e os gastos que ela lançar ficam marcados com o nome sozinhos. Os dados são da conta inteira; "eu", "meu" e "gastei" se referem a quem falou.
 - Se a pessoa pedir para falar com uma pessoa, um humano ou o suporte, ou relatar um problema que você não resolve (cobrança, acesso, pagamento, erro do app), abra um chamado com open_support_ticket, resumindo o problema nas palavras dela, e diga o protocolo e o prazo. Você não é o suporte humano: nunca finja ser.`;
 
 const CATEGORIES = ["Alimentação", "Mercado", "Transporte", "Moradia", "Contas da casa", "Saúde", "Educação", "Lazer", "Compras",
@@ -66,6 +67,7 @@ export type AgentInput = {
   externalMessageId?: string;
   now?: Date;
   images?: ChatImage[];
+  sender?: string | null;  // nome de quem usa o WhatsApp que mandou (conta dividida por casal, família)
 };
 
 export const agentEnabled = () => !!process.env.ANTHROPIC_API_KEY;
@@ -110,7 +112,7 @@ function toRule(r: z.infer<typeof RepeatInput>, firstDay: string): string | null
   return toRRule({ freq: "monthly", interval: r.interval, monthDay: r.month_day ?? d.getUTCDate() });
 }
 
-function buildTools(store: DataStore, now: Date, cards: ActionCardData[], channel: "web" | "whatsapp" | "voice", replies: string[]) {
+function buildTools(store: DataStore, now: Date, cards: ActionCardData[], channel: "web" | "whatsapp" | "voice", replies: string[], sender: string | null = null) {
   const tz = store.timezone();
   const today = localDate(now, tz);
   const json = (v: unknown) => JSON.stringify(v);
@@ -171,7 +173,7 @@ function buildTools(store: DataStore, now: Date, cards: ActionCardData[], channe
         let created: Transaction | null = null;
         await addCard(() => recordTransaction(store, {
           type: i.type, amountCents: Math.round(i.amount * 100), description: i.description, categoryName: i.category,
-          paymentMethod: i.payment_method, occurredOn: i.occurred_on ?? undefined,
+          paymentMethod: i.payment_method, occurredOn: i.occurred_on ?? undefined, author: sender,
         }, now, (t) => { created = t; }));
         const t = created as Transaction | null;
         if (!t || t.type !== "expense" || !t.categoryId) return json({ ok: true });
@@ -743,11 +745,13 @@ export async function writeReview(store: DataStore, input: { title: string; prom
   return text;
 }
 
-export async function runAgent({ store, text, channel, clientMessageId, externalMessageId, now = new Date(), images = [] }: AgentInput): Promise<AgentReply> {
+export async function runAgent({ store, text, channel, clientMessageId, externalMessageId, now = new Date(), images = [], sender = null }: AgentInput): Promise<AgentReply> {
   const tz = store.timezone();
   const history = (await store.listTodayTranscript()) as BetaMessageParam[];
+  // quem falou entra no carimbo da mensagem (dado, não instrução): a conta pode ser de mais de uma pessoa
+  const who = sender ? ` · De: ${sender.replace(/[\[\]\n]/g, " ").trim().slice(0, 40)}` : "";
   const userContent = [
-    { type: "text" as const, text: `[${stamp(now, tz)}]\n${text}` },
+    { type: "text" as const, text: `[${stamp(now, tz)}${who}]\n${text}` },
     ...images.map((img) => ({ type: "image" as const, source: { type: "base64" as const, media_type: img.mediaType, data: img.data } })),
   ];
   await store.appendMessage({ role: "user", text, cards: [], content: userContent, channel, clientMessageId, externalMessageId });
@@ -768,7 +772,7 @@ export async function runAgent({ store, text, channel, clientMessageId, external
   let runner: ReturnType<Anthropic["beta"]["messages"]["toolRunner"]>;
   const calls: BetaMessage[] = [];  // cada chamada à API da mensagem, para somar o custo (também se der erro no meio)
   try {
-    runner = anthropic().beta.messages.toolRunner(turnParams(buildTools(store, now, cards, channel, replies), messages));
+    runner = anthropic().beta.messages.toolRunner(turnParams(buildTools(store, now, cards, channel, replies, sender), messages));
     for await (const call of runner) calls.push(call as BetaMessage);  // sem stream: cada item é uma mensagem completa
     if (!calls.length) throw new Error("a API não devolveu resposta");
     final = calls[calls.length - 1];

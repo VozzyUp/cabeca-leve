@@ -38,3 +38,12 @@ export function limitReply(plan: Settings["plan"], usage: Usage, limits: Limits)
   if (limits.costUsdPerDay !== null && usage.costTodayUsd >= limits.costUsdPerDay) return "Hoje já usei bastante do meu espaço com você. Amanhã eu volto com tudo. Se for urgente, peça para falar com uma pessoa.";
   return null;
 }
+
+// Quantos WhatsApps a conta pode vincular (casal, família). Por plano, configurável no admin.
+export const DEFAULT_WHATSAPP = { trial: 1, monthly: 2, yearly: 3 } as const;
+
+export function whatsappLimit(plan: Settings["plan"], env: Record<string, string | undefined> = process.env): number {
+  const key = plan === "monthly" ? "LIMIT_WHATSAPP_MONTHLY" : plan === "yearly" ? "LIMIT_WHATSAPP_YEARLY" : "LIMIT_WHATSAPP_TRIAL";
+  const fallback = plan === "monthly" ? DEFAULT_WHATSAPP.monthly : plan === "yearly" ? DEFAULT_WHATSAPP.yearly : DEFAULT_WHATSAPP.trial;
+  return Math.min(20, Math.floor(positive(env[key]) ?? fallback));
+}

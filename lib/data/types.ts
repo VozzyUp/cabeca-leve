@@ -53,6 +53,7 @@ export type Transaction = {
   source: "manual" | "chat" | "whatsapp";
   cardId?: string | null;       // compra no cartão de crédito
   recurrenceId?: string | null; // lançamento gerado por um fixo
+  author?: string | null;       // quem lançou (nome do WhatsApp que mandou), quando a conta é dividida
   createdAt: string;
 };
 
@@ -226,7 +227,11 @@ export type Settings = {
   channels: { whatsapp: string | null; whatsappVerified?: boolean; telegram: boolean; email: boolean; push: boolean };
   calendars: { google: boolean; outlook: boolean };
   onboarded?: boolean;  // já passou pela configuração inicial (ou fechou)
+  // WhatsApps da conta (casal, família) e quantos o plano permite
+  whatsapp?: { numbers: WhatsAppNumber[]; limit: number };
 };
+
+export type WhatsAppNumber = { id: string; number: string; label: string | null; verified: boolean; receivesNotices: boolean };
 
 // F3: chamado para uma pessoa do time
 export type SupportTicket = {

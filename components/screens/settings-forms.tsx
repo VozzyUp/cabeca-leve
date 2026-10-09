@@ -2,7 +2,7 @@
 import { Download, Play, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { clearMemories, deleteAccount, deleteMemory, exportData, linkWhatsApp as startWhatsAppLink, testNotice, updateSettings } from "@/app/actions";
+import { clearMemories, deleteAccount, deleteMemory, exportData, linkWhatsApp as startWhatsAppLink, testNotice, unlinkWhatsApp, updateSettings, updateWhatsApp } from "@/app/actions";
 import { signOut } from "@/app/auth-actions";
 import { pushSupported, subscribePush, unsubscribePush } from "@/lib/push-client";
 import { Button } from "@/components/ui/button";
@@ -65,44 +65,131 @@ const toE164 = (s: string) => {
   return /^55\d{10,11}$/.test(full) ? `+${full}` : null;
 };
 
-// Vincular o WhatsApp: pede o número e mostra o código que a pessoa manda do próprio WhatsApp.
+type LinkResult = Awaited<ReturnType<typeof startWhatsAppLink>>;
+
+// Código para confirmar o número, com o link que abre o WhatsApp já com a mensagem
+function LinkCode({ result }: { result: LinkResult }) {
+  if (!result || "limitReached" in result || !result.code) return null;
+  return (
+    <div role="status" className="flex flex-col gap-2 rounded-md bg-surface-2 p-3 text-sm text-body">
+      <p>Para confirmar que o número é seu, mande este código desse WhatsApp para o assistente (vale por 30 minutos):</p>
+      <p className="font-mono text-2xl font-semibold tracking-widest text-text">{result.code}</p>
+      {result.link && (
+        <a href={result.link} target="_blank" rel="noopener noreferrer"
+          className="inline-flex h-10 w-fit items-center rounded-md bg-accent px-4 text-sm font-semibold text-on-accent">Abrir o WhatsApp com o código</a>
+      )}
+    </div>
+  );
+}
+
+// Vincular um WhatsApp: número (e, na conta dividida, o nome de quem usa) e o código de confirmação.
 // Usado em Ajustes e na configuração inicial.
-export function WhatsAppLinkForm({ channels, label = "WhatsApp" }: { channels: Settings["channels"]; label?: string }) {
+export function WhatsAppLinkForm({ channels, label = "WhatsApp", owner, askName = false, onDone, onResult }: {
+  channels?: Settings["channels"]; label?: string; owner?: string | null; askName?: boolean; onDone?: () => void;
+  onResult?: (r: LinkResult) => void;  // quem chama mostra o código (o formulário some quando a lista atualiza)
+}) {
   const router = useRouter();
-  const [phone, setPhone] = useState(channels.whatsapp ?? "");
+  const [phone, setPhone] = useState(askName ? "" : channels?.whatsapp ?? "");
+  const [name, setName] = useState(owner ?? "");
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [linking, startLinking] = useTransition();
-  const [linkCode, setLinkCode] = useState<Awaited<ReturnType<typeof startWhatsAppLink>>>(null);
+  const [result, setResult] = useState<LinkResult>(null);
   function linkWhatsApp(e: React.FormEvent) {
     e.preventDefault();
     const n = toE164(phone);
     if (!n) { setPhoneError("Use o número com DDD, como 11 99999-0000."); return; }
     setPhoneError(null);
     startLinking(async () => {
-      try { setLinkCode(await startWhatsAppLink(n)); router.refresh(); }
-      catch { setPhoneError("Não deu para vincular agora. Tente de novo."); }
+      try {
+        const r = await startWhatsAppLink(n, name.trim() || owner || null);
+        if (r && "limitReached" in r) { setPhoneError(`Seu plano permite ${r.limitReached} número${r.limitReached === 1 ? "" : "s"} de WhatsApp. Remova um ou troque de plano.`); return; }
+        setResult(r);
+        onResult?.(r);
+        if (r?.alreadyLinked) onDone?.();
+        router.refresh();
+      } catch { setPhoneError("Não deu para vincular agora. Tente de novo."); }
     });
   }
+  const hint = askName ? "Com DDD. A pessoa confirma mandando um código desse WhatsApp."
+    : !channels?.whatsapp ? `Mande e receba tudo pelo WhatsApp. ${WHATSAPP_PROMISE}`
+    : channels.whatsappVerified === false ? `Aguardando confirmação: ${channels.whatsapp}` : `Vinculado: ${channels.whatsapp}`;
   return (
     <form onSubmit={linkWhatsApp} className="flex flex-col gap-2">
+      {askName && <Field label="Nome de quem vai usar" value={name} onChange={(e) => setName(e.target.value)} maxLength={40} placeholder="Ex.: Ana" />}
       <div className="flex items-end gap-3">
         <Field label={label} type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="11 99999-0000"
-          error={phoneError ?? undefined} className="flex-1"
-          hint={!channels.whatsapp ? `Mande e receba tudo pelo WhatsApp. ${WHATSAPP_PROMISE}`
-            : channels.whatsappVerified === false ? `Aguardando confirmação: ${channels.whatsapp}` : `Vinculado: ${channels.whatsapp}`} />
-        <Button type="submit" variant="secondary" className="mb-6" loading={linking}>{channels.whatsapp ? "Trocar" : "Vincular"}</Button>
+          error={phoneError ?? undefined} className="flex-1" hint={hint} />
+        <Button type="submit" variant="secondary" className="mb-6" loading={linking}>{!askName && channels?.whatsapp ? "Trocar" : "Vincular"}</Button>
       </div>
-      {linkCode && (
-        <div role="status" className="flex flex-col gap-2 rounded-md bg-surface-2 p-3 text-sm text-body">
-          <p>Para confirmar que o número é seu, mande este código do seu WhatsApp para o assistente (vale por 30 minutos):</p>
-          <p className="font-mono text-2xl font-semibold tracking-widest text-text">{linkCode.code}</p>
-          {linkCode.link && (
-            <a href={linkCode.link} target="_blank" rel="noopener noreferrer"
-              className="inline-flex h-10 w-fit items-center rounded-md bg-accent px-4 text-sm font-semibold text-on-accent">Abrir o WhatsApp com o código</a>
-          )}
-        </div>
-      )}
+      {result && !("limitReached" in result) && result.alreadyLinked && <p role="status" className="text-sm text-body">Esse número já está vinculado. Nome atualizado.</p>}
+      {!onResult && <LinkCode result={result} />}
     </form>
+  );
+}
+
+// Os WhatsApps da conta (casal, família): nome de quem usa, se recebe os avisos e remover.
+// Mostra quantos o plano permite e o formulário para mais um enquanto houver vaga.
+export function WhatsAppNumbers({ initial, owner }: { initial: NonNullable<Settings["whatsapp"]>; owner: string }) {
+  const router = useRouter();
+  const [busy, start] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [code, setCode] = useState<LinkResult>(null);
+  const { numbers, limit } = initial;
+  const gotCode = (r: LinkResult) => { setCode(r); if (r && !("limitReached" in r) && r.code) setAdding(false); };
+  const run = (fn: () => Promise<unknown>) => start(async () => {
+    setError(null);
+    try { await fn(); router.refresh(); } catch { setError("Não deu para salvar. Tente de novo."); }
+  });
+  const canAdd = numbers.length < limit;
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="text-sm font-medium text-text">WhatsApp</span>
+        <span className="text-xs text-muted">{numbers.length} de {limit} número{limit === 1 ? "" : "s"} do seu plano</span>
+      </div>
+      {numbers.length === 0 && <WhatsAppLinkForm label="Seu número de WhatsApp" owner={owner} onResult={gotCode} />}
+      {numbers.length > 0 && (
+        <ul className="flex flex-col divide-y divide-border rounded-md border border-border">
+          {numbers.map((n) => (
+            <li key={n.id} className="flex flex-col gap-2 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="flex min-w-0 flex-col">
+                  <span className="text-sm font-medium text-text">{n.label ?? "Sem nome"}</span>
+                  <span className="font-mono text-xs text-muted">{n.number} · {n.verified ? "vinculado" : "aguardando o código"}</span>
+                </span>
+                <Button variant="ghost" size="sm" disabled={busy} aria-label={`Remover ${n.label ?? n.number}`}
+                  onClick={() => { if (window.confirm(`Desvincular ${n.number}? Esse número para de falar com a conta na hora.`)) run(() => unlinkWhatsApp(n.id)); }}>Remover</Button>
+              </div>
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <form className="flex flex-1 items-end gap-2" onSubmit={(e) => {
+                  e.preventDefault();
+                  const v = String(new FormData(e.currentTarget).get("nome") ?? "").trim();
+                  run(() => updateWhatsApp(n.id, { label: v || null }));
+                }}>
+                  <Field label="Nome de quem usa" name="nome" defaultValue={n.label ?? ""} maxLength={40} className="min-w-36 flex-1" />
+                  <Button type="submit" variant="secondary" size="sm" className="mb-1" disabled={busy}>Salvar</Button>
+                </form>
+                <span className="flex items-center gap-2 pb-2 text-xs text-body">
+                  Recebe os avisos
+                  <Switch label={`Avisos no ${n.label ?? n.number}`} checked={n.receivesNotices} onChange={(v) => run(() => updateWhatsApp(n.id, { receivesNotices: v }))} />
+                </span>
+              </div>
+              {!n.verified && <WhatsAppLinkForm label="Mandar o código de novo" channels={{ whatsapp: n.number, whatsappVerified: false, telegram: false, email: false, push: false }} />}
+            </li>
+          ))}
+        </ul>
+      )}
+      {error && <p role="alert" className="text-xs text-danger">{error}</p>}
+      <LinkCode result={code} />
+      {numbers.length > 0 && (canAdd ? (
+        adding ? <WhatsAppLinkForm label="Número" askName onDone={() => setAdding(false)} onResult={gotCode} />
+          : <Button variant="secondary" className="w-fit" onClick={() => setAdding(true)}>Adicionar outro WhatsApp</Button>
+      ) : (
+        <p className="text-xs text-muted">Para vincular mais números (casal, família), <a href="/planos" className="underline">veja os planos</a>.</p>
+      ))}
+      <p className="text-xs text-muted">Cada pessoa conversa pelo próprio WhatsApp e vê os mesmos dados da conta. Os gastos ficam marcados com o nome de quem lançou.</p>
+    </div>
   );
 }
 
@@ -165,7 +252,10 @@ export function SettingsForm({ initial, canSignOut }: { initial: Settings; canSi
 
       <Card className="flex flex-col">
         <SectionLabel className="mb-1">Onde o assistente fala com você</SectionLabel>
-        <div className="border-b border-border py-3"><WhatsAppLinkForm channels={channels} /></div>
+        <div className="border-b border-border py-3">
+          {/* lista vem das props (atualiza com router.refresh); o resto do formulário guarda estado local */}
+          {initial.whatsapp ? <WhatsAppNumbers initial={initial.whatsapp} owner={settings.name} /> : <WhatsAppLinkForm channels={channels} />}
+        </div>
         <Row title="Notificações no aparelho" hint="lembretes e avisos, mesmo com o app fechado">
           <PushSwitch checked={channels.push} onChange={(v) => save({ channels: { ...channels, push: v } })} />
         </Row>
@@ -328,7 +418,7 @@ function TestNotice() {
       {result && (
         <ul role="status" className="flex flex-col gap-1 text-xs text-body">
           <li><span className="font-medium text-text">Aparelho:</span> {PUSH_TEXT[result.push](result.devices)}</li>
-          <li><span className="font-medium text-text">WhatsApp:</span> {WA_TEXT[result.whatsapp](result.number)}</li>
+          <li><span className="font-medium text-text">WhatsApp:</span> {WA_TEXT[result.whatsapp](result.numbers.join(", "))}</li>
           <li><span className="font-medium text-text">No app:</span> está em Avisos.</li>
           {result.detail && <li className="text-muted">Detalhe técnico: {result.detail}</li>}
         </ul>

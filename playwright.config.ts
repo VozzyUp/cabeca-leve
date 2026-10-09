@@ -29,6 +29,7 @@ export const E2E_ENV = {
   ANTHROPIC_API_KEY: "",
   LIMIT_DAILY_MESSAGES_TRIAL: "100000",  // os testes dividem contas e mandam muitas mensagens
   LIMIT_DAILY_MESSAGES_PAID: "100000",
+  LIMIT_WHATSAPP_TRIAL: "2",  // conta dividida (F16-H2) com a conta de teste
   GROQ_API_KEY: "",
 };
 

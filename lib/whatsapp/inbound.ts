@@ -3,7 +3,7 @@ import { storeForUser } from "@/lib/data";
 import type { ActionCardData } from "@/lib/data/types";
 import { getAdmin } from "@/lib/supabase/server";
 import { transcribe, transcriptionEnabled } from "@/lib/transcribe";
-import { findUserByNumber, tryVerify } from "./link";
+import { findLinkByNumber, tryVerify } from "./link";
 import { phoneVariants, toE164 } from "./phone";
 import { cardButtons, firstTime, handleButton } from "./buttons";
 import { sendReply, whatsapp, type Inbound } from "./provider";
@@ -27,7 +27,8 @@ const site = siteUrl;
 export async function processInbound(msg: Inbound) {
   const wa = whatsapp();
   if (!wa) return;
-  const userId = await findUserByNumber(msg.from);
+  const found = await findLinkByNumber(msg.from);
+  const userId = found?.userId ?? null;
   if (!userId) {
     const linked = msg.text ? await tryVerify(msg.from, msg.text) : null;
     await wa.sendText(msg.from, linked
@@ -64,7 +65,7 @@ export async function processInbound(msg: Inbound) {
   }
   const store = await storeForUser(userId);
   try {
-    const { reply } = await respond(store, text ?? "", { channel: "whatsapp", externalMessageId: msg.externalId, now: msg.at, ...(images ? { images } : {}) });
+    const { reply } = await respond(store, text ?? "", { channel: "whatsapp", externalMessageId: msg.externalId, now: msg.at, sender: found?.label ?? null, ...(images ? { images } : {}) });
     // o assistente pode propor respostas rápidas; senão, o que acabou de ser registrado ganha Desfazer e Alterar
     const buttons = reply.replies?.length ? reply.replies.map((r) => ({ id: `q:${r}`, title: r })) : cardButtons(reply.cards);
     await sendReply(wa, msg.from, formatReply(reply.text, reply.cards), buttons);

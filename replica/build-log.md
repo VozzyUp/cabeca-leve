@@ -198,3 +198,11 @@ Paridade 63,2/100; **40 de 40 obrigatórias completas**.
 - **Tom "Sem filtro"**: o amigo sincerão que zoa, cobra e pode soltar palavrão leve, nunca contra a pessoa. Em qualquer tom: nada sobre corpo, peso, aparência ou saúde, e se a pessoa estiver mal, acolhe.
 - **Termômetro do gasto** (`lib/domain/pulse.ts`): ao registrar um gasto, o resultado da ferramenta traz sinais já calculados (categoria 30% acima do mesmo período do mês passado, 5 ou mais lançamentos na semana, muitas assinaturas ou caras). O assistente comenta em uma frase, no tom escolhido, só quando há sinal.
 - Escolha do tom em cartões com exemplo (Ajustes e configuração inicial). Migração `20261010000200_tom_sem_filtro` (arquivo 24).
+
+## 2026-10-10: vários WhatsApps na mesma conta
+
+- **Limite por plano** (teste 1, mensal 2, anual 3; configurável em Admin > Configurações > Limites de uso). Conta no limite os números confirmados e os aguardando código; pedir de novo um número da própria conta só renova o código ou o nome. A página de planos mostra quantos números cada plano tem.
+- **Cada número tem o nome de quem usa** (casal, família). A mensagem chega para a IA com "De: Nome", ela trata a pessoa pelo nome e o gasto lançado fica marcado ("por Ana" no card e no extrato; coluna `transactions.author`).
+- **Avisos por número:** lembretes, resumo, revisões, teste de aviso e respostas do suporte vão para todos os números com "Recebe os avisos" ligado; cada um tem a sua chave de entrega (sem envio em dobro).
+- **Ajustes:** lista dos números com nome, status, "Recebe os avisos" e Remover, "Adicionar outro WhatsApp" enquanto houver vaga. O código de confirmação continua na tela depois que a lista atualiza.
+- Migração `20261010000300_varios_whatsapp` (arquivo 25): tira o "um por conta", único por (conta, número), `label`, `receives_notices` e `transactions.author`.

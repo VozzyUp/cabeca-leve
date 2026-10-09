@@ -58,10 +58,13 @@ export const CONFIG_GROUPS: ConfigGroup[] = [
     { key: "LEGAL_COMPANY_DOCUMENT", label: "CNPJ ou CPF", secret: false },
     { key: "LEGAL_CONTACT_EMAIL", label: "E-mail para assuntos de dados pessoais", secret: false, hint: "sem isso, usa o e-mail do suporte" },
   ] },
-  { title: "Limites de uso (por dia)", fields: [
+  { title: "Limites de uso", fields: [
     { key: "LIMIT_DAILY_MESSAGES_TRIAL", label: "Mensagens por dia no teste grátis", secret: false, hint: "padrão 40" },
     { key: "LIMIT_DAILY_MESSAGES_PAID", label: "Mensagens por dia nos planos pagos", secret: false, hint: "padrão 200" },
     { key: "LIMIT_DAILY_COST_USD", label: "Teto de custo de IA por pessoa por dia (US$)", secret: false, hint: "padrão 2. Use 0 para desligar" },
+    { key: "LIMIT_WHATSAPP_TRIAL", label: "Números de WhatsApp no teste grátis", secret: false, hint: "padrão 1" },
+    { key: "LIMIT_WHATSAPP_MONTHLY", label: "Números de WhatsApp no plano mensal", secret: false, hint: "padrão 2" },
+    { key: "LIMIT_WHATSAPP_YEARLY", label: "Números de WhatsApp no plano anual", secret: false, hint: "padrão 3" },
   ] },
   { title: "Suporte", fields: [
     { key: "SUPPORT_EMAIL", label: "E-mail que recebe os chamados", secret: false },

@@ -8,6 +8,9 @@ import { PLANS, TRIAL_DAYS, yearlySaving } from "@/lib/plans";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { currentUser } from "@/lib/supabase/server";
 import { formatMoney } from "@/lib/time";
+import { whatsappLimit } from "@/lib/limits";
+
+const waText = (n: number) => (n === 1 ? "1 número de WhatsApp" : `até ${n} números de WhatsApp (casal, família)`);
 
 const INCLUDED = [
   "Conversa por texto e áudio, no app e no WhatsApp",
@@ -53,6 +56,8 @@ export default async function Page({ searchParams }: PageProps<"/planos">) {
                 </div>
                 <p><span className="font-mono text-4xl font-semibold text-text">{formatMoney(p.priceCents)}</span> <span className="text-sm text-muted">{p.period}</span></p>
                 <p className="text-sm text-muted">{yearly ? `equivale a ${formatMoney(Math.round(p.priceCents / 12))} por mês` : "cobrado todo mês, cancele quando quiser"}</p>
+                <p className="flex items-center gap-2 text-sm text-body"><Check aria-hidden className="size-4 shrink-0 text-success" />
+                  {waText(whatsappLimit(p.id))}</p>
                 {loggedIn ? (
                   <form action={startCheckout.bind(null, p.id)} className="mt-auto">
                     <button type="submit" className={cn(cta, "w-full", yearly ? primary : secondary, chosen === p.id && "ring-2 ring-focus")}>

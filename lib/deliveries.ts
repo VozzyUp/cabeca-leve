@@ -8,6 +8,7 @@ import { pushEnabled, sendPush } from "@/lib/push";
 import { getAdmin } from "@/lib/supabase/server";
 import { formatTime, localDate, zonedParts } from "@/lib/time";
 import { reminderButtons, testButtons } from "@/lib/whatsapp/buttons";
+import { noticeNumbers } from "@/lib/whatsapp/link";
 import { whatsapp, type Button, type Proactive } from "@/lib/whatsapp/provider";
 
 // Entregas no horário (lembretes e resumo da manhã), chamadas pela varredura de cada minuto.
@@ -30,12 +31,15 @@ async function finish(key: string, error: string | null) {
 
 async function channelsFor(userId: string) {
   const db = getAdmin();
-  const [{ data: profile }, { data: link }] = await Promise.all([
+  const [{ data: profile }, numbers] = await Promise.all([
     db.from("profiles").select("notify_push").eq("user_id", userId).single(),
-    db.from("channel_links").select("external_id, last_inbound_at").eq("user_id", userId).eq("channel", "whatsapp").not("verified_at", "is", null).maybeSingle(),
+    noticeNumbers(userId),
   ]);
-  return { push: profile?.notify_push ?? true, whatsapp: link?.external_id ?? null, lastInbound: link?.last_inbound_at ? new Date(link.last_inbound_at) : null };
+  return { push: profile?.notify_push ?? true, whatsapp: numbers };
 }
+
+// Chave de cada número: o primeiro mantém o formato antigo; os outros levam os dígitos
+const waKey = (base: string, i: number, number: string) => (i === 0 ? `${base}:whatsapp` : `${base}:whatsapp:${number.replace(/\D/g, "")}`);
 
 async function send(userId: string, source: "reminder" | "briefing", sourceId: string | null, keyBase: string,
   { template, buttons, ...msg }: { title: string; body: string; url: string; whatsappText: string; template: Proactive; buttons?: Button[] }) {
@@ -44,9 +48,12 @@ async function send(userId: string, source: "reminder" | "briefing", sourceId: s
   if (ch.push && (await claim(userId, source, sourceId, "push", `${keyBase}:push`, msg))) {
     try { await sendPush(userId, msg); await finish(`${keyBase}:push`, null); } catch (e) { await finish(`${keyBase}:push`, String(e)); }
   }
-  if (ch.whatsapp && wa && (await claim(userId, source, sourceId, "whatsapp", `${keyBase}:whatsapp`, msg))) {
-    try { await wa.sendProactive(ch.whatsapp, { ...template, text: msg.whatsappText }, ch.lastInbound, buttons); await finish(`${keyBase}:whatsapp`, null); }
-    catch (e) { await finish(`${keyBase}:whatsapp`, String(e)); }
+  // cada número que recebe avisos (casal, família) ganha o seu
+  for (const [i, n] of (wa ? ch.whatsapp : []).entries()) {
+    const key = waKey(keyBase, i, n.number);
+    if (!(await claim(userId, source, sourceId, "whatsapp", key, msg))) continue;
+    try { await wa!.sendProactive(n.number, { ...template, text: msg.whatsappText }, n.lastInbound, buttons); await finish(key, null); }
+    catch (e) { await finish(key, String(e)); }
   }
 }
 
@@ -105,7 +112,7 @@ export async function deliverBriefings(now = new Date()) {
 
 // F6: "testar aviso agora". Manda pelos canais ligados e diz o que aconteceu em cada um,
 // para a pessoa descobrir hoje (e não na hora do remédio) que o celular está bloqueando.
-export type TestResult = { push: "sent" | "no-device" | "off" | "not-configured" | "error"; devices: number; whatsapp: "sent" | "not-linked" | "error" | "not-configured"; number: string | null; detail?: string };
+export type TestResult = { push: "sent" | "no-device" | "off" | "not-configured" | "error"; devices: number; whatsapp: "sent" | "not-linked" | "error" | "not-configured"; numbers: string[]; detail?: string };
 
 export async function sendTestNotice(userId: string): Promise<TestResult> {
   const ch = await channelsFor(userId);
@@ -118,15 +125,17 @@ export async function sendTestNotice(userId: string): Promise<TestResult> {
     catch (e) { push = "error"; details.push(`aparelho: ${String(e).slice(0, 200)}`); console.error("teste de aviso: push falhou", e); }
   }
   const wa = whatsapp();
-  let whatsappStatus: TestResult["whatsapp"] = !wa ? "not-configured" : ch.whatsapp ? "sent" : "not-linked";
-  if (wa && ch.whatsapp) {
+  let whatsappStatus: TestResult["whatsapp"] = !wa ? "not-configured" : ch.whatsapp.length ? "sent" : "not-linked";
+  const sentTo: string[] = [];
+  for (const n of wa ? ch.whatsapp : []) {
     const text = "🔔 Aviso de teste: se você está vendo isto, os lembretes chegam aqui no WhatsApp.\nSe aparecerem botões embaixo, toque em “Apareceu”.";
-    try { await wa.sendProactive(ch.whatsapp, { template: "aviso", params: ["teste de aviso: se você está vendo isto, os lembretes chegam aqui no WhatsApp"], text }, ch.lastInbound, testButtons()); }
-    catch (e) { whatsappStatus = "error"; details.push(`WhatsApp: ${String(e).slice(0, 200)}`); console.error("teste de aviso: WhatsApp falhou", e); }
+    try { await wa!.sendProactive(n.number, { template: "aviso", params: ["teste de aviso: se você está vendo isto, os lembretes chegam aqui no WhatsApp"], text }, n.lastInbound, testButtons()); sentTo.push(n.number); }
+    catch (e) { whatsappStatus = "error"; details.push(`WhatsApp ${n.number}: ${String(e).slice(0, 200)}`); console.error("teste de aviso: WhatsApp falhou", e); }
   }
   try { await getAdmin().from("notices").insert({ user_id: userId, kind: "system", title: msg.title, body: msg.body, href: "/avisos" }); }
   catch (e) { console.error("teste de aviso: não gravou em Avisos", e); }
-  return { push, devices, whatsapp: whatsappStatus, number: ch.whatsapp, ...(details.length ? { detail: details.join(" | ") } : {}) };
+  if (whatsappStatus === "error" && sentTo.length) whatsappStatus = "sent";  // chegou em algum; o detalhe mostra o que falhou
+  return { push, devices, whatsapp: whatsappStatus, numbers: whatsappStatus === "sent" ? sentTo : ch.whatsapp.map((n) => n.number), ...(details.length ? { detail: details.join(" | ") } : {}) };
 }
 
 // Revisão agendada pronta: vai para os Avisos sempre e pelo canal escolhido. Se o WhatsApp ou o e-mail
@@ -145,11 +154,15 @@ export async function deliverReview(userId: string, automationId: string, schedu
 
   if (channel === "whatsapp") {
     const wa = whatsapp();
-    if (ch.whatsapp && wa) {
-      if (await claim(userId, "automation", automationId, "whatsapp", `${key}:whatsapp`, { text })) {
-        try { await wa.sendProactive(ch.whatsapp, { template: "resumo", params: [oneLine(`${title}: ${text}`)], text: `*${title}*\n${text}` }, ch.lastInbound); await finish(`${key}:whatsapp`, null); }
-        catch (e) { await finish(`${key}:whatsapp`, String(e)); notes.push("WhatsApp falhou"); via = "push"; }
+    if (ch.whatsapp.length && wa) {
+      let failed = 0;
+      for (const [i, n] of ch.whatsapp.entries()) {
+        const k = waKey(key, i, n.number);
+        if (!(await claim(userId, "automation", automationId, "whatsapp", k, { text }))) continue;
+        try { await wa.sendProactive(n.number, { template: "resumo", params: [oneLine(`${title}: ${text}`)], text: `*${title}*\n${text}` }, n.lastInbound); await finish(k, null); }
+        catch (e) { await finish(k, String(e)); failed++; }
       }
+      if (failed === ch.whatsapp.length) { notes.push("WhatsApp falhou"); via = "push"; }
     } else { notes.push("WhatsApp não vinculado"); via = "push"; }
   } else if (channel === "email") {
     const { data } = await db.auth.admin.getUserById(userId);

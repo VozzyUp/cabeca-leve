@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_LIMITS, limitReply, limitsFor } from "./limits";
+import { DEFAULT_LIMITS, DEFAULT_WHATSAPP, limitReply, limitsFor, whatsappLimit } from "./limits";
 
 describe("limites por plano", () => {
   it("usa os padrões e separa teste de plano pago", () => {
@@ -24,5 +24,12 @@ describe("limites por plano", () => {
     expect(limitReply("monthly", { lastMinute: 0, today: 5, costTodayUsd: 0 }, l)).toMatch(/limite de mensagens de hoje/);
     expect(limitReply("trial", { lastMinute: 0, today: 99, costTodayUsd: 0 }, limitsFor("trial", {}))).toMatch(/período de teste/);
     expect(limitReply("monthly", { lastMinute: 0, today: 1, costTodayUsd: 1 }, l)).toMatch(/espaço/);
+  });
+  it("números de WhatsApp por plano: padrão, configurado e com teto de segurança", () => {
+    expect(whatsappLimit("trial", {})).toBe(DEFAULT_WHATSAPP.trial);
+    expect(whatsappLimit("monthly", {})).toBe(DEFAULT_WHATSAPP.monthly);
+    expect(whatsappLimit("yearly", { LIMIT_WHATSAPP_YEARLY: "5" })).toBe(5);
+    expect(whatsappLimit("none", { LIMIT_WHATSAPP_TRIAL: "2" })).toBe(2);
+    expect(whatsappLimit("monthly", { LIMIT_WHATSAPP_MONTHLY: "999" })).toBe(20);
   });
 });

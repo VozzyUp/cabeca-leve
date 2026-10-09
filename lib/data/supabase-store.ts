@@ -1,3 +1,4 @@
+import { whatsappLimit } from "@/lib/limits";
 import { costUsd } from "@/lib/assistant/models";
 import type { Admin } from "@/lib/supabase/server";
 import type { Json, TablesUpdate } from "@/lib/supabase/database.types";
@@ -192,6 +193,7 @@ export async function createSupabaseStore(db: Admin, userId: string, email: stri
         categoryId: t.category_id, accountId: t.account_id ?? "", cardId: t.card_id, recurrenceId: t.recurrence_id,
         paymentMethod: t.payment_method ? (UI_METHODS.has(t.payment_method) ? t.payment_method : "other") as Transaction["paymentMethod"] : null,
         source: (["manual", "chat", "whatsapp"].includes(t.source) ? t.source : "manual") as Transaction["source"], createdAt: t.created_at,
+        author: (t as { author?: string | null }).author ?? null,
       }));
     },
     async createTransaction(input) {
@@ -204,7 +206,7 @@ export async function createSupabaseStore(db: Admin, userId: string, email: stri
       const t = must(await db.from("transactions").insert({
         user_id: userId, type: input.type, amount_cents: input.amountCents, occurred_on: input.occurredOn, description: input.description,
         category_id: input.categoryId, account_id: accountId, card_id: cardId, payment_method: input.paymentMethod, source: input.source,
-        recurrence_id: input.recurrenceId ?? null,
+        recurrence_id: input.recurrenceId ?? null, ...(input.author ? { author: input.author.slice(0, 40) } : {}),
       }).select("*").single());
       return { ...input, id: t.id, accountId: t.account_id ?? "", cardId: t.card_id, createdAt: t.created_at };
     },
@@ -704,7 +706,7 @@ export async function createSupabaseStore(db: Admin, userId: string, email: stri
       const [p, sub, wa, integ] = await Promise.all([
         db.from("profiles").select("*").eq("user_id", userId).single(),
         db.from("subscriptions").select("plan, status, current_period_end, cancel_at_period_end, canceled_at, cancel_protocol").eq("user_id", userId).order("created_at", { ascending: false }).limit(5),
-        db.from("channel_links").select("external_id, verified_at").eq("user_id", userId).eq("channel", "whatsapp").maybeSingle(),
+        db.from("channel_links").select("*").eq("user_id", userId).eq("channel", "whatsapp").order("created_at"),
         db.from("integrations").select("provider").eq("user_id", userId).eq("status", "active"),
       ]);
       const prof = must(p);
@@ -712,7 +714,10 @@ export async function createSupabaseStore(db: Admin, userId: string, email: stri
       const nowIso = new Date().toISOString();
       const s = must(sub).find((x) => ["active", "trialing", "past_due"].includes(x.status) || (x.current_period_end ?? "") > nowIso);
       const providers = new Set(must(integ).map((i) => i.provider));
-      const waRow = must(wa as Result<{ external_id: string; verified_at: string | null } | null>);
+      // vários números por conta: o primeiro confirmado (ou o primeiro) aparece como "o" WhatsApp nas telas antigas
+      const waRows = must(wa).map((l) => ({ id: l.id, number: l.external_id, label: (l as { label?: string | null }).label ?? null, verified: !!l.verified_at,
+        receivesNotices: (l as { receives_notices?: boolean }).receives_notices ?? true }));
+      const waMain = waRows.find((l) => l.verified) ?? waRows[0];
       // F2: voltou da página de pagamento e a Asaas ainda não avisou: libera por 2 h, sem "assinatura inválida"
       const confirming = !s && prof.trial_ends_on < today()
         ? must(await db.from("checkout_sessions").select("plan").eq("user_id", userId).eq("status", "pending")
@@ -729,7 +734,8 @@ export async function createSupabaseStore(db: Admin, userId: string, email: stri
         tone: (prof.assistant_tone === "custom" ? "warm" : prof.assistant_tone) as Settings["tone"], answerLength: prof.answer_length as Settings["answerLength"],
         voice: (prof.assistant_voice === "male" ? "male" : "female"), memoryEnabled: prof.memory_enabled, theme: prof.theme as Settings["theme"],
         briefingTime: prof.briefing_enabled ? hm(prof.briefing_time) : null,
-        channels: { whatsapp: waRow?.external_id ?? null, whatsappVerified: !!waRow?.verified_at, telegram: prof.notify_telegram, email: prof.notify_email, push: prof.notify_push },
+        channels: { whatsapp: waMain?.number ?? null, whatsappVerified: !!waMain?.verified, telegram: prof.notify_telegram, email: prof.notify_email, push: prof.notify_push },
+        whatsapp: { numbers: waRows, limit: whatsappLimit(plan) },
         calendars: { google: providers.has("google"), outlook: providers.has("microsoft") },
         // sem a coluna (migração ainda não aplicada) conta como configurado: nada de janela presa
         onboarded: (prof as { onboarded_at?: string | null }).onboarded_at !== null,
@@ -752,13 +758,7 @@ export async function createSupabaseStore(db: Admin, userId: string, email: stri
         row.notify_push = patch.channels.push;
         row.notify_email = patch.channels.email;
         row.notify_telegram = patch.channels.telegram;
-        const current = must(await db.from("channel_links").select("external_id").eq("user_id", userId).eq("channel", "whatsapp").maybeSingle() as Result<{ external_id: string } | null>);
-        if (patch.channels.whatsapp === null && current) must(await db.from("channel_links").delete().eq("user_id", userId).eq("channel", "whatsapp"));
-        // número novo fica pendente até a pessoa confirmar pelo próprio WhatsApp (lib/whatsapp/link.ts)
-        if (patch.channels.whatsapp && patch.channels.whatsapp !== current?.external_id) {
-          must(await db.from("channel_links").upsert({ user_id: userId, channel: "whatsapp", external_id: patch.channels.whatsapp, verified_at: null },
-            { onConflict: "user_id,channel" }));
-        }
+        // o WhatsApp não muda por aqui: vincular e desvincular passam por lib/whatsapp/link.ts (código de confirmação)
       }
       // agendas: aqui só dá para desconectar; conectar passa pelo OAuth do Google ou da Microsoft
       if (patch.calendars) {

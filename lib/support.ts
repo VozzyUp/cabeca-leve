@@ -1,3 +1,4 @@
+import { noticeNumbers } from "@/lib/whatsapp/link";
 import crypto from "node:crypto";
 import { BRAND } from "@/lib/brand";
 import { sendEmail } from "@/lib/email";
@@ -48,16 +49,11 @@ export async function answerTicket(ticketId: string, reply: string, by: string) 
   if (error) throw new Error(error.message);
   if (!t) return false;  // já respondido
   await db.from("notices").insert({ user_id: t.user_id, kind: "support", title: `Resposta do suporte (${t.protocol})`, body: reply, href: "/ajustes/suporte" });
-  const [{ data: link }, { data: user }] = await Promise.all([
-    db.from("channel_links").select("external_id, last_inbound_at").eq("user_id", t.user_id).eq("channel", "whatsapp").not("verified_at", "is", null).maybeSingle(),
-    db.auth.admin.getUserById(t.user_id),
-  ]);
+  const [numbers, { data: user }] = await Promise.all([noticeNumbers(t.user_id), db.auth.admin.getUserById(t.user_id)]);
   const text = `Resposta do suporte do ${BRAND.name} (protocolo ${t.protocol}):\n\n${reply}`;
   const wa = whatsapp();
   await Promise.allSettled([
-    wa && link?.external_id
-      ? wa.sendProactive(link.external_id, { template: "aviso", params: [`resposta do suporte ao chamado ${t.protocol}: ${reply}`], text }, link.last_inbound_at ? new Date(link.last_inbound_at) : null)
-      : Promise.resolve(),
+    ...(wa ? numbers : []).map((n) => wa!.sendProactive(n.number, { template: "aviso", params: [`resposta do suporte ao chamado ${t.protocol}: ${reply}`], text }, n.lastInbound)),
     sendEmail(user.user?.email ?? "", `${BRAND.name}: resposta ao chamado ${t.protocol}`, text),
   ]);
   return true;

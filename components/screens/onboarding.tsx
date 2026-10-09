@@ -65,7 +65,7 @@ export function Onboarding({ initial }: { initial: Settings }) {
       {step === 1 && (
         <div className="flex flex-col gap-4">
           <p className="text-sm text-body">Com o WhatsApp vinculado, você anota gastos, cria lembretes e recebe os avisos por lá, com botões para concluir ou adiar.</p>
-          <WhatsAppLinkForm channels={channels} label="Seu número de WhatsApp" />
+          <WhatsAppLinkForm channels={channels} label="Seu número de WhatsApp" owner={name.trim() || null} />
           <Footer onNext={() => setStep(2)} onSkip={() => setStep(2)} skipLabel="Pular por agora" nextLabel={channels.whatsapp ? "Continuar" : undefined} />
         </div>
       )}

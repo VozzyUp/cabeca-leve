@@ -59,6 +59,7 @@ async function callHuman(store: DataStore, text: string, channel: "web" | "whats
 export async function respond(store: DataStore, text: string, opts: {
   channel: "web" | "whatsapp" | "voice"; clientMessageId?: string; externalMessageId?: string; now?: Date;
   images?: ChatImage[];  // fotos desta mensagem (já reduzidas); o texto pode ser a legenda ou vazio
+  sender?: string | null;  // nome do WhatsApp que mandou, quando a conta tem mais de uma pessoa
 }): Promise<{ user: ChatMessage | null; reply: AssistantReply; stored?: false }> {
   if (opts.images?.length) text = text.trim() ? `📷 ${text.trim()}` : "📷 Foto";
   // teste grátis acabou e não há assinatura: guarda a mensagem e explica, sem rodar o assistente
@@ -80,7 +81,7 @@ export async function respond(store: DataStore, text: string, opts: {
 }
 
 async function turn(store: DataStore, text: string, opts: {
-  channel: "web" | "whatsapp" | "voice"; clientMessageId?: string; externalMessageId?: string; now?: Date; images?: ChatImage[];
+  channel: "web" | "whatsapp" | "voice"; clientMessageId?: string; externalMessageId?: string; now?: Date; images?: ChatImage[]; sender?: string | null;
 }): Promise<{ user: ChatMessage | null; reply: AssistantReply; stored?: false }> {
   // limite de uso por plano: protege o custo de IA (e o número de WhatsApp) contra abuso
   const settings = await store.getSettings();

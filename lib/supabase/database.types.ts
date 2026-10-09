@@ -335,14 +335,14 @@ isOneToOne: false
                   ]
                 },"channel_links": {
                   Row: {
-                    "channel": string,"created_at": string,"external_id": string,"id": string,"last_inbound_at": string | null,"updated_at": string,"user_id": string,"verification_code_hash": string | null,"verification_expires_at": string | null,"verified_at": string | null
+                    "channel": string,"created_at": string,"external_id": string,"id": string,"label": string | null,"last_inbound_at": string | null,"receives_notices": boolean,"updated_at": string,"user_id": string,"verification_code_hash": string | null,"verification_expires_at": string | null,"verified_at": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "channel": string,"created_at"?: string,"external_id": string,"id"?: string,"last_inbound_at"?: string | null,"updated_at"?: string,"user_id": string,"verification_code_hash"?: string | null,"verification_expires_at"?: string | null,"verified_at"?: string | null
+                    "channel": string,"created_at"?: string,"external_id": string,"id"?: string,"label"?: string | null,"last_inbound_at"?: string | null,"receives_notices"?: boolean,"updated_at"?: string,"user_id": string,"verification_code_hash"?: string | null,"verification_expires_at"?: string | null,"verified_at"?: string | null
                   }
                   Update: {
-                    "channel"?: string,"created_at"?: string,"external_id"?: string,"id"?: string,"last_inbound_at"?: string | null,"updated_at"?: string,"user_id"?: string,"verification_code_hash"?: string | null,"verification_expires_at"?: string | null,"verified_at"?: string | null
+                    "channel"?: string,"created_at"?: string,"external_id"?: string,"id"?: string,"label"?: string | null,"last_inbound_at"?: string | null,"receives_notices"?: boolean,"updated_at"?: string,"user_id"?: string,"verification_code_hash"?: string | null,"verification_expires_at"?: string | null,"verified_at"?: string | null
                   }
                   Relationships: [
                     
@@ -1029,14 +1029,14 @@ isOneToOne: false
                   ]
                 },"transactions": {
                   Row: {
-                    "account_id": string | null,"amount_cents": number,"card_id": string | null,"category_id": string | null,"counterpart_account_id": string | null,"created_at": string,"currency": string,"description": string,"id": string,"installment_number": number | null,"installment_purchase_id": string | null,"invoice_id": string | null,"merchant": string | null,"notes": string | null,"occurred_on": string,"payment_method": string | null,"project_id": string | null,"recurrence_id": string | null,"source": string,"status": string,"type": string,"updated_at": string,"user_id": string
+                    "account_id": string | null,"amount_cents": number,"author": string | null,"card_id": string | null,"category_id": string | null,"counterpart_account_id": string | null,"created_at": string,"currency": string,"description": string,"id": string,"installment_number": number | null,"installment_purchase_id": string | null,"invoice_id": string | null,"merchant": string | null,"notes": string | null,"occurred_on": string,"payment_method": string | null,"project_id": string | null,"recurrence_id": string | null,"source": string,"status": string,"type": string,"updated_at": string,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "account_id"?: string | null,"amount_cents": number,"card_id"?: string | null,"category_id"?: string | null,"counterpart_account_id"?: string | null,"created_at"?: string,"currency"?: string,"description": string,"id"?: string,"installment_number"?: number | null,"installment_purchase_id"?: string | null,"invoice_id"?: string | null,"merchant"?: string | null,"notes"?: string | null,"occurred_on": string,"payment_method"?: string | null,"project_id"?: string | null,"recurrence_id"?: string | null,"source"?: string,"status"?: string,"type": string,"updated_at"?: string,"user_id": string
+                    "account_id"?: string | null,"amount_cents": number,"author"?: string | null,"card_id"?: string | null,"category_id"?: string | null,"counterpart_account_id"?: string | null,"created_at"?: string,"currency"?: string,"description": string,"id"?: string,"installment_number"?: number | null,"installment_purchase_id"?: string | null,"invoice_id"?: string | null,"merchant"?: string | null,"notes"?: string | null,"occurred_on": string,"payment_method"?: string | null,"project_id"?: string | null,"recurrence_id"?: string | null,"source"?: string,"status"?: string,"type": string,"updated_at"?: string,"user_id": string
                   }
                   Update: {
-                    "account_id"?: string | null,"amount_cents"?: number,"card_id"?: string | null,"category_id"?: string | null,"counterpart_account_id"?: string | null,"created_at"?: string,"currency"?: string,"description"?: string,"id"?: string,"installment_number"?: number | null,"installment_purchase_id"?: string | null,"invoice_id"?: string | null,"merchant"?: string | null,"notes"?: string | null,"occurred_on"?: string,"payment_method"?: string | null,"project_id"?: string | null,"recurrence_id"?: string | null,"source"?: string,"status"?: string,"type"?: string,"updated_at"?: string,"user_id"?: string
+                    "account_id"?: string | null,"amount_cents"?: number,"author"?: string | null,"card_id"?: string | null,"category_id"?: string | null,"counterpart_account_id"?: string | null,"created_at"?: string,"currency"?: string,"description"?: string,"id"?: string,"installment_number"?: number | null,"installment_purchase_id"?: string | null,"invoice_id"?: string | null,"merchant"?: string | null,"notes"?: string | null,"occurred_on"?: string,"payment_method"?: string | null,"project_id"?: string | null,"recurrence_id"?: string | null,"source"?: string,"status"?: string,"type"?: string,"updated_at"?: string,"user_id"?: string
                   }
                   Relationships: [
                     {

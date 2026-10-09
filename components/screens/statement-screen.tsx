@@ -123,7 +123,7 @@ export function StatementScreen() {
                   <div className="min-w-0">
                     <p className="truncate text-sm text-text">{t.description}</p>
                     <p className="text-xs text-muted">
-                      {[catName.get(t.categoryId ?? ""), t.paymentMethod ? METHOD[t.paymentMethod] : null].filter(Boolean).join(" · ")}
+                      {[catName.get(t.categoryId ?? ""), t.paymentMethod ? METHOD[t.paymentMethod] : null, t.author ? `por ${t.author}` : null].filter(Boolean).join(" · ")}
                     </p>
                   </div>
                   <span className={`shrink-0 font-mono text-sm ${t.type === "income" ? "text-income" : "text-expense"}`}>

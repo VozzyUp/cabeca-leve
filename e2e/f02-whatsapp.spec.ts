@@ -24,6 +24,8 @@ test.describe("F02 e F16 WhatsApp", () => {
     await page.getByRole("button", { name: "Vincular" }).click();
     const status = page.getByRole("status").filter({ hasText: "mande este código" });
     await expect(status).toBeVisible();
+    await expect(page.getByText(`+${number} · aguardando o código`)).toBeVisible();  // a lista atualizou
+    await expect(status).toBeVisible();  // e o código continua na tela
     const code = (await status.locator(".font-mono").textContent())!.trim();
     expect(code).toMatch(/^\d{6}$/);
     await expect(status.getByRole("link", { name: "Abrir o WhatsApp com o código" })).toHaveAttribute("href", new RegExp(`wa\\.me/5511900000000\\?text=.*${code}`));
@@ -31,7 +33,7 @@ test.describe("F02 e F16 WhatsApp", () => {
     expect((await hook(inbound(`L-${number}`, number, `Meu código: ${code}`))).status).toBe(200);
     await waitSent(number, /Pronto!/);
     await page.reload();
-    await expect(page.getByText(`Vinculado: `)).toBeVisible();
+    await expect(page.getByText(`+${number} · vinculado`)).toBeVisible();
 
     // F02-H1: texto vira lançamento, resposta no WhatsApp e aparece no app
     await hook(inbound(`T-${number}`, number, "gastei 27,90 no uber"));
@@ -69,7 +71,40 @@ test.describe("F02 e F16 WhatsApp", () => {
     await hook(inbound(`X-${number}`, number, "Meu código: 000000"));
     await waitSent(number, /ainda não está ligado/);
     await page.reload();
-    await expect(page.getByText(/Aguardando confirmação/)).toBeVisible();
+    await expect(page.getByText(/aguardando o código/)).toBeVisible();
+  });
+
+  test("F16-H2 conta dividida: adiciona o WhatsApp de outra pessoa com o nome, até o limite do plano, e remove", async ({ page, user }) => {
+    const mine = phone();
+    await admin.from("channel_links").insert({ user_id: user.id, channel: "whatsapp", external_id: `+${mine}`, verified_at: new Date().toISOString() });
+    await login(page, user, "/ajustes");
+    await expect(page.getByText("1 de 2 números do seu plano")).toBeVisible();
+    // nome de quem usa o primeiro número e avisos desligados nele
+    const first = page.getByRole("listitem").filter({ hasText: `+${mine}` });
+    await first.getByLabel("Nome de quem usa").fill("Fernando");
+    await first.getByRole("button", { name: "Salvar" }).click();
+    await expect.poll(async () => (await admin.from("channel_links").select("label").eq("user_id", user.id).single()).data?.label).toBe("Fernando");
+    await page.getByRole("switch", { name: "Avisos no Fernando" }).click();
+    await expect.poll(async () => (await admin.from("channel_links").select("receives_notices").eq("user_id", user.id).single()).data?.receives_notices).toBe(false);
+
+    // segundo número, com o nome da pessoa
+    const other = `55119${String(Date.now() + 7).slice(-8)}`;
+    await page.getByRole("button", { name: "Adicionar outro WhatsApp" }).click();
+    await page.getByLabel("Nome de quem vai usar").fill("Ana");
+    await page.getByLabel("Número").fill(other.slice(2));
+    await page.getByRole("button", { name: "Vincular" }).click();
+    await expect(page.getByRole("status").filter({ hasText: "mande este código" })).toBeVisible();
+    await page.reload();
+    await expect(page.getByText("2 de 2 números do seu plano")).toBeVisible();
+    await expect(page.getByText(`+${other} · aguardando o código`)).toBeVisible();
+    await expect(page.getByRole("button", { name: "Adicionar outro WhatsApp" })).toBeHidden();
+    await expect(page.getByRole("link", { name: "veja os planos" })).toBeVisible();
+
+    // remover a Ana devolve a vaga
+    page.once("dialog", (d) => d.accept());
+    await page.getByRole("button", { name: "Remover Ana" }).click();
+    await expect(page.getByText("1 de 2 números do seu plano")).toBeVisible();
+    expect((await admin.from("channel_links").select("id").eq("user_id", user.id)).data).toHaveLength(1);
   });
 
   test("F02-N1 número que não é de ninguém recebe a explicação de como vincular", async () => {

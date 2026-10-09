@@ -61,7 +61,7 @@ export async function createHabit(
 export async function recordTransaction(
   store: DataStore,
   input: { type: Transaction["type"]; amountCents: number; description: string; categoryName: string;
-    paymentMethod: Transaction["paymentMethod"]; occurredOn?: string },
+    paymentMethod: Transaction["paymentMethod"]; occurredOn?: string; author?: string | null },
   now: Date,
   onCreated?: (t: Transaction) => void,  // o agente usa para montar o termômetro do gasto
 ): Promise<ActionCardData> {
@@ -77,12 +77,14 @@ export async function recordTransaction(
   const t = await store.createTransaction({
     type: input.type, amountCents: input.amountCents, occurredOn, description: input.description,
     categoryId: category.id, accountId: accounts[0].id, paymentMethod: input.paymentMethod, source: "chat",
+    ...(input.author ? { author: input.author } : {}),
   });
   onCreated?.(t);
   const action = await store.recordAction("transaction", t.id);
   const day = formatDayLabel(occurredOn, now, tz);
   const parts = [`${day[0].toUpperCase()}${day.slice(1)}`, category.name];
   if (t.paymentMethod) parts.push(PAYMENT_LABEL[t.paymentMethod]);
+  if (input.author) parts.push(`por ${input.author}`);
   const sign = t.type === "income" ? "+" : "−";
   // F5: este gasto fez algum teto (da categoria ou da de cima) cruzar 80% ou 100%?
   let alert: string | undefined;

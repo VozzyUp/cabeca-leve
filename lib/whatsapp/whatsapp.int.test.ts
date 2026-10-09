@@ -232,4 +232,40 @@ describe.skipIf(!run)("WhatsApp (UAZAPI)", () => {
     const { data } = await admin.from("messages").select("text_preview, channel").eq("user_id", userId).eq("role", "user").order("created_at");
     expect(data!.at(-1)).toEqual({ text_preview: "me lembra de ligar pra minha mãe amanhã às 10h", channel: "whatsapp" });
   });
+
+  it("conta dividida: segundo número só dentro do limite, fala com a mesma conta e cada número escolhe se recebe os avisos", async () => {
+    const { LinkLimitError, startLink } = await import("./link");
+    const { processInbound } = await import("./inbound");
+    const { deliverDueReminders } = await import("@/lib/deliveries");
+    const second = "+5511912340000";
+    // o plano permite 1: o segundo número é recusado
+    await expect(startLink(userId, second, { label: "Ana", limit: 1 })).rejects.toBeInstanceOf(LinkLimitError);
+    // pedir de novo o número já vinculado não conta no limite (só atualiza o nome)
+    expect(await startLink(userId, number, { label: "Fernando", limit: 1 })).toMatchObject({ alreadyLinked: true, code: null });
+    // com 2, vincula pelo código mandado do próprio número
+    const r = await startLink(userId, second, { label: "Ana", limit: 2 });
+    await processInbound(inbound("D1", `Meu código: ${r.code}`, "5511912340000"));
+    expect(sent.at(-1)).toMatchObject({ number: "5511912340000", text: expect.stringMatching(/Pronto!/) });
+    const { data: links } = await admin.from("channel_links").select("external_id, label, verified_at").eq("user_id", userId).order("created_at");
+    // o primeiro foi confirmado sem o 9 e fica gravado como chegou
+    expect(links!.map((l) => [l.external_id, l.label, !!l.verified_at])).toEqual([[`+${fromWithout9}`, "Fernando", true], [second, "Ana", true]]);
+    await expect(startLink(userId, "+5511955550000", { limit: 2 })).rejects.toBeInstanceOf(LinkLimitError);
+
+    // a Ana lança pelo número dela: entra na mesma conta e a resposta volta para ela
+    const before = (await admin.from("transactions").select("id").eq("user_id", userId)).data!.length;
+    await processInbound(inbound("D2", "gastei 12 no pão", "5511912340000"));
+    expect(sent.at(-1)!.number).toBe("5511912340000");
+    expect((await admin.from("transactions").select("id").eq("user_id", userId)).data!.length).toBe(before + 1);
+
+    // lembrete: vai para os dois; com os avisos desligados num número, só para o outro
+    const fire = async (title: string) => {
+      await admin.from("reminders").insert({ user_id: userId, title, next_fire_at: new Date(Date.now() - 1000).toISOString(), timezone: "America/Sao_Paulo" });
+      const n = sent.length;
+      await deliverDueReminders();
+      return sent.slice(n).filter((m) => String(m.text).includes(title)).map((m) => m.number).sort();
+    };
+    expect(await fire("Regar as plantas")).toEqual([fromWithout9, "5511912340000"].sort());
+    await admin.from("channel_links").update({ receives_notices: false }).eq("user_id", userId).eq("external_id", `+${fromWithout9}`);
+    expect(await fire("Comprar ração")).toEqual(["5511912340000"]);
+  });
 });
