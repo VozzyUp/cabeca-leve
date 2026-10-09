@@ -5,9 +5,16 @@ import { getAdmin } from "@/lib/supabase/server";
 // Web Push (VAPID): chega com o app fechado. No iPhone, só com o app instalado na tela inicial.
 export const pushEnabled = () => !!(serverPublicEnv().vapidPublicKey && process.env.VAPID_PRIVATE_KEY);
 
+// O assunto VAPID precisa ser mailto: ou https://; aceita só o e-mail e completa
+export function vapidSubject() {
+  const raw = (process.env.VAPID_SUBJECT ?? "").trim();
+  if (!raw) return "mailto:contato@exemplo.com.br";
+  return /^(mailto:|https?:\/\/)/.test(raw) ? raw : `mailto:${raw}`;
+}
+
 export async function sendPush(userId: string, payload: { title: string; body: string; url: string }) {
   if (!pushEnabled()) return 0;
-  webpush.setVapidDetails(process.env.VAPID_SUBJECT ?? "mailto:contato@exemplo.com.br", serverPublicEnv().vapidPublicKey!, process.env.VAPID_PRIVATE_KEY!);
+  webpush.setVapidDetails(vapidSubject(), serverPublicEnv().vapidPublicKey!, process.env.VAPID_PRIVATE_KEY!);
   const db = getAdmin();
   const { data: subs } = await db.from("push_subscriptions").select("id, endpoint, p256dh, auth").eq("user_id", userId);
   let sent = 0;

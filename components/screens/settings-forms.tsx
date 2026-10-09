@@ -264,6 +264,7 @@ const PUSH_TEXT = {
   sent: (n: number) => `Notificação enviada para ${n} aparelho${n === 1 ? "" : "s"}. Se não apareceu, confira se o navegador ou o celular está silenciando o site.`,
   "no-device": () => "Nenhum aparelho com notificação ligada. Ligue acima neste aparelho.",
   off: () => "Notificações no aparelho estão desligadas.",
+  error: () => "Não deu para mandar a notificação agora (confira as chaves VAPID do app).",
   "not-configured": () => "Notificações no aparelho ainda não estão ligadas neste app.",
 } as const;
 const WA_TEXT = {
@@ -294,6 +295,7 @@ function TestNotice() {
           <li><span className="font-medium text-text">Aparelho:</span> {PUSH_TEXT[result.push](result.devices)}</li>
           <li><span className="font-medium text-text">WhatsApp:</span> {WA_TEXT[result.whatsapp](result.number)}</li>
           <li><span className="font-medium text-text">No app:</span> está em Avisos.</li>
+          {result.detail && <li className="text-muted">Detalhe técnico: {result.detail}</li>}
         </ul>
       )}
     </div>

@@ -105,23 +105,28 @@ export async function deliverBriefings(now = new Date()) {
 
 // F6: "testar aviso agora". Manda pelos canais ligados e diz o que aconteceu em cada um,
 // para a pessoa descobrir hoje (e não na hora do remédio) que o celular está bloqueando.
-export type TestResult = { push: "sent" | "no-device" | "off" | "not-configured"; devices: number; whatsapp: "sent" | "not-linked" | "error" | "not-configured"; number: string | null };
+export type TestResult = { push: "sent" | "no-device" | "off" | "not-configured" | "error"; devices: number; whatsapp: "sent" | "not-linked" | "error" | "not-configured"; number: string | null; detail?: string };
 
 export async function sendTestNotice(userId: string): Promise<TestResult> {
   const ch = await channelsFor(userId);
   const msg = { title: "Aviso de teste", body: "Se você está vendo isto, os lembretes chegam aqui.", url: "/avisos" };
   let push: TestResult["push"] = "off", devices = 0;
+  const details: string[] = [];
   if (!pushEnabled()) push = "not-configured";
-  else if (ch.push) { devices = await sendPush(userId, msg); push = devices > 0 ? "sent" : "no-device"; }
+  else if (ch.push) {
+    try { devices = await sendPush(userId, msg); push = devices > 0 ? "sent" : "no-device"; }
+    catch (e) { push = "error"; details.push(`aparelho: ${String(e).slice(0, 200)}`); console.error("teste de aviso: push falhou", e); }
+  }
   const wa = whatsapp();
   let whatsappStatus: TestResult["whatsapp"] = !wa ? "not-configured" : ch.whatsapp ? "sent" : "not-linked";
   if (wa && ch.whatsapp) {
     const text = "🔔 Aviso de teste: se você está vendo isto, os lembretes chegam aqui no WhatsApp.\nSe aparecerem botões embaixo, toque em “Apareceu”.";
     try { await wa.sendProactive(ch.whatsapp, { template: "aviso", params: ["teste de aviso: se você está vendo isto, os lembretes chegam aqui no WhatsApp"], text }, ch.lastInbound, testButtons()); }
-    catch { whatsappStatus = "error"; }
+    catch (e) { whatsappStatus = "error"; details.push(`WhatsApp: ${String(e).slice(0, 200)}`); console.error("teste de aviso: WhatsApp falhou", e); }
   }
-  await getAdmin().from("notices").insert({ user_id: userId, kind: "system", title: msg.title, body: msg.body, href: "/avisos" });
-  return { push, devices, whatsapp: whatsappStatus, number: ch.whatsapp };
+  try { await getAdmin().from("notices").insert({ user_id: userId, kind: "system", title: msg.title, body: msg.body, href: "/avisos" }); }
+  catch (e) { console.error("teste de aviso: não gravou em Avisos", e); }
+  return { push, devices, whatsapp: whatsappStatus, number: ch.whatsapp, ...(details.length ? { detail: details.join(" | ") } : {}) };
 }
 
 // Revisão agendada pronta: vai para os Avisos sempre e pelo canal escolhido. Se o WhatsApp ou o e-mail
