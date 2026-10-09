@@ -113,7 +113,8 @@ function toRule(r: z.infer<typeof RepeatInput>, firstDay: string): string | null
 function buildTools(store: DataStore, now: Date, cards: ActionCardData[], channel: "web" | "whatsapp" | "voice") {
   const tz = store.timezone();
   const today = localDate(now, tz);
-  // A API aceita no máximo 20 ferramentas estritas: ficam de fora as sem parâmetro (nada a validar)
+  // Limites da API para ferramentas estritas: no máximo 20 ferramentas e 16 parâmetros "pode ser nulo" (anyOf) somados.
+  // Ficam de fora as sem parâmetro e as de edição e consulta com muitos campos opcionais; o zod valida a entrada de todas.
   const strict = <T extends object>(tool: T): T =>
     ({ ...tool, ...("input_schema" in tool ? { input_schema: strictSchema(tool.input_schema) } : {}), strict: true });
   const json = (v: unknown) => JSON.stringify(v);
@@ -191,7 +192,7 @@ function buildTools(store: DataStore, now: Date, cards: ActionCardData[], channe
       inputSchema: z.object({ habit_id: z.string(), day: z.iso.date().nullable().describe("null para hoje"), done: z.boolean() }),
       run: async (i) => json({ ok: await store.setHabitDone(i.habit_id, i.day ?? today, i.done) }),
     })),
-    strict(betaZodTool({
+    betaZodTool({
       name: "update_task",
       description: "Conclui, reabre, muda o prazo, renomeia ou muda as observações de uma tarefa (null = não mexe). Use query_tasks antes para achar o id.",
       inputSchema: z.object({
@@ -206,7 +207,7 @@ function buildTools(store: DataStore, now: Date, cards: ActionCardData[], channe
         const t = await store.updateTask(i.task_id, patch);
         return t ? json({ ok: true, task: t }) : "Erro: tarefa não encontrada.";
       },
-    })),
+    }),
     strict(betaZodTool({
       name: "update_reminder",
       description: "Conclui ou cancela um lembrete, ou muda o horário. Use query_reminders antes para achar o id.",
@@ -322,7 +323,7 @@ function buildTools(store: DataStore, now: Date, cards: ActionCardData[], channe
         return json(cats.map((c) => ({ name: c.name, kind: c.kind, inside: c.parentId ? name.get(c.parentId) ?? null : null })));
       },
     }),
-    strict(betaZodTool({
+    betaZodTool({
       name: "query_transactions",
       description: "Busca lançamentos (gastos e entradas) com id, para corrigir ou apagar. Filtra por texto na descrição e por período.",
       inputSchema: z.object({
@@ -337,8 +338,8 @@ function buildTools(store: DataStore, now: Date, cards: ActionCardData[], channe
           .slice(0, 30).map((t) => ({ id: t.id, day: t.occurredOn, description: t.description, amount: formatMoney(t.amountCents), type: t.type,
             category: names.get(t.categoryId ?? "") ?? null, payment_method: t.paymentMethod })));
       },
-    })),
-    strict(betaZodTool({
+    }),
+    betaZodTool({
       name: "update_transaction",
       description: "Corrige um lançamento: valor, descrição, categoria, dia ou forma de pagamento (null = não mexe). Use query_transactions antes.",
       inputSchema: z.object({
@@ -360,7 +361,7 @@ function buildTools(store: DataStore, now: Date, cards: ActionCardData[], channe
         const t = await store.updateTransaction(i.transaction_id, patch);
         return t ? json({ ok: true, transaction: { description: t.description, amount: formatMoney(t.amountCents), day: t.occurredOn } }) : "Erro: lançamento não encontrado.";
       },
-    })),
+    }),
     strict(betaZodTool({
       name: "delete_transaction",
       description: "Apaga um lançamento de vez. Use query_transactions antes para achar o id.",

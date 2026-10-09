@@ -65,12 +65,18 @@ describe.skipIf(!run)("agente", () => {
     expect(first.body.model).toBe("claude-opus-5-5");
     expect(first.body.fallbacks).toBe("default");
     expect(first.body.output_config).toEqual({ effort: "low" });
-    // a API recusa mais de 20 ferramentas estritas; só as sem parâmetro ficam de fora
-    const tools = first.body.tools as Array<{ strict?: boolean; input_schema?: { properties?: object } }>;
-    expect(tools.filter((t) => t.strict).length).toBeLessThanOrEqual(20);
-    expect(tools.filter((t) => !t.strict).every((t) => Object.keys(t.input_schema?.properties ?? {}).length === 0)).toBe(true);
-    // nenhum limite que as ferramentas estritas não aceitam vai no esquema
-    expect(JSON.stringify(first.body.tools)).not.toMatch(/"(minimum|maximum|minLength|maxLength|maxItems)"/);
+    // limites da API para ferramentas estritas: no máximo 20 ferramentas e 16 parâmetros "pode ser nulo" somados
+    type Tool = { name: string; strict?: boolean };
+    const tools = first.body.tools as Tool[];
+    const strictTools = tools.filter((t) => t.strict);
+    const unions = (n: unknown): number => Array.isArray(n) ? n.reduce((a: number, x) => a + unions(x), 0)
+      : n && typeof n === "object" ? Object.entries(n).reduce((a, [k, v]) => a + (k === "anyOf" || (k === "type" && Array.isArray(v)) ? 1 : 0) + unions(v), 0) : 0;
+    expect(strictTools.length).toBeLessThanOrEqual(20);
+    expect(unions(strictTools)).toBeLessThanOrEqual(16);
+    // criar lembrete, tarefa, lançamento e hábito continuam estritos
+    expect(strictTools.map((t) => t.name)).toEqual(expect.arrayContaining(["create_reminder", "create_task", "record_transaction", "create_habit"]));
+    // nenhum limite que as ferramentas estritas não aceitam vai no esquema delas
+    expect(JSON.stringify(strictTools)).not.toMatch(/"(minimum|maximum|minLength|maxLength|maxItems)"/);
     // 1ª mensagem do dia: usuário com data e hora, depois o contexto como mensagem de sistema
     expect(first.body.messages.map((m) => m.role)).toEqual(["user", "system"]);
     expect(JSON.stringify(first.body.messages[0].content)).toContain("08/10/2026 12:00");
