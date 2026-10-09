@@ -14,7 +14,7 @@ import { Segmented } from "@/components/ui/segmented";
 import type { Memory, Settings } from "@/lib/data/types";
 
 // Salva cada mudança na hora e mostra "Salvo" ou o erro ao lado do título da seção
-function useSaver(initial: Settings) {
+export function useSaver(initial: Settings) {
   const [settings, setSettings] = useState(initial);
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [, start] = useTransition();
@@ -32,7 +32,7 @@ function useSaver(initial: Settings) {
   return { settings, save, status };
 }
 
-function SaveStatus({ status }: { status: ReturnType<typeof useSaver>["status"] }) {
+export function SaveStatus({ status }: { status: ReturnType<typeof useSaver>["status"] }) {
   return (
     <span role="status" className={cn("text-xs", status === "error" ? "text-danger" : "text-muted")}>
       {status === "saving" ? "Salvando…" : status === "saved" ? "Salvo" : status === "error" ? "Não deu para salvar. Tente de novo." : ""}
@@ -40,7 +40,7 @@ function SaveStatus({ status }: { status: ReturnType<typeof useSaver>["status"] 
   );
 }
 
-function Switch({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
+export function Switch({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
   return (
     <button type="button" role="switch" aria-checked={checked} aria-label={label} onClick={() => onChange(!checked)}
       className={cn("relative h-6 w-10 shrink-0 rounded-full transition-colors", checked ? "bg-accent" : "bg-surface-3")}>
@@ -49,7 +49,7 @@ function Switch({ checked, onChange, label }: { checked: boolean; onChange: (v: 
   );
 }
 
-function Row({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
+export function Row({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-4 py-3">
       <span className="flex min-w-0 flex-col"><span className="text-sm text-text">{title}</span>{hint && <span className="text-xs text-muted">{hint}</span>}</span>
@@ -65,22 +65,14 @@ const toE164 = (s: string) => {
   return /^55\d{10,11}$/.test(full) ? `+${full}` : null;
 };
 
-// ---- S29 ----
-export function SettingsForm({ initial, canSignOut }: { initial: Settings; canSignOut: boolean }) {
-  const { settings, save, status } = useSaver(initial);
-  const [name, setName] = useState(initial.name);
-  const [phone, setPhone] = useState(initial.channels.whatsapp ?? "");
-  const [phoneError, setPhoneError] = useState<string | null>(null);
-  const [confirm, setConfirm] = useState("");
-  const [deleting, startDelete] = useTransition();
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [exporting, startExport] = useTransition();
+// Vincular o WhatsApp: pede o número e mostra o código que a pessoa manda do próprio WhatsApp.
+// Usado em Ajustes e na configuração inicial.
+export function WhatsAppLinkForm({ channels, label = "WhatsApp" }: { channels: Settings["channels"]; label?: string }) {
   const router = useRouter();
+  const [phone, setPhone] = useState(channels.whatsapp ?? "");
+  const [phoneError, setPhoneError] = useState<string | null>(null);
   const [linking, startLinking] = useTransition();
-  const [pushNote, setPushNote] = useState<string | null>(null);
   const [linkCode, setLinkCode] = useState<Awaited<ReturnType<typeof startWhatsAppLink>>>(null);
-  const channels = settings.channels;
-
   function linkWhatsApp(e: React.FormEvent) {
     e.preventDefault();
     const n = toE164(phone);
@@ -91,6 +83,58 @@ export function SettingsForm({ initial, canSignOut }: { initial: Settings; canSi
       catch { setPhoneError("Não deu para vincular agora. Tente de novo."); }
     });
   }
+  return (
+    <form onSubmit={linkWhatsApp} className="flex flex-col gap-2">
+      <div className="flex items-end gap-3">
+        <Field label={label} type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="11 99999-0000"
+          error={phoneError ?? undefined} className="flex-1"
+          hint={!channels.whatsapp ? `Mande e receba tudo pelo WhatsApp. ${WHATSAPP_PROMISE}`
+            : channels.whatsappVerified === false ? `Aguardando confirmação: ${channels.whatsapp}` : `Vinculado: ${channels.whatsapp}`} />
+        <Button type="submit" variant="secondary" className="mb-6" loading={linking}>{channels.whatsapp ? "Trocar" : "Vincular"}</Button>
+      </div>
+      {linkCode && (
+        <div role="status" className="flex flex-col gap-2 rounded-md bg-surface-2 p-3 text-sm text-body">
+          <p>Para confirmar que o número é seu, mande este código do seu WhatsApp para o assistente (vale por 30 minutos):</p>
+          <p className="font-mono text-2xl font-semibold tracking-widest text-text">{linkCode.code}</p>
+          {linkCode.link && (
+            <a href={linkCode.link} target="_blank" rel="noopener noreferrer"
+              className="inline-flex h-10 w-fit items-center rounded-md bg-accent px-4 text-sm font-semibold text-on-accent">Abrir o WhatsApp com o código</a>
+          )}
+        </div>
+      )}
+    </form>
+  );
+}
+
+// Notificações no aparelho: ligar pede a permissão do navegador e inscreve este aparelho
+export function PushSwitch({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+  const [note, setNote] = useState<string | null>(null);
+  return (
+    <span className="flex flex-col items-end gap-1">
+      <Switch label="Notificações no aparelho" checked={checked} onChange={async (v) => {
+        if (v && pushSupported()) {
+          const r = await subscribePush();
+          if (r === "denied") { setNote("O navegador bloqueou as notificações. Libere nas permissões do site."); return; }
+        }
+        if (!v) await unsubscribePush().catch(() => {});
+        setNote(null);
+        onChange(v);
+      }} />
+      {note && <span role="alert" className="max-w-56 text-right text-xs text-danger">{note}</span>}
+    </span>
+  );
+}
+
+// ---- S29 ----
+export function SettingsForm({ initial, canSignOut }: { initial: Settings; canSignOut: boolean }) {
+  const { settings, save, status } = useSaver(initial);
+  const [name, setName] = useState(initial.name);
+  const [confirm, setConfirm] = useState("");
+  const [deleting, startDelete] = useTransition();
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [exporting, startExport] = useTransition();
+  const router = useRouter();
+  const channels = settings.channels;
   function download() {
     startExport(async () => {
       const json = await exportData();
@@ -121,44 +165,13 @@ export function SettingsForm({ initial, canSignOut }: { initial: Settings; canSi
 
       <Card className="flex flex-col">
         <SectionLabel className="mb-1">Onde o assistente fala com você</SectionLabel>
-        <form onSubmit={linkWhatsApp} className="flex flex-col gap-2 border-b border-border py-3">
-          <div className="flex items-end gap-3">
-            <Field label="WhatsApp" type="tel" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="11 99999-0000"
-              error={phoneError ?? undefined} className="flex-1"
-              hint={!channels.whatsapp ? `Mande e receba tudo pelo WhatsApp. ${WHATSAPP_PROMISE}`
-                : channels.whatsappVerified === false ? `Aguardando confirmação: ${channels.whatsapp}` : `Vinculado: ${channels.whatsapp}`} />
-            <Button type="submit" variant="secondary" className="mb-6" loading={linking}>{channels.whatsapp ? "Trocar" : "Vincular"}</Button>
-          </div>
-          {linkCode && (
-            <div role="status" className="flex flex-col gap-2 rounded-md bg-surface-2 p-3 text-sm text-body">
-              <p>Para confirmar que o número é seu, mande este código do seu WhatsApp para o assistente (vale por 30 minutos):</p>
-              <p className="font-mono text-2xl font-semibold tracking-widest text-text">{linkCode.code}</p>
-              {linkCode.link && (
-                <a href={linkCode.link} target="_blank" rel="noopener noreferrer"
-                  className="inline-flex h-10 w-fit items-center rounded-md bg-accent px-4 text-sm font-semibold text-on-accent">Abrir o WhatsApp com o código</a>
-              )}
-            </div>
-          )}
-        </form>
+        <div className="border-b border-border py-3"><WhatsAppLinkForm channels={channels} /></div>
         <Row title="Notificações no aparelho" hint="lembretes e avisos, mesmo com o app fechado">
-          <Switch label="Notificações no aparelho" checked={channels.push} onChange={async (v) => {
-            // ligar pede a permissão do navegador e inscreve este aparelho no push
-            if (v && pushSupported()) {
-              const r = await subscribePush();
-              if (r === "denied") { setPushNote("O navegador bloqueou as notificações. Libere nas permissões do site."); return; }
-            }
-            if (!v) await unsubscribePush().catch(() => {});
-            setPushNote(null);
-            save({ channels: { ...channels, push: v } });
-          }} />
+          <PushSwitch checked={channels.push} onChange={(v) => save({ channels: { ...channels, push: v } })} />
         </Row>
-        {pushNote && <p role="alert" className="pb-2 text-xs text-danger">{pushNote}</p>}
         {canSignOut && <TestNotice />}
         <Row title="E-mail" hint="resumos e recibos">
           <Switch label="E-mail" checked={channels.email} onChange={(v) => save({ channels: { ...channels, email: v } })} />
-        </Row>
-        <Row title="Telegram">
-          <Switch label="Telegram" checked={channels.telegram} onChange={(v) => save({ channels: { ...channels, telegram: v } })} />
         </Row>
       </Card>
 
@@ -203,7 +216,7 @@ export function SettingsForm({ initial, canSignOut }: { initial: Settings; canSi
 }
 
 // ---- S30 ----
-const TONE_SAMPLE: Record<Settings["tone"], string> = {
+export const TONE_SAMPLE: Record<Settings["tone"], string> = {
   direct: "Feito: lembrete para amanhã às 9h. Mais alguma coisa?",
   warm: "Prontinho! Amanhã às 9h eu te lembro. Qualquer coisa, é só falar.",
   playful: "Anotado e guardado a sete chaves! Amanhã às 9h eu apareço pra te lembrar.",

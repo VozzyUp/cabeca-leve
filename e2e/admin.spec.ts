@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { a11y, admin, expect, login, mockCalls, PASSWORD, test, type TestUser } from "./fixtures";
+import { a11y, admin, expect, login, markOnboarded, mockCalls, PASSWORD, test, type TestUser } from "./fixtures";
 
 // Tela de configuração do sistema (/admin/configuracoes): as chaves dos serviços no banco,
 // criptografadas, valendo na hora. Usa campos que os outros testes não leem (rodam em paralelo).
@@ -10,6 +10,7 @@ async function adminUser(): Promise<TestUser> {
   if (old) return { id: old.id, email: ADMIN, name: "Dono" };
   const { data: created, error } = await admin.auth.admin.createUser({ email: ADMIN, password: PASSWORD, email_confirm: true, user_metadata: { name: "Dono" } });
   if (error) throw error;
+  await markOnboarded(created.user!.id);
   return { id: created.user!.id, email: ADMIN, name: "Dono" };
 }
 

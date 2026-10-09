@@ -1,9 +1,10 @@
 "use client";
 import {
-  Bell, BookOpen, CalendarDays, CheckSquare, FolderKanban, LayoutGrid, MessageCircle, Settings, Sprout, Target, Wallet,
+  Bell, BookOpen, CalendarDays, CheckSquare, FolderKanban, HeartPulse, LayoutGrid, MessageCircle, Repeat, Sprout, Target, Timer, Wallet,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { BRAND } from "@/lib/brand";
 import { cn } from "./cn";
 
 export const navItems = [
@@ -18,31 +19,38 @@ export const navItems = [
   { href: "/metas", label: "Metas", icon: Target },
 ] as const;
 
+// Menu lateral do computador, em grupos e com o nome de cada seção à vista
+const SIDEBAR: Array<{ title?: string; items: Array<{ href: string; label: string; icon: typeof Bell }> }> = [
+  { items: [navItems[0], navItems[1], navItems[2], navItems[3]] },
+  { title: "Organização", items: [navItems[6], navItems[5], navItems[7], { href: "/foco", label: "Modo foco", icon: Timer }, { href: "/automacoes", label: "Revisões", icon: Repeat }] },
+  { title: "Saúde e rotina", items: [navItems[4], { href: "/saude", label: "Saúde", icon: HeartPulse }, navItems[8]] },
+];
+
 // Ativo quando a rota atual é a seção ou está dentro dela
 function useIsActive() {
   const path = usePathname() ?? "";
   return (href: string) => path === href || path.startsWith(`${href}/`);
 }
 
-// Computador (lg+): trilho lateral só com ícones; o nome aparece no tooltip e no leitor de tela
-export function NavRail({ notifications = 0 }: { notifications?: number }) {
+// Computador (lg+): menu lateral com nomes. Avisos, tema e conta ficam na barra de cima.
+export function NavRail() {
   const isActive = useIsActive();
   return (
-    <nav aria-label="Seções" className="sticky top-0 flex h-dvh w-[72px] shrink-0 flex-col items-center gap-1 border-r border-border bg-surface py-4">
-      {navItems.map(({ href, label, icon: Icon }) => (
-        <Link key={href} href={href} title={label} aria-label={label} aria-current={isActive(href) ? "page" : undefined}
-          className={cn("flex size-11 items-center justify-center rounded-md transition-colors",
-            isActive(href) ? "bg-surface-3 text-text" : "text-muted hover:bg-surface-2 hover:text-text")}>
-          <Icon aria-hidden className="size-5" />
-        </Link>
+    <nav aria-label="Seções" className="sticky top-0 flex h-dvh w-56 shrink-0 flex-col gap-5 overflow-y-auto border-r border-border bg-surface px-3 py-5">
+      <Link href="/conversa" className="px-3 text-lg font-bold text-text">{BRAND.name}</Link>
+      {SIDEBAR.map((g, i) => (
+        <div key={g.title ?? i} className="flex flex-col gap-0.5">
+          {g.title && <p className="px-3 pb-1 text-label text-muted">{g.title}</p>}
+          {g.items.map(({ href, label, icon: Icon }) => (
+            <Link key={href} href={href} aria-current={isActive(href) ? "page" : undefined}
+              className={cn("flex h-10 items-center gap-3 rounded-md px-3 text-sm font-medium transition-colors",
+                isActive(href) ? "bg-surface-3 text-text" : "text-body hover:bg-surface-2 hover:text-text")}>
+              <Icon aria-hidden className="size-5 shrink-0" />
+              {label}
+            </Link>
+          ))}
+        </div>
       ))}
-      <Link href="/ajustes" title="Ajustes" aria-label={notifications ? `Ajustes (${notifications} avisos novos)` : "Ajustes"}
-        aria-current={isActive("/ajustes") ? "page" : undefined}
-        className={cn("relative mt-auto flex size-11 items-center justify-center rounded-md hover:bg-surface-2 hover:text-text",
-          isActive("/ajustes") ? "bg-surface-3 text-text" : "text-muted")}>
-        <Settings aria-hidden className="size-5" />
-        {notifications > 0 && <span aria-hidden className="absolute right-1.5 top-1.5 size-2 rounded-full bg-warning" />}
-      </Link>
     </nav>
   );
 }

@@ -182,3 +182,11 @@ Paridade 63,2/100; **40 de 40 obrigatórias completas**.
 - **Páginas legais** `/privacidade` e `/termos` (`lib/legal.ts`), públicas, com a empresa e o contato vindos da configuração. Cobrem: dados tratados, bases legais, fornecedores (Supabase, Anthropic, Groq, WhatsApp, Asaas, Resend), fotos apagadas em 2 dias, direitos da LGPD, cancelamento com comprovante, arrependimento de 7 dias, IA que pode errar e não substitui profissional. Links no rodapé, no cadastro e em Ajustes. **São uma base: peça a revisão de um advogado antes de cobrar.**
 - **Página inicial** (`/`) para quem não entrou: título, exemplo de conversa, funções, como começa, preço e botão de teste grátis; sem depoimentos inventados. Quem já entrou segue para a conversa.
 - **Teste de aviso** não falha por inteiro se o push der erro; mostra o detalhe técnico de cada canal.
+
+## 2026-10-10: navegação mais simples e configuração inicial
+
+- **Barra de cima em todas as telas logadas:** "Voltar" à esquerda (no celular, em tudo que não é aba da barra inferior; no computador, nas páginas de detalhe), e à direita o sino de **Avisos** com contador, o botão de **tema claro/escuro** e o **menu da conta** (Ajustes, Jeito do assistente, Assinatura, Falar com uma pessoa, Refazer a configuração inicial e **Sair**). Voltar volta de verdade quando houve tela anterior; quem entrou direto pelo link sobe um nível.
+- **Menu lateral do computador com nomes**, em grupos (principal, Organização, Saúde e rotina), e agora com Saúde, Modo foco e Revisões, que só existiam no celular.
+- **Tela "Tudo" do celular em grupos** (Organização, Dinheiro, Saúde e rotina, Conta) em vez de uma lista de 28 itens.
+- **Configuração inicial** para conta nova: nome e jeito de conversar (com exemplo de cada tom), WhatsApp (com o código de confirmação), notificações e resumo da manhã, e exemplos do que pedir. Fechar em qualquer passo conta como feito; dá para refazer pelo menu da conta. Contas antigas não veem (migração `20261010000100_boas_vindas`, arquivo 23).
+- **Limpeza:** Avisos saiu de Ajustes (está no sino), o botão do Telegram sumiu (não existia de verdade), links "← Ajustes" e "← Hábitos" trocados pelo Voltar da barra.

@@ -15,7 +15,13 @@ export async function createUser(name = "Lia"): Promise<TestUser> {
   const email = `e2e-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@exemplo.com.br`;
   const { data, error } = await admin.auth.admin.createUser({ email, password: PASSWORD, email_confirm: true, user_metadata: { name } });
   if (error) throw error;
+  await markOnboarded(data.user!.id);
   return { id: data.user!.id, email, name };
+}
+
+// A configuração inicial tem teste próprio (e2e/navegacao.spec.ts); nos outros, já passou
+export async function markOnboarded(userId: string) {
+  await admin.from("profiles").update({ onboarded_at: new Date().toISOString() }).eq("user_id", userId);
 }
 
 export async function login(page: Page, user: TestUser, path = "/conversa") {

@@ -731,6 +731,8 @@ export async function createSupabaseStore(db: Admin, userId: string, email: stri
         briefingTime: prof.briefing_enabled ? hm(prof.briefing_time) : null,
         channels: { whatsapp: waRow?.external_id ?? null, whatsappVerified: !!waRow?.verified_at, telegram: prof.notify_telegram, email: prof.notify_email, push: prof.notify_push },
         calendars: { google: providers.has("google"), outlook: providers.has("microsoft") },
+        // sem a coluna (migração ainda não aplicada) conta como configurado: nada de janela presa
+        onboarded: (prof as { onboarded_at?: string | null }).onboarded_at !== null,
       };
     },
     async updateSettings(patch) {
@@ -741,6 +743,7 @@ export async function createSupabaseStore(db: Admin, userId: string, email: stri
       if (patch.voice !== undefined) row.assistant_voice = patch.voice;
       if (patch.memoryEnabled !== undefined) row.memory_enabled = patch.memoryEnabled;
       if (patch.theme !== undefined) row.theme = patch.theme;
+      if (patch.onboarded !== undefined) row.onboarded_at = patch.onboarded ? new Date().toISOString() : null;
       if (patch.briefingTime !== undefined) {
         row.briefing_enabled = patch.briefingTime !== null;
         if (patch.briefingTime) row.briefing_time = patch.briefingTime;

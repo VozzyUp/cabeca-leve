@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { admin, createUser, expect, login, mockCalls, PASSWORD, test, type TestUser } from "./fixtures";
+import { admin, createUser, expect, login, markOnboarded, mockCalls, PASSWORD, test, type TestUser } from "./fixtures";
 
 // F1, F2 e F3 do replica/fixes.md: o que mais irrita quem usa o original.
 const TOKEN = "token-do-webhook-e2e-com-mais-de-32-caracteres";
@@ -94,6 +94,7 @@ test.describe("F3 falar com uma pessoa", () => {
     if (old) await admin.auth.admin.deleteUser(old.id);
     const { data: created, error } = await admin.auth.admin.createUser({ email: ADMIN, password: PASSWORD, email_confirm: true, user_metadata: { name: "Dono" } });
     if (error) throw error;
+    await markOnboarded(created.user!.id);
     return { id: created.user!.id, email: ADMIN, name: "Dono" };
   }
 

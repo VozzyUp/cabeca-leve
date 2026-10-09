@@ -225,6 +225,7 @@ export type Settings = {
   briefingTime: string | null;
   channels: { whatsapp: string | null; whatsappVerified?: boolean; telegram: boolean; email: boolean; push: boolean };
   calendars: { google: boolean; outlook: boolean };
+  onboarded?: boolean;  // já passou pela configuração inicial (ou fechou)
 };
 
 // F3: chamado para uma pessoa do time

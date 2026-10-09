@@ -48,7 +48,6 @@ export async function HabitDetailScreen({ id }: { id: string }) {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1">
-        <Link href="/habitos" className="text-sm font-medium text-accent hover:underline">← Hábitos</Link>
         <PageHeader id="S13" title={habit.name} />
         <p className="text-sm text-muted">{capitalizeFirst(describeWeekdays(habit.weekdays))}{habit.time ? ` às ${habit.time}` : ""}</p>
       </div>

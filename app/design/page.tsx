@@ -37,7 +37,7 @@ export default function DesignPage() {
 
   return (
     <div className="flex flex-1">
-      <div className="hidden lg:flex"><NavRail notifications={3} /></div>
+      <div className="hidden lg:flex"><NavRail /></div>
       <main className="mx-auto flex w-full max-w-[1120px] flex-col gap-10 px-4 py-8 pb-28 lg:px-8">
         <header className="flex flex-wrap items-center justify-between gap-4">
           <div>

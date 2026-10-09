@@ -104,6 +104,7 @@ const settingsPatch = z.object({
   briefingTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).nullable(),
   channels: z.object({ whatsapp: z.string().regex(/^\+\d{10,15}$/).nullable(), telegram: z.boolean(), email: z.boolean(), push: z.boolean() }),
   calendars: z.object({ google: z.boolean(), outlook: z.boolean() }),
+  onboarded: z.boolean(),
 }).partial();
 
 export async function updateSettings(patch: Partial<Settings>) {

@@ -24,9 +24,8 @@ function LinkRow({ href, icon: Icon, title, hint }: { href: string; icon: typeof
 // ---- S29 ----
 export async function SettingsScreen() {
   const { store, today } = await serverContext();
-  const [settings, notices] = await Promise.all([store.getSettings(), store.listNotices()]);
+  const settings = await store.getSettings();
   const admin = isSupabaseConfigured() && isSupportAdmin((await currentUser())?.email);
-  const unread = notices.filter((n) => !n.readAt).length;
   const end = settings.billing?.periodEnd ? formatShortDate(settings.billing.periodEnd.slice(0, 10)) : null;
   const plan = settings.billing?.confirming ? "Pagamento em confirmação: tudo liberado enquanto a Asaas confirma"
     : settings.billing?.pastDue ? "Pagamento atrasado: atualize o cartão para não perder o acesso"
@@ -48,7 +47,6 @@ export async function SettingsScreen() {
         {admin && <LinkRow href="/admin/configuracoes" icon={KeyRound} title="Configuração do sistema" hint="chaves dos serviços (só para o time)" />}
         {admin && <LinkRow href="/admin/custos" icon={Coins} title="Custo da IA" hint="gasto por usuário e por modelo (só para o time)" />}
         {admin && <LinkRow href="/suporte/painel" icon={Inbox} title="Chamados de suporte" hint="responder quem pediu uma pessoa (só para o time)" />}
-        <LinkRow href="/avisos" icon={Bell} title="Avisos" hint={unread ? `${unread} novo${unread === 1 ? "" : "s"}` : "tudo lido"} />
       </Card>
       {settings.billing?.canceledAt && (
         <p role="note" className="rounded-lg border border-border bg-surface px-4 py-3 text-sm text-body">
@@ -75,7 +73,6 @@ export async function AssistantSettingsScreen() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1">
-        <Link href="/ajustes" className="text-sm font-medium text-accent hover:underline">← Ajustes</Link>
         <PageHeader id="S30" title="Jeito do assistente" />
       </div>
       <AssistantForm initial={settings} memories={memories} />
