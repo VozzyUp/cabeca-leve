@@ -190,3 +190,11 @@ Paridade 63,2/100; **40 de 40 obrigatórias completas**.
 - **Tela "Tudo" do celular em grupos** (Organização, Dinheiro, Saúde e rotina, Conta) em vez de uma lista de 28 itens.
 - **Configuração inicial** para conta nova: nome e jeito de conversar (com exemplo de cada tom), WhatsApp (com o código de confirmação), notificações e resumo da manhã, e exemplos do que pedir. Fechar em qualquer passo conta como feito; dá para refazer pelo menu da conta. Contas antigas não veem (migração `20261010000100_boas_vindas`, arquivo 23).
 - **Limpeza:** Avisos saiu de Ajustes (está no sino), o botão do Telegram sumiu (não existia de verdade), links "← Ajustes" e "← Hábitos" trocados pelo Voltar da barra.
+
+## 2026-10-10: o tom do assistente de verdade e o tom "Sem filtro"
+
+- **Defeito:** o tom, o tamanho das respostas e a memória só entravam na primeira mensagem do dia. Quem trocava o tom em Ajustes continuava com o antigo até o dia seguinte. Agora o contexto é conferido a cada mensagem e, se mudou, entra de novo ("Preferências atualizadas agora"). Sem mudança, não repete (o cache continua valendo). Fato novo da memória também passa a valer na hora.
+- **Tons mais marcados** (descrição de como cada um soa) e regra no prompt: seguir sempre o tom mais recente, inclusive nas confirmações.
+- **Tom "Sem filtro"**: o amigo sincerão que zoa, cobra e pode soltar palavrão leve, nunca contra a pessoa. Em qualquer tom: nada sobre corpo, peso, aparência ou saúde, e se a pessoa estiver mal, acolhe.
+- **Termômetro do gasto** (`lib/domain/pulse.ts`): ao registrar um gasto, o resultado da ferramenta traz sinais já calculados (categoria 30% acima do mesmo período do mês passado, 5 ou mais lançamentos na semana, muitas assinaturas ou caras). O assistente comenta em uma frase, no tom escolhido, só quando há sinal.
+- Escolha do tom em cartões com exemplo (Ajustes e configuração inicial). Migração `20261010000200_tom_sem_filtro` (arquivo 24).

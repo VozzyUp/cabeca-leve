@@ -283,6 +283,51 @@ describe.skipIf(!run)("agente", () => {
     } finally { await admin.auth.admin.deleteUser(uid); }
   });
 
+  it("trocar o tom no meio do dia vale na mensagem seguinte; e o gasto que pede comentário traz o termômetro", async () => {
+    const { runAgent } = await import("./agent");
+    const { data: created } = await admin.auth.admin.createUser({ email: `tom-${Date.now()}@teste.local`, password: "x".repeat(12), email_confirm: true, user_metadata: { name: "Bia" } });
+    const uid = created.user!.id;
+    try {
+      const s3 = await createSupabaseStore(admin, uid, null);
+      const systems = (i: number) => requests[i].body.messages.filter((m) => m.role === "system").map((m) => m.content as string);
+      replies.push(msg([{ type: "text", text: "Oi, Bia!" }], "end_turn"));
+      let n = requests.length;
+      await runAgent({ store: s3, text: "oi", channel: "web", now: new Date("2026-10-10T12:00:00Z") });
+      expect(systems(n)).toHaveLength(1);
+      expect(systems(n)[0]).toContain("ACOLHEDOR");
+
+      // muda o tom em Ajustes: a próxima mensagem já leva o contexto novo, avisando que mudou
+      await s3.updateSettings({ tone: "tough" });
+      replies.push(msg([{ type: "text", text: "Fala!" }], "end_turn"));
+      n = requests.length;
+      await runAgent({ store: s3, text: "e aí", channel: "web", now: new Date("2026-10-10T12:05:00Z") });
+      expect(systems(n)).toHaveLength(2);
+      expect(systems(n)[1]).toMatch(/^Preferências atualizadas agora.*SEM FILTRO/);
+
+      // sem mudança, não repete o contexto
+      replies.push(msg([{ type: "text", text: "Beleza." }], "end_turn"));
+      n = requests.length;
+      await runAgent({ store: s3, text: "valeu", channel: "web", now: new Date("2026-10-10T12:06:00Z") });
+      expect(systems(n)).toHaveLength(2);
+
+      // 5º gasto em Alimentação na semana: o resultado da ferramenta traz o sinal para o comentário
+      const [cats, accounts] = await Promise.all([s3.listCategories(), s3.listAccounts()]);
+      const food = cats.find((c) => c.name === "Alimentação")!;
+      for (const day of ["2026-10-05", "2026-10-07", "2026-10-08", "2026-10-09"]) {
+        await s3.createTransaction({ type: "expense", amountCents: 4000, occurredOn: day, description: "iFood", categoryId: food.id, accountId: accounts[0].id, paymentMethod: null, source: "chat" });
+      }
+      replies.push(
+        msg([{ type: "tool_use", id: "toolu_pulse", name: "record_transaction", input: { type: "expense", amount: 45, description: "iFood", category: "Alimentação", payment_method: null, occurred_on: null } }], "tool_use"),
+        msg([{ type: "text", text: "Anotado. Pô, quinto iFood da semana?" }], "end_turn"),
+      );
+      n = requests.length;
+      await runAgent({ store: s3, text: "gastei 45 no ifood", channel: "web", now: new Date("2026-10-10T12:10:00Z") });
+      const result = JSON.stringify(requests[n + 1].body.messages.at(-1));
+      expect(result).toContain("termometro");
+      expect(result).toContain("5º lançamento em Alimentação nos últimos 7 dias");
+    } finally { await admin.auth.admin.deleteUser(uid); }
+  });
+
   it("conta fixa pelo chat: cadastra, aparece em a resolver e paguei confirma no vencimento (sem lançar gasto avulso)", async () => {
     const { runAgent } = await import("./agent");
     const call = (name: string, input: object, n: string) => ({ type: "tool_use", id: `toolu_${name}_${n}`, name, input });

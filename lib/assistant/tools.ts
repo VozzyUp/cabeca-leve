@@ -63,6 +63,7 @@ export async function recordTransaction(
   input: { type: Transaction["type"]; amountCents: number; description: string; categoryName: string;
     paymentMethod: Transaction["paymentMethod"]; occurredOn?: string },
   now: Date,
+  onCreated?: (t: Transaction) => void,  // o agente usa para montar o termômetro do gasto
 ): Promise<ActionCardData> {
   const tz = store.timezone();
   const [categories, accounts] = await Promise.all([store.listCategories(), store.listAccounts()]);
@@ -77,6 +78,7 @@ export async function recordTransaction(
     type: input.type, amountCents: input.amountCents, occurredOn, description: input.description,
     categoryId: category.id, accountId: accounts[0].id, paymentMethod: input.paymentMethod, source: "chat",
   });
+  onCreated?.(t);
   const action = await store.recordAction("transaction", t.id);
   const day = formatDayLabel(occurredOn, now, tz);
   const parts = [`${day[0].toUpperCase()}${day.slice(1)}`, category.name];

@@ -217,7 +217,7 @@ export type Settings = {
     confirming?: boolean;                 // voltou do pagamento e a Asaas ainda não confirmou (F2)
     canceledAt?: string | null; cancelProtocol?: string | null;  // comprovante do cancelamento (F1)
   };
-  tone: "direct" | "warm" | "playful";
+  tone: "direct" | "warm" | "playful" | "tough";
   answerLength: "short" | "detailed";
   voice: "female" | "male";
   memoryEnabled: boolean;

@@ -8,13 +8,8 @@ import { cn } from "@/components/ui/cn";
 import { Dialog } from "@/components/ui/dialog";
 import { Field } from "@/components/ui/field";
 import type { Settings } from "@/lib/data/types";
-import { PushSwitch, Row, Switch, TONE_SAMPLE, WhatsAppLinkForm } from "./settings-forms";
+import { PushSwitch, Row, Switch, ToneChooser, WhatsAppLinkForm } from "./settings-forms";
 
-const TONES: Array<{ id: Settings["tone"]; label: string }> = [
-  { id: "warm", label: "Acolhedor" },
-  { id: "direct", label: "Direto" },
-  { id: "playful", label: "Divertido" },
-];
 const TITLES = ["Boas-vindas! Vamos deixar tudo do seu jeito", "Fale comigo pelo WhatsApp", "Como você quer ser avisado", "Tudo pronto"];
 const EXAMPLES = ["gastei 35 na padaria", "me lembra de pagar a luz amanhã às 9h", "quero ler 20 minutos todo dia às 21h", "monta um treino de 3 dias pra mim"];
 
@@ -59,19 +54,10 @@ export function Onboarding({ initial }: { initial: Settings }) {
       {step === 0 && (
         <form className="flex flex-col gap-4" onSubmit={(e) => { e.preventDefault(); if (name.trim()) save({ name: name.trim(), tone }, () => setStep(1)); }}>
           <Field label="Como quer que eu chame você?" value={name} onChange={(e) => setName(e.target.value)} maxLength={80} autoComplete="given-name" />
-          <fieldset className="flex flex-col gap-2">
-            <legend className="mb-2 text-sm font-medium text-text">Qual jeito de conversar combina com você?</legend>
-            {TONES.map((t) => (
-              <label key={t.id} className={cn("flex cursor-pointer flex-col gap-1 rounded-md border p-3",
-                tone === t.id ? "border-accent bg-surface-2" : "border-border hover:bg-surface-2")}>
-                <span className="flex items-center gap-2 text-sm font-medium text-text">
-                  <input type="radio" name="tom" value={t.id} checked={tone === t.id} onChange={() => setTone(t.id)} className="accent-[var(--c-accent)]" />
-                  {t.label}
-                </span>
-                <span className="pl-6 text-xs text-muted">“{TONE_SAMPLE[t.id]}”</span>
-              </label>
-            ))}
-          </fieldset>
+          <div className="flex flex-col gap-2">
+            <p className="text-sm font-medium text-text">Qual jeito de conversar combina com você?</p>
+            <ToneChooser value={tone} onChange={setTone} />
+          </div>
           <Footer saving={saving} error={error} disabled={!name.trim()} onSkip={close} skipLabel="Fazer depois" />
         </form>
       )}

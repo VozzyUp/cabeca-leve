@@ -46,7 +46,7 @@ test.describe("Navegação e configuração inicial", () => {
     const dialog = page.getByRole("dialog");
     await expect(dialog.getByRole("heading", { name: /Boas-vindas/ })).toBeVisible();
     await dialog.getByLabel("Como quer que eu chame você?").fill("Ana Clara");
-    await dialog.getByText("Divertido").click();
+    await dialog.getByRole("radio", { name: /^Divertido/ }).click();
     await dialog.getByRole("button", { name: "Continuar" }).click();
     await expect(dialog.getByRole("heading", { name: "Fale comigo pelo WhatsApp" })).toBeVisible();
     await dialog.getByRole("button", { name: "Pular por agora" }).click();

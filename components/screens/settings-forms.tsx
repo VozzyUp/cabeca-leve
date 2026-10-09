@@ -216,10 +216,36 @@ export function SettingsForm({ initial, canSignOut }: { initial: Settings; canSi
 }
 
 // ---- S30 ----
+export const TONES: Array<{ id: Settings["tone"]; label: string; hint: string }> = [
+  { id: "warm", label: "Acolhedor", hint: "gentil, como um amigo organizado" },
+  { id: "direct", label: "Direto", hint: "só o essencial, sem rodeios" },
+  { id: "playful", label: "Divertido", hint: "leve, com piadinhas" },
+  { id: "tough", label: "Sem filtro", hint: "zoa, cobra e puxa a orelha (pode soltar palavrão leve)" },
+];
+
+// Escolha do tom com um exemplo de resposta em cada opção (Ajustes e configuração inicial)
+export function ToneChooser({ value, onChange }: { value: Settings["tone"]; onChange: (t: Settings["tone"]) => void }) {
+  return (
+    <fieldset className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+      <legend className="sr-only">Tom da conversa</legend>
+      {TONES.map((t) => (
+        <label key={t.id} className={cn("flex cursor-pointer flex-col gap-1 rounded-md border p-3",
+          value === t.id ? "border-accent bg-surface-2" : "border-border hover:bg-surface-2")}>
+          <span className="flex items-center gap-2 text-sm font-medium text-text">
+            <input type="radio" name="tom-da-conversa" value={t.id} checked={value === t.id} onChange={() => onChange(t.id)} className="accent-[var(--c-accent)]" />
+            {t.label}<span className="font-normal text-muted">· {t.hint}</span>
+          </span>
+          <span className="pl-6 text-xs text-muted">“{TONE_SAMPLE[t.id]}”</span>
+        </label>
+      ))}
+    </fieldset>
+  );
+}
 export const TONE_SAMPLE: Record<Settings["tone"], string> = {
   direct: "Feito: lembrete para amanhã às 9h. Mais alguma coisa?",
   warm: "Prontinho! Amanhã às 9h eu te lembro. Qualquer coisa, é só falar.",
   playful: "Anotado e guardado a sete chaves! Amanhã às 9h eu apareço pra te lembrar.",
+  tough: "Anotado, 9h eu te cutuco. E pô, terceiro iFood da semana? Bora abrir essa geladeira aí.",
 };
 
 export function AssistantForm({ initial, memories: initialMemories }: { initial: Settings; memories: Memory[] }) {
@@ -238,11 +264,7 @@ export function AssistantForm({ initial, memories: initialMemories }: { initial:
       <div className="flex justify-end"><SaveStatus status={status} /></div>
       <Card className="flex flex-col gap-4">
         <SectionLabel>Tom</SectionLabel>
-        <Segmented label="Tom da conversa" value={settings.tone} onChange={(tone) => save({ tone })}
-          options={[{ value: "direct", label: "Direto" }, { value: "warm", label: "Acolhedor" }, { value: "playful", label: "Divertido" }]} />
-        <div className="rounded-md bg-surface-2 px-4 py-3 text-sm text-body" aria-live="polite">
-          <span className="sr-only">Exemplo de resposta: </span>{TONE_SAMPLE[settings.tone]}
-        </div>
+        <ToneChooser value={settings.tone} onChange={(tone) => save({ tone })} />
         <div className="flex flex-wrap items-center justify-between gap-3">
           <span className="text-sm text-text">Tamanho das respostas</span>
           <Segmented label="Tamanho das respostas" value={settings.answerLength} onChange={(answerLength) => save({ answerLength })}

@@ -96,7 +96,7 @@ export async function addMeasurement(input: { day: string; weightKg: number | nu
 
 const settingsPatch = z.object({
   name: z.string().trim().min(1).max(80),
-  tone: z.enum(["direct", "warm", "playful"]),
+  tone: z.enum(["direct", "warm", "playful", "tough"]),
   answerLength: z.enum(["short", "detailed"]),
   voice: z.enum(["female", "male"]),
   memoryEnabled: z.boolean(),
