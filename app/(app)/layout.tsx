@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { PushKeeper } from "@/components/push-keeper";
 import { RealtimeSync } from "@/components/realtime-sync";
 import { Onboarding } from "@/components/screens/onboarding";
 import { ReminderWatcher } from "@/components/screens/reminder-watcher";
@@ -28,6 +29,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       </main>
       <div className="fixed inset-x-4 bottom-4 z-10 lg:hidden"><BottomNav /></div>
       <ReminderWatcher serverDelivery={configured} />
+      {configured && <PushKeeper enabled={settings.channels.push} />}
       {configured && <Suspense><Onboarding initial={settings} /></Suspense>}
     </div>
   );

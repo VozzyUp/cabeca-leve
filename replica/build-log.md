@@ -220,3 +220,12 @@ Paridade 63,2/100; **40 de 40 obrigatórias completas**.
 - **Landing nova em `/`** no ângulo "o assistente que responde quando você precisa": título, captura do app de verdade (`public/landing/conversa.png`), o problema em palavras nossas, como começa, as 6 correções (F1 a F7) como "o que você pode cobrar da gente", preço, dúvidas e chamada final. Sem depoimento, número de usuários ou nota; nenhuma frase de avaliador; nome do original fora (sweep limpo).
 - **Preço:** mercado lido em 2026-10-14 (lojas) e o original em 2026-10-08. Custo medido no banco: US$ 0,0025 por mensagem no Haiku 5.5 e US$ 0,021 no Sonnet 5.5 (amostra de 21 mensagens). Recomendação em `pricing.md`: Haiku como padrão, teto diário de US$ 0,30 e, se aprovado, níveis Pessoal (1 WhatsApp) e Casa (até 3). Nada disso foi mudado no código.
 - Card do chat no feminino: "Tarefa salva", "Meta salva", "Conta fixa salva" (antes "Tarefa salvo").
+
+## 2026-10-14: notificações no iPhone
+
+- **Causa:** o app não tinha manifesto. Sem ele, o ícone da Tela de Início do iPhone abria como atalho do Safari, e o iOS só entrega notificação para app web instalado em modo app (iOS 16.4+).
+- `app/manifest.ts` (display standalone, start_url /conversa, ícones 192 e 512, maskable), ícone do iPhone (`public/icons/apple-touch-icon.png`) e `appleWebApp` no layout.
+- O botão de notificações explica o que fazer quando não dá: no Safari do iPhone, ensina a adicionar à Tela de Início; iOS antigo, a atualizar; bloqueado, onde liberar. Antes ele ficava ligado sem inscrever o aparelho.
+- A cada abertura do app, a inscrição do aparelho é conferida e regravada (`components/push-keeper.tsx`).
+- O assunto VAPID sem configuração usa o e-mail do suporte ou o endereço https do site: a Apple recusa o de exemplo.
+- e2e: `e2e/iphone.spec.ts`.

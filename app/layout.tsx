@@ -11,7 +11,9 @@ export const metadata: Metadata = {
   title: { default: BRAND.name, template: `%s · ${BRAND.name}` },
   description: BRAND.description,
   applicationName: BRAND.name,
-  icons: { icon: "/icon.svg" },
+  icons: { icon: "/icon.svg", apple: "/icons/apple-touch-icon.png" },
+  // no iPhone, abre como app (sem a barra do Safari) quando adicionado à Tela de Início
+  appleWebApp: { capable: true, title: BRAND.name, statusBarStyle: "black" },
 };
 
 export const viewport: Viewport = { themeColor: BRAND.color };

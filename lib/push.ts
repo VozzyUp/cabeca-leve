@@ -5,11 +5,14 @@ import { getAdmin } from "@/lib/supabase/server";
 // Web Push (VAPID): chega com o app fechado. No iPhone, só com o app instalado na tela inicial.
 export const pushEnabled = () => !!(serverPublicEnv().vapidPublicKey && process.env.VAPID_PRIVATE_KEY);
 
-// O assunto VAPID precisa ser mailto: ou https://; aceita só o e-mail e completa
-export function vapidSubject() {
-  const raw = (process.env.VAPID_SUBJECT ?? "").trim();
-  if (!raw) return "mailto:contato@exemplo.com.br";
-  return /^(mailto:|https?:\/\/)/.test(raw) ? raw : `mailto:${raw}`;
+// O assunto VAPID precisa ser mailto: ou https:// de verdade: a Apple recusa o envio (403 BadJwtToken)
+// com endereço de exemplo ou localhost. Sem VAPID_SUBJECT, usa o e-mail do suporte ou o endereço do site.
+export function vapidSubject(env: Record<string, string | undefined> = process.env, site = serverPublicEnv().siteUrl) {
+  const raw = (env.VAPID_SUBJECT ?? "").trim();
+  if (raw) return /^(mailto:|https:\/\/)/.test(raw) ? raw : raw.includes("@") ? `mailto:${raw}` : raw;
+  const email = (env.SUPPORT_EMAIL ?? env.LEGAL_CONTACT_EMAIL ?? "").trim();
+  if (email.includes("@")) return `mailto:${email}`;
+  return site.startsWith("https://") ? site : "mailto:contato@exemplo.com.br";
 }
 
 export async function sendPush(userId: string, payload: { title: string; body: string; url: string }) {

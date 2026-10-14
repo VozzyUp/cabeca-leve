@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { clearMemories, deleteAccount, deleteMemory, exportData, linkWhatsApp as startWhatsAppLink, testNotice, unlinkWhatsApp, updateSettings, updateWhatsApp } from "@/app/actions";
 import { signOut } from "@/app/auth-actions";
-import { pushSupported, subscribePush, unsubscribePush } from "@/lib/push-client";
+import { isIos, pushAvailability, subscribePush, unsubscribePush, type PushAvailability } from "@/lib/push-client";
 import { Button } from "@/components/ui/button";
 import { WHATSAPP_PROMISE } from "@/lib/whatsapp/promise";
 import { Card, SectionLabel } from "@/components/ui/card";
@@ -193,21 +193,33 @@ export function WhatsAppNumbers({ initial, owner }: { initial: NonNullable<Setti
   );
 }
 
-// Notificações no aparelho: ligar pede a permissão do navegador e inscreve este aparelho
+// Notificações no aparelho: ligar pede a permissão do navegador e inscreve este aparelho.
+// No iPhone, só funciona no app adicionado à Tela de Início: a tela ensina o caminho em vez de falhar calada.
+const PUSH_HELP: Record<Exclude<PushAvailability, "ok">, string> = {
+  "ios-install": "No iPhone, as notificações só funcionam com o app na Tela de Início: no Safari, toque em Compartilhar e em \u201cAdicionar à Tela de Início\u201d. Depois abra pelo ícone e ligue aqui.",
+  "ios-update": "Este iPhone precisa do iOS 16.4 ou mais novo para receber notificações do app. Atualize em Ajustes > Geral > Atualização de Software.",
+  unsupported: "Este navegador não recebe notificações. Use o WhatsApp para os lembretes ou abra o app no Chrome, no Edge ou no Safari.",
+  "not-configured": "As notificações ainda não estão ligadas neste app.",
+};
+
 export function PushSwitch({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
   const [note, setNote] = useState<string | null>(null);
   return (
     <span className="flex flex-col items-end gap-1">
       <Switch label="Notificações no aparelho" checked={checked} onChange={async (v) => {
-        if (v && pushSupported()) {
+        if (v) {
+          const can = pushAvailability();
+          if (can !== "ok") { setNote(PUSH_HELP[can]); return; }
           const r = await subscribePush();
-          if (r === "denied") { setNote("O navegador bloqueou as notificações. Libere nas permissões do site."); return; }
+          if (r === "denied") { setNote(isIos() ? "As notificações estão bloqueadas. Libere em Ajustes do iPhone > Notificações > Cabeça Leve." : "O navegador bloqueou as notificações. Libere nas permissões do site."); return; }
+          if (r !== "ok") { setNote("Não deu para ligar neste aparelho agora. Tente de novo."); return; }
+        } else {
+          await unsubscribePush().catch(() => {});
         }
-        if (!v) await unsubscribePush().catch(() => {});
         setNote(null);
         onChange(v);
       }} />
-      {note && <span role="alert" className="max-w-56 text-right text-xs text-danger">{note}</span>}
+      {note && <span role="alert" className="max-w-64 text-right text-xs text-danger">{note}</span>}
     </span>
   );
 }
@@ -387,7 +399,7 @@ export function AssistantForm({ initial, memories: initialMemories }: { initial:
 
 const PUSH_TEXT = {
   sent: (n: number) => `Notificação enviada para ${n} aparelho${n === 1 ? "" : "s"}. Se não apareceu, confira se o navegador ou o celular está silenciando o site.`,
-  "no-device": () => "Nenhum aparelho com notificação ligada. Ligue acima neste aparelho.",
+  "no-device": () => "Nenhum aparelho com notificação ligada. Ligue acima neste aparelho (no iPhone, abra pelo ícone da Tela de Início).",
   off: () => "Notificações no aparelho estão desligadas.",
   error: () => "Não deu para mandar a notificação agora (confira as chaves VAPID do app).",
   "not-configured": () => "Notificações no aparelho ainda não estão ligadas neste app.",
