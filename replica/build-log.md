@@ -213,3 +213,10 @@ Paridade 63,2/100; **40 de 40 obrigatórias completas**.
 - **Cofre de senhas** (`/cofre`, `lib/vault-crypto.ts`): nome, site, login, senha e observação. Cifrado no aparelho com a senha mestra (PBKDF2-SHA256 com 600 mil rodadas e sal aleatório, AES-GCM com IV novo a cada gravação); o servidor guarda só cifrado, nem o nome do item fica legível. Destrancar confere um verificador cifrado; tranca sozinho após 5 minutos parado e ao recarregar. Copiar login e senha (a área de transferência é limpa em 30 s), mostrar, gerador de senha de 20 caracteres, força da senha, trocar a senha mestra (recifra tudo de uma vez; o servidor recusa se faltar item) e "esqueci a senha mestra" (só apagando o cofre). Tabelas `vaults` e `vault_items` sem acesso do navegador. A IA não guarda senha pela conversa e indica o cofre. Exportação de dados leva o cofre cifrado.
 - Teste de revisão "uma vez só" deixou de depender da hora (falhava de madrugada).
 - Migração `20261014000100_pesquisa_e_cofre` (arquivo 26).
+
+## 2026-10-14: /replica-launch
+
+- `replica/launch/`: `landing.md`, `pricing.md`, `listing.json` (o `listing.py` passa sem erro nem aviso) e `launch-plan.md`.
+- **Landing nova em `/`** no ângulo "o assistente que responde quando você precisa": título, captura do app de verdade (`public/landing/conversa.png`), o problema em palavras nossas, como começa, as 6 correções (F1 a F7) como "o que você pode cobrar da gente", preço, dúvidas e chamada final. Sem depoimento, número de usuários ou nota; nenhuma frase de avaliador; nome do original fora (sweep limpo).
+- **Preço:** mercado lido em 2026-10-14 (lojas) e o original em 2026-10-08. Custo medido no banco: US$ 0,0025 por mensagem no Haiku 5.5 e US$ 0,021 no Sonnet 5.5 (amostra de 21 mensagens). Recomendação em `pricing.md`: Haiku como padrão, teto diário de US$ 0,30 e, se aprovado, níveis Pessoal (1 WhatsApp) e Casa (até 3). Nada disso foi mudado no código.
+- Card do chat no feminino: "Tarefa salva", "Meta salva", "Conta fixa salva" (antes "Tarefa salvo").

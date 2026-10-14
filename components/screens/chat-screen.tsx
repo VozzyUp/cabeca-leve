@@ -17,14 +17,14 @@ type Local = ChatMessage & { status?: "sending" | "error" };
 const CARD = {
   reminder: { kind: "Lembrete", open: "Ver nos lembretes" },
   transaction: { kind: "Lançamento", open: "Ver no extrato" },
-  task: { kind: "Tarefa", open: "Ver nas tarefas" },
+  task: { feminine: true, kind: "Tarefa", open: "Ver nas tarefas" },
   habit: { kind: "Hábito", open: "Ver nos hábitos" },
-  workout: { kind: "Ficha de treino", open: "Ver no treino" },
+  workout: { feminine: true, kind: "Ficha de treino", open: "Ver no treino" },
   meal: { kind: "Plano alimentar", open: "Ver na alimentação" },
   project: { kind: "Projeto", open: "Ver nos projetos" },
-  goal: { kind: "Meta", open: "Ver nas metas" },
-  automation: { kind: "Revisão agendada", open: "Ver nas revisões" },
-  recurring: { kind: "Conta fixa", open: "Ver os fixos" },
+  goal: { feminine: true, kind: "Meta", open: "Ver nas metas" },
+  automation: { feminine: true, kind: "Revisão agendada", open: "Ver nas revisões" },
+  recurring: { feminine: true, kind: "Conta fixa", open: "Ver os fixos" },
 } as const;
 
 const SUGGESTIONS = [
@@ -177,7 +177,7 @@ export function ChatScreen() {
                 {m.cards.length > 0 && (
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     {m.cards.map((c) => (
-                      <ActionCard key={c.actionId} kind={CARD[c.kind].kind} title={c.title}
+                      <ActionCard key={c.actionId} kind={CARD[c.kind].kind} feminine={"feminine" in CARD[c.kind]} title={c.title}
                         value={c.value} valueTone={c.valueTone} meta={c.meta} alert={c.alert} state={c.undone ? "undone" : "created"}
                         openLabel={CARD[c.kind].open}
                         onOpen={() => router.push(c.href)} onUndo={() => undo(c.actionId)} />

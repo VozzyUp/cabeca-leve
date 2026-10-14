@@ -6,6 +6,7 @@ export type ActionCardState = "created" | "undone" | "error";
 
 type ActionCardProps = {
   kind: string;            // "Lembrete", "Gasto", "Tarefa"...
+  feminine?: boolean;      // "Tarefa salva", "Meta desfeita"
   title: string;
   value?: ReactNode;       // horário ou valor, em destaque
   valueTone?: "neutral" | "income" | "expense";
@@ -21,10 +22,11 @@ const tones = { neutral: "text-text", income: "text-income", expense: "text-expe
 
 // Card que o assistente devolve no chat para cada item que criou ou mudou
 export function ActionCard({
-  kind, title, value, valueTone = "neutral", meta, alert, state = "created", openLabel, onOpen, onUndo,
+  kind, feminine = false, title, value, valueTone = "neutral", meta, alert, state = "created", openLabel, onOpen, onUndo,
 }: ActionCardProps) {
+  const a = feminine ? "a" : "o";
   const status =
-    state === "created" ? `${kind} salvo` : state === "undone" ? `${kind} desfeito` : `Não deu para salvar`;
+    state === "created" ? `${kind} salv${a}` : state === "undone" ? `${kind} desfeit${a}` : `Não deu para salvar`;
   return (
     <article
       aria-label={`${status}: ${title}`}

@@ -3,7 +3,13 @@ import { expect, login, noHorizontalScroll, test } from "./fixtures";
 test.describe("Início e páginas legais", () => {
   test("PUB-H1 quem não entrou vê a página inicial, com preço e os links legais", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByRole("heading", { level: 1, name: "Tire a vida da cabeça" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: /Seu assistente no WhatsApp/ })).toBeVisible();
+    await expect(page.getByRole("img", { name: /O app de verdade/ })).toBeVisible();
+    // cada correção do fixes.md aparece; nada de prova inventada
+    for (const fix of ["Uma pessoa de verdade", "Cancelou, parou", "Pagou, entrou", "Lembrete que chega", "Conta que bate", "Seu WhatsApp fica intacto"]) {
+      await expect(page.getByRole("heading", { name: fix, exact: true })).toBeVisible();
+    }
+    await expect(page.getByText(/depoimento|avaliações|estrelas|usuários satisfeitos/i)).toHaveCount(0);
     await expect(page.getByRole("link", { name: /Começar 7 dias grátis/ }).first()).toHaveAttribute("href", "/entrar?modo=criar");
     await expect(page.getByText(/R\$\s*39,90/).first()).toBeVisible();
     await expect(page.getByRole("contentinfo").getByRole("link", { name: "Privacidade" })).toHaveAttribute("href", "/privacidade");

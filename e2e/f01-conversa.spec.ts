@@ -72,10 +72,10 @@ test.describe("F01 conversa", () => {
   test("F01-E6 recarregar a página mantém a conversa", async ({ page }) => {
     await box(page).fill("cria uma tarefa de enviar o relatório até sexta");
     await box(page).press("Enter");
-    await expect(page.getByRole("article", { name: /Tarefa salvo/ })).toBeVisible();
+    await expect(page.getByRole("article", { name: /Tarefa salva/ })).toBeVisible();
     await page.reload();
     await expect(page.getByText("cria uma tarefa de enviar o relatório até sexta")).toBeVisible();
-    await expect(page.getByRole("article", { name: /Tarefa salvo/ })).toBeVisible();
+    await expect(page.getByRole("article", { name: /Tarefa salva/ })).toBeVisible();
   });
 
   test("F01-E7 sem internet: avisa, bloqueia o envio e não perde o texto", async ({ page, context }) => {

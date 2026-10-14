@@ -9,7 +9,7 @@ test("X-E2 conversa no computador, celular em Tarefas atualiza sozinho", async (
   const box = page.getByLabel("Mensagem para o assistente");
   await box.fill("cria uma tarefa de renovar a CNH amanhã");
   await box.press("Enter");
-  await expect(page.getByRole("article", { name: /Tarefa salvo/ })).toBeVisible();
+  await expect(page.getByRole("article", { name: /Tarefa salva/ })).toBeVisible();
   await expect(phone.getByText(/Renovar a CNH/i)).toBeVisible({ timeout: 15_000 });
   await phone.context().close();
 });
