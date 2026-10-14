@@ -7,6 +7,22 @@
 export const urlSafeKey = (k: string | null | undefined) =>
   k ? k.trim().replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "") || null : null;
 
+// Chave pública VAPID de verdade: 65 bytes começando em 0x04 (ponto P-256 sem compressão), em base64 de URL
+export function isVapidPublicKey(k: string | null | undefined) {
+  const v = urlSafeKey(k);
+  if (!v || !/^[A-Za-z0-9_-]+$/.test(v)) return false;
+  try {
+    const raw = atob(v.replace(/-/g, "+").replace(/_/g, "/") + "=".repeat((4 - (v.length % 4)) % 4));
+    return raw.length === 65 && raw.charCodeAt(0) === 4;
+  } catch { return false; }
+}
+// Chave privada VAPID: 32 bytes em base64 de URL
+export function isVapidPrivateKey(k: string | null | undefined) {
+  const v = urlSafeKey(k);
+  if (!v || !/^[A-Za-z0-9_-]+$/.test(v)) return false;
+  try { return atob(v.replace(/-/g, "+").replace(/_/g, "/") + "=".repeat((4 - (v.length % 4)) % 4)).length === 32; } catch { return false; }
+}
+
 export type PublicEnv = { supabaseUrl: string | null; supabaseKey: string | null; siteUrl: string; vapidPublicKey: string | null };
 
 declare global {
@@ -19,7 +35,7 @@ export function serverPublicEnv(): PublicEnv {
     supabaseUrl: e.SUPABASE_URL || e["NEXT_PUBLIC_SUPABASE_URL"] || null,
     supabaseKey: e.SUPABASE_PUBLISHABLE_KEY || e["NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"] || null,
     siteUrl: (e.SITE_URL || e["NEXT_PUBLIC_SITE_URL"] || "http://localhost:3000").replace(/\/$/, ""),
-    vapidPublicKey: urlSafeKey(e.VAPID_PUBLIC_KEY || e["NEXT_PUBLIC_VAPID_PUBLIC_KEY"] || null),
+    vapidPublicKey: isVapidPublicKey(e.VAPID_PUBLIC_KEY || e["NEXT_PUBLIC_VAPID_PUBLIC_KEY"]) ? urlSafeKey(e.VAPID_PUBLIC_KEY || e["NEXT_PUBLIC_VAPID_PUBLIC_KEY"]) : null,
   };
 }
 

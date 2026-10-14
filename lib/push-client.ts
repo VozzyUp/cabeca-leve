@@ -33,15 +33,21 @@ export function pushAvailability(): PushAvailability {
 // Já autorizado: garante que a inscrição deste aparelho está no servidor (o iOS às vezes troca o endereço)
 export async function refreshPushSubscription() {
   if (!pushSupported() || Notification.permission !== "granted") return;
-  const reg = await navigator.serviceWorker.register("/sw.js");
+  const reg = await activeRegistration();
   const sub = (await reg.pushManager.getSubscription()) ?? await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: toUint8(key()!) });
   await fetch("/api/push/subscriptions", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(sub.toJSON()) });
+}
+
+// Registra o service worker e espera ficar ativo: no iPhone, inscrever antes disso falha
+async function activeRegistration() {
+  await navigator.serviceWorker.register("/sw.js");
+  return navigator.serviceWorker.ready;
 }
 
 export async function subscribePush(): Promise<"ok" | "denied" | "unsupported"> {
   if (!pushSupported()) return "unsupported";
   if ((await Notification.requestPermission()) !== "granted") return "denied";
-  const reg = await navigator.serviceWorker.register("/sw.js");
+  const reg = await activeRegistration();
   const sub = (await reg.pushManager.getSubscription()) ?? await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: toUint8(key()!) });
   const res = await fetch("/api/push/subscriptions", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(sub.toJSON()) });
   return res.ok ? "ok" : "unsupported";

@@ -13,7 +13,7 @@ import { sendTestNotice } from "@/lib/deliveries";
 import { confirmBill } from "@/lib/assistant/tools";
 import { CONFIG_FIELDS, CONFIG_KEYS, loadAppConfig, saveAppConfig } from "@/lib/app-config";
 import { pingAgent } from "@/lib/assistant/agent";
-import { siteUrl } from "@/lib/public-env";
+import { isVapidPrivateKey, isVapidPublicKey, siteUrl } from "@/lib/public-env";
 import type { Settings } from "@/lib/data/types";
 
 // Ações de servidor das telas do M3 e M4. Cada uma valida a entrada, grava pelo DataStore
@@ -316,6 +316,8 @@ export async function saveSystemConfig(changes: Record<string, string | null>) {
     if (options && !options.includes(value)) throw new Error(`${key}: escolha uma das opções da lista`);
     if (key === "COST_USD_BRL" && !(Number(value.replace(",", ".")) > 0)) throw new Error("COST_USD_BRL: use um número, por exemplo 5.50");
     if (key.endsWith("_URL") && !/^https?:\/\/\S+$/.test(value)) throw new Error(`${key}: use um endereço que comece com https://`);
+    if (key === "VAPID_PUBLIC_KEY" && !isVapidPublicKey(value)) throw new Error("Chave pública: isso não é uma chave VAPID. Use o botão Gerar, que cria e salva as duas chaves.");
+    if (key === "VAPID_PRIVATE_KEY" && !isVapidPrivateKey(value)) throw new Error("Chave privada: isso não é uma chave VAPID. Use o botão Gerar, que cria e salva as duas chaves.");
     clean[key] = value;
   }
   await saveAppConfig(clean, by);

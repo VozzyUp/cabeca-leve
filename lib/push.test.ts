@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { vapidSubject } from "./push";
-import { urlSafeKey } from "./public-env";
+import { isVapidPrivateKey, isVapidPublicKey, urlSafeKey } from "./public-env";
+import webpush from "web-push";
 
 describe("assunto das notificações (VAPID)", () => {
   it("aceita mailto ou https e completa o e-mail sozinho", () => {
@@ -16,5 +17,15 @@ describe("assunto das notificações (VAPID)", () => {
     expect(urlSafeKey(" BAbc+def/ghi== ")).toBe("BAbc-def_ghi");
     expect(urlSafeKey("BAbc-def_ghi")).toBe("BAbc-def_ghi");
     expect(urlSafeKey("")).toBeNull();
+  });
+  it("reconhece chave VAPID de verdade e recusa e-mail ou texto qualquer", () => {
+    const k = webpush.generateVAPIDKeys();
+    expect(isVapidPublicKey(k.publicKey)).toBe(true);
+    expect(isVapidPrivateKey(k.privateKey)).toBe(true);
+    expect(isVapidPublicKey(` ${k.publicKey}= `)).toBe(true);  // espaço e "=" colados não atrapalham
+    expect(isVapidPublicKey("fernando@exemplo.com.br")).toBe(false);
+    expect(isVapidPublicKey(k.privateKey)).toBe(false);  // trocar as duas de lugar é recusado
+    expect(isVapidPrivateKey(k.publicKey)).toBe(false);
+    expect(isVapidPrivateKey("")).toBe(false);
   });
 });

@@ -237,3 +237,10 @@ Paridade 63,2/100; **40 de 40 obrigatórias completas**.
 - Em Revisões e pesquisas, cada card tem **"Chega por"** (WhatsApp, notificação ou e-mail) para trocar na hora.
 - Chave VAPID normalizada sozinha (`urlSafeKey`), na pública e na privada.
 - Testes: agente (canal padrão), `e2e/revisoes.spec.ts`, `lib/push.test.ts`.
+
+## 2026-10-14: notificações que não ligavam no aparelho
+
+- **Causa:** em produção, o campo "Chave pública" de Notificações no aparelho (Admin > Configurações) tinha um e-mail, não uma chave VAPID. O iPhone recusava a inscrição, e o botão desligava sem dizer nada.
+- O painel recusa salvar o que não for chave VAPID de verdade (pública: 65 bytes começando em 0x04; privada: 32 bytes) e mostra um aviso no topo quando as chaves salvas são inválidas, mandando usar o botão Gerar.
+- Chave inválida não vai para o navegador: o app diz "notificações ainda não estão ligadas" em vez de quebrar.
+- O aparelho espera o service worker ficar ativo antes de se inscrever (no iPhone, inscrever antes falha) e o botão mostra o erro, se houver, em vez de desligar calado.

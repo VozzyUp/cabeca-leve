@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/ui/load-error";
 import { CONFIG_GROUPS, configStatus, loadAppConfig } from "@/lib/app-config";
+import { isVapidPrivateKey, isVapidPublicKey } from "@/lib/public-env";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { currentUser } from "@/lib/supabase/server";
 import { isSupportAdmin } from "@/lib/support";
@@ -14,6 +15,9 @@ export async function AdminConfigScreen() {
   const missingKey = !process.env.APP_SECRET_KEY || process.env.APP_SECRET_KEY.length < 32;
   if (!missingKey) await loadAppConfig(true);
   const status = missingKey ? [] : await configStatus();
+  // alguma chave de notificação preenchida, mas que não é chave de verdade (ex.: um e-mail colado no campo)
+  const pub = process.env.VAPID_PUBLIC_KEY, priv = process.env.VAPID_PRIVATE_KEY;
+  const pushBroken = !missingKey && !!(pub || priv) && !(isVapidPublicKey(pub) && isVapidPrivateKey(priv));
   return (
     <div className="flex flex-col gap-6">
       <PageHeader id="admin-config" title="Configuração do sistema" />
@@ -28,6 +32,13 @@ export async function AdminConfigScreen() {
             As chaves ficam no banco, criptografadas, e valem na hora, sem reiniciar. O que estiver aqui vale mais que a variável do stack.
             Segredos aparecem só com os 4 últimos caracteres; para trocar, digite o valor novo.
           </p>
+          {pushBroken && (
+            <p role="alert" className="rounded-lg border border-danger px-4 py-3 text-sm text-text">
+              As chaves de <strong>Notificações no aparelho</strong> salvas não são chaves VAPID válidas, então nenhuma notificação sai e o
+              botão de ligar no aparelho não funciona. Toque em <strong>Gerar</strong> nessa seção: ele cria e salva as duas chaves. Depois,
+              ligue as notificações de novo em cada aparelho.
+            </p>
+          )}
           <IntegrationInfo version={status.filter((s) => s.key.endsWith("_SECRET") || s.key.endsWith("_TOKEN")).map((s) => `${s.key}:${s.preview}`).join("|")} />
           {CONFIG_GROUPS.map((g) => <AdminConfigForm key={g.title} group={g} status={status.filter((s) => g.fields.some((f) => f.key === s.key))} />)}
         </>

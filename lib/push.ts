@@ -1,9 +1,9 @@
 import webpush from "web-push";
-import { serverPublicEnv, urlSafeKey } from "@/lib/public-env";
+import { isVapidPrivateKey, serverPublicEnv, urlSafeKey } from "@/lib/public-env";
 import { getAdmin } from "@/lib/supabase/server";
 
 // Web Push (VAPID): chega com o app fechado. No iPhone, só com o app instalado na tela inicial.
-export const pushEnabled = () => !!(serverPublicEnv().vapidPublicKey && process.env.VAPID_PRIVATE_KEY);
+export const pushEnabled = () => !!serverPublicEnv().vapidPublicKey && isVapidPrivateKey(process.env.VAPID_PRIVATE_KEY);
 
 // O assunto VAPID precisa ser mailto: ou https:// de verdade: a Apple recusa o envio (403 BadJwtToken)
 // com endereço de exemplo ou localhost. Sem VAPID_SUBJECT, usa o e-mail do suporte ou o endereço do site.
