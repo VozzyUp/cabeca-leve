@@ -331,4 +331,33 @@ describe.skipIf(!run)("SupabaseStore", () => {
     const { data } = await admin.from("tasks").select("id").eq("user_id", users[1]);
     expect(data).toEqual([]);
   });
+
+  it("cofre: guarda só o cifrado, é de cada conta, troca de senha exige todos os itens e apagar leva tudo", async () => {
+    const meta = { salt: "c2FsdC1kZS10ZXN0ZS0xMg==", iterations: 600000, verifier: { iv: "aXYtZGUtdGVzdGUx", ciphertext: "dmVyaWZpY2Fkb3ItY2lmcmFkbw==" } };
+    expect(await a.getVault()).toBeNull();
+    await a.setupVault(meta);
+    await expect(a.setupVault(meta)).rejects.toThrow();  // um cofre por conta
+    expect(await a.getVault()).toEqual(meta);
+    const one = await a.saveVaultItem(null, { iv: "aXYtaXRlbS0wMDAx", ciphertext: "Y2lmcmFkby11bS0xMjM0NQ==" });
+    const two = await a.saveVaultItem(null, { iv: "aXYtaXRlbS0wMDAy", ciphertext: "Y2lmcmFkby1kb2lzLTEyMw==" });
+    expect((await a.listVaultItems()).map((i) => i.id)).toEqual([one.id, two.id]);
+    // a outra conta não vê nem mexe
+    expect(await b.getVault()).toBeNull();
+    expect(await b.listVaultItems()).toEqual([]);
+    expect(await b.deleteVaultItem(one.id)).toBe(false);
+    // troca da senha mestra precisa de todos os itens, senão um ficaria com a chave velha
+    const meta2 = { ...meta, salt: "b3V0cm8tc2FsLTEyMzQ1Ng==" };
+    await expect(a.rekeyVault(meta2, [{ id: one.id, iv: "bm92by1pdi0wMDAx", ciphertext: "bm92by1jaWZyYWRvLTEy" }])).rejects.toThrow(/mudaram/);
+    expect((await a.getVault())!.salt).toBe(meta.salt);
+    await a.rekeyVault(meta2, [{ id: one.id, iv: "bm92by1pdi0wMDAx", ciphertext: "bm92by1jaWZyYWRvLTEy" }, { id: two.id, iv: "bm92by1pdi0wMDAy", ciphertext: "bm92by1jaWZyYWRvLTM0" }]);
+    expect((await a.getVault())!.salt).toBe(meta2.salt);
+    expect((await a.listVaultItems()).find((i) => i.id === one.id)!.ciphertext).toBe("bm92by1jaWZyYWRvLTEy");
+    // o navegador (chave pública) não lê as tabelas do cofre
+    const anon = createClient<Database>(URL, PUBLISHABLE, { auth: { persistSession: false } });
+    expect((await anon.from("vault_items").select("id")).data ?? []).toEqual([]);
+    // apagar o cofre leva os itens
+    await a.deleteVault();
+    expect(await a.getVault()).toBeNull();
+    expect((await admin.from("vault_items").select("id").in("id", [one.id, two.id])).data).toEqual([]);
+  });
 });

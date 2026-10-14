@@ -33,6 +33,8 @@ export function privacySections(o = operator()): Section[] {
         "O que você pede ao assistente: mensagens, tarefas, lembretes, gastos, contas, hábitos, metas, notas, treino, alimentação e medidas que você registra.",
         "Fotos que você envia na conversa e a transcrição de áudios que você manda (o áudio em si não fica guardado).",
         "Fatos que você pede para o assistente lembrar (a “memória”), que você vê e apaga em Ajustes.",
+        "Cofre de senhas: os itens são cifrados no seu aparelho com a sua senha mestra antes de chegar ao servidor. Guardamos só o conteúdo cifrado. Nem o time nem o assistente conseguem ler, e sem a senha mestra não há como recuperar.",
+        "Pesquisas agendadas: o assunto que você pede para pesquisar vai para a busca na internet feita pela Anthropic.",
         "Pagamento: a Asaas processa o cartão ou o Pix. Nós guardamos só o plano, o status e as datas, nunca o número do cartão.",
         "Dados técnicos de uso: horário das mensagens, volume de uso da IA (para limite e custo) e o registro do aparelho que recebe notificações.",
       ] },
@@ -52,7 +54,7 @@ export function privacySections(o = operator()): Section[] {
       "Usamos fornecedores (operadores) que tratam os dados só para nos prestar o serviço:",
       { list: [
         "Supabase: banco de dados e login.",
-        "Anthropic: a inteligência artificial que lê sua mensagem (e foto) e escreve a resposta.",
+        "Anthropic: a inteligência artificial que lê sua mensagem (e foto) e escreve a resposta, e faz as buscas na internet das pesquisas agendadas.",
         "Groq: transcrição dos áudios em texto.",
         "WhatsApp: a mensagem passa pelo provedor de conexão do WhatsApp que usamos (UAZAPI ou a API oficial da Meta).",
         "Asaas: cobrança e pagamento.",

@@ -1,5 +1,5 @@
 import { whatsappLimit } from "@/lib/limits";
-import { costUsd } from "@/lib/assistant/models";
+import { costUsd, WEB_SEARCH_USD } from "@/lib/assistant/models";
 import type { Admin } from "@/lib/supabase/server";
 import type { Json, TablesUpdate } from "@/lib/supabase/database.types";
 import { nextAutomationRun } from "@/lib/domain/automation";
@@ -260,7 +260,7 @@ export async function createSupabaseStore(db: Admin, userId: string, email: stri
       const turn = crypto.randomUUID();
       must(await db.from("ai_usage").insert(rows.map((r) => ({
         user_id: userId, turn_id: turn, model: r.model, calls: r.calls, input_tokens: r.inputTokens, output_tokens: r.outputTokens,
-        cache_read_tokens: r.cacheReadTokens, cache_write_tokens: r.cacheWriteTokens,
+        cache_read_tokens: r.cacheReadTokens, cache_write_tokens: r.cacheWriteTokens, ...(r.webSearches ? { web_searches: r.webSearches } : {}),
       }))));
     },
     async recordAction(entity, entityId, replaced) {
@@ -349,9 +349,10 @@ export async function createSupabaseStore(db: Admin, userId: string, email: stri
       return r.count ?? 0;
     },
     async aiCostSince(iso) {
-      const r = await db.from("ai_usage").select("model, input_tokens, output_tokens, cache_read_tokens, cache_write_tokens").eq("user_id", userId).gte("created_at", iso);
+      const r = await db.from("ai_usage").select("model, input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, web_searches").eq("user_id", userId).gte("created_at", iso);
       if (r.error) throw new Error(r.error.message);
-      return (r.data ?? []).reduce((sum, u) => sum + (costUsd(u.model, { input: Number(u.input_tokens), output: Number(u.output_tokens), cacheRead: Number(u.cache_read_tokens), cacheWrite: Number(u.cache_write_tokens) }) ?? 0), 0);
+      return (r.data ?? []).reduce((sum, u) => sum + (costUsd(u.model, { input: Number(u.input_tokens), output: Number(u.output_tokens), cacheRead: Number(u.cache_read_tokens), cacheWrite: Number(u.cache_write_tokens) }) ?? 0)
+        + Number(u.web_searches ?? 0) * WEB_SEARCH_USD, 0);
     },
     async listTodayTranscript() {
       const conv = must(await db.from("conversations").select("id").eq("user_id", userId).eq("local_date", today()).maybeSingle() as Result<{ id: string } | null>);
@@ -477,6 +478,7 @@ export async function createSupabaseStore(db: Admin, userId: string, email: stri
         schedule: a.schedule as Automation["schedule"], runOn: a.run_on,
         weekdays: a.schedule === "daily" ? [0, 1, 2, 3, 4, 5, 6] : a.schedule === "weekly" ? a.weekdays : [],
         lastRunAt: a.automation_runs.map((r) => r.finished_at).filter((x): x is string => !!x).sort().pop() ?? null,
+        sources: a.sources,
       }));
     },
     async createAutomation(input) {
@@ -768,6 +770,38 @@ export async function createSupabaseStore(db: Admin, userId: string, email: stri
       }
       if (Object.keys(row).length) must(await db.from("profiles").update(row).eq("user_id", userId));
       return store.getSettings();
+    },
+    async getVault() {
+      const v = must(await db.from("vaults").select("salt, iterations, verifier_iv, verifier").eq("user_id", userId).maybeSingle());
+      return v ? { salt: v.salt, iterations: v.iterations, verifier: { iv: v.verifier_iv, ciphertext: v.verifier } } : null;
+    },
+    async setupVault(meta) {
+      must(await db.from("vaults").insert({ user_id: userId, salt: meta.salt, iterations: meta.iterations, verifier_iv: meta.verifier.iv, verifier: meta.verifier.ciphertext }));
+    },
+    async listVaultItems() {
+      const rows = must(await db.from("vault_items").select("id, iv, ciphertext, updated_at").eq("user_id", userId).order("created_at"));
+      return rows.map((r) => ({ id: r.id, iv: r.iv, ciphertext: r.ciphertext, updatedAt: r.updated_at }));
+    },
+    async saveVaultItem(id, sealed) {
+      const row = id
+        ? must(await db.from("vault_items").update({ iv: sealed.iv, ciphertext: sealed.ciphertext, updated_at: new Date().toISOString() })
+            .eq("id", id).eq("user_id", userId).select("id, iv, ciphertext, updated_at").single())
+        : must(await db.from("vault_items").insert({ user_id: userId, iv: sealed.iv, ciphertext: sealed.ciphertext }).select("id, iv, ciphertext, updated_at").single());
+      return { id: row.id, iv: row.iv, ciphertext: row.ciphertext, updatedAt: row.updated_at };
+    },
+    async deleteVaultItem(id) {
+      const rows = must(await db.from("vault_items").delete().eq("id", id).eq("user_id", userId).select("id"));
+      return rows.length > 0;
+    },
+    async rekeyVault(meta, items) {
+      // troca da senha mestra: todos os itens recifrados juntos, nenhum pode ficar para trás com a chave velha
+      const current = must(await db.from("vault_items").select("id").eq("user_id", userId)).map((r) => r.id).sort();
+      if (JSON.stringify(current) !== JSON.stringify(items.map((i) => i.id).sort())) throw new Error("itens do cofre mudaram; abra de novo e tente outra vez");
+      for (const i of items) must(await db.from("vault_items").update({ iv: i.iv, ciphertext: i.ciphertext, updated_at: new Date().toISOString() }).eq("id", i.id).eq("user_id", userId));
+      must(await db.from("vaults").update({ salt: meta.salt, iterations: meta.iterations, verifier_iv: meta.verifier.iv, verifier: meta.verifier.ciphertext, updated_at: new Date().toISOString() }).eq("user_id", userId));
+    },
+    async deleteVault() {
+      must(await db.from("vaults").delete().eq("user_id", userId));  // os itens vão junto (cascade)
     },
     async deleteAllData() {
       // apagar o usuário do Auth apaga tudo dele em cascata (FKs on delete cascade)

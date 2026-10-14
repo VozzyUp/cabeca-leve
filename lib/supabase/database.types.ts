@@ -59,14 +59,14 @@ isOneToOne: false
                   ]
                 },"ai_usage": {
                   Row: {
-                    "cache_read_tokens": number,"cache_write_tokens": number,"calls": number,"created_at": string,"id": number,"input_tokens": number,"model": string,"output_tokens": number,"turn_id": string,"user_id": string
+                    "cache_read_tokens": number,"cache_write_tokens": number,"calls": number,"created_at": string,"id": number,"input_tokens": number,"model": string,"output_tokens": number,"turn_id": string,"user_id": string,"web_searches": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "cache_read_tokens"?: number,"cache_write_tokens"?: number,"calls": number,"created_at"?: string,"id"?: never,"input_tokens"?: number,"model": string,"output_tokens"?: number,"turn_id": string,"user_id": string
+                    "cache_read_tokens"?: number,"cache_write_tokens"?: number,"calls": number,"created_at"?: string,"id"?: never,"input_tokens"?: number,"model": string,"output_tokens"?: number,"turn_id": string,"user_id": string,"web_searches"?: number
                   }
                   Update: {
-                    "cache_read_tokens"?: number,"cache_write_tokens"?: number,"calls"?: number,"created_at"?: string,"id"?: never,"input_tokens"?: number,"model"?: string,"output_tokens"?: number,"turn_id"?: string,"user_id"?: string
+                    "cache_read_tokens"?: number,"cache_write_tokens"?: number,"calls"?: number,"created_at"?: string,"id"?: never,"input_tokens"?: number,"model"?: string,"output_tokens"?: number,"turn_id"?: string,"user_id"?: string,"web_searches"?: number
                   }
                   Relationships: [
                     
@@ -1107,6 +1107,40 @@ isOneToOne: false
       referencedColumns: ["id","user_id"]
     }
                   ]
+                },"vault_items": {
+                  Row: {
+                    "ciphertext": string,"created_at": string,"id": string,"iv": string,"updated_at": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "ciphertext": string,"created_at"?: string,"id"?: string,"iv": string,"updated_at"?: string,"user_id": string
+                  }
+                  Update: {
+                    "ciphertext"?: string,"created_at"?: string,"id"?: string,"iv"?: string,"updated_at"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "vault_items_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "vaults"
+      referencedColumns: ["user_id"]
+    }
+                  ]
+                },"vaults": {
+                  Row: {
+                    "created_at": string,"iterations": number,"salt": string,"updated_at": string,"user_id": string,"verifier": string,"verifier_iv": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"iterations": number,"salt": string,"updated_at"?: string,"user_id": string,"verifier": string,"verifier_iv": string
+                  }
+                  Update: {
+                    "created_at"?: string,"iterations"?: number,"salt"?: string,"updated_at"?: string,"user_id"?: string,"verifier"?: string,"verifier_iv"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"workout_logs": {
                   Row: {
                     "calories": number | null,"created_at": string,"distance_m": number | null,"duration_s": number | null,"external_id": string | null,"finished_at": string | null,"habit_id": string | null,"id": string,"kind": string,"plan_session_id": string | null,"source": string,"started_at": string,"updated_at": string,"user_id": string
@@ -1246,7 +1280,7 @@ isOneToOne: false
                            },
 "admin_ai_usage":
 { Args: { "p_from": string,"p_to": string }; Returns: {
-              "cache_read_tokens": number,"cache_write_tokens": number,"calls": number,"input_tokens": number,"model": string,"output_tokens": number,"turns": number,"user_id": string
+              "cache_read_tokens": number,"cache_write_tokens": number,"calls": number,"input_tokens": number,"model": string,"output_tokens": number,"turns": number,"user_id": string,"web_searches": number
             }[]
                            },
 "append_message":

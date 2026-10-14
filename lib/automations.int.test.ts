@@ -11,6 +11,7 @@ const run = process.env.SUPABASE_TEST === "1";
 describe.skipIf(!run)("revisões agendadas", () => {
   const apiCalls: Array<{ body: { model: string; system: string; tools?: unknown; messages: Array<{ content: string }> } }> = [];
   let apiFails = false;
+  const queued: object[] = [];  // respostas específicas de um teste (a pesquisa); vazia = resposta padrão
   let server: http.Server;
   let userId = "";
   const admin = createClient<Database>("http://127.0.0.1:54321", (process.env.SUPABASE_SECRET_KEY ?? ""), { auth: { persistSession: false } });
@@ -23,6 +24,7 @@ describe.skipIf(!run)("revisões agendadas", () => {
         apiCalls.push({ body: JSON.parse(data) });
         if (apiFails) { res.writeHead(500, { "content-type": "application/json" }); res.end(JSON.stringify({ type: "error", error: { type: "api_error", message: "fora do ar" } })); return; }
         res.writeHead(200, { "content-type": "application/json" });
+        if (queued.length) { res.end(JSON.stringify(queued.shift())); return; }
         res.end(JSON.stringify({
           id: "msg_rev", type: "message", role: "assistant", model: "claude-sonnet-5-5", stop_reason: "end_turn", stop_sequence: null,
           content: [{ type: "text", text: "*Seu dia*\n• Pagar a conta de luz hoje" }],
@@ -105,8 +107,9 @@ describe.skipIf(!run)("revisões agendadas", () => {
     const { data: advanced } = await admin.from("automations").select("next_run_at").eq("id", late.id).single();
     expect(new Date(advanced!.next_run_at!).getTime()).toBeGreaterThan(Date.now());
 
-    const day = new Date().toISOString().slice(0, 10);
-    const once = await make({ title: "Uma vez", schedule: "once", run_on: day, channel: "whatsapp" });
+    // hoje no fuso da pessoa, à meia-noite: já passou a qualquer hora do dia (antes, às 7h, falhava de madrugada)
+    const day = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
+    const once = await make({ title: "Uma vez", schedule: "once", run_on: day, run_time: "00:00", channel: "whatsapp" });
     const r = await runDueAutomations();
     expect(r.delivered).toBe(1);
     const row = (await runs(once.id))[0];
@@ -131,5 +134,43 @@ describe.skipIf(!run)("revisões agendadas", () => {
       expect(next!.active).toBe(true);
       expect(new Date(next!.next_run_at!).getTime()).toBeGreaterThan(Date.now());
     } finally { apiFails = false; }
+  });
+
+  it("pesquisa na web: manda a busca da Anthropic, continua depois da pausa, junta as fontes e conta as buscas no custo", async () => {
+    const { runDueAutomations } = await import("./automations");
+    const usage = (searches: number) => ({ input_tokens: 1000, output_tokens: 50, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, server_tool_use: { web_search_requests: searches } });
+    const searchBlocks = [
+      { type: "server_tool_use", id: "srvtoolu_1", name: "web_search", input: { query: "github trending" } },
+      { type: "web_search_tool_result", tool_use_id: "srvtoolu_1", content: [{ type: "web_search_result", url: "https://github.com/trending", title: "Trending", encrypted_content: "x", page_age: null }] },
+    ];
+    queued.push(
+      { id: "msg_p1", type: "message", role: "assistant", model: "claude-sonnet-5-5", stop_reason: "pause_turn", stop_sequence: null, content: searchBlocks, usage: usage(2) },
+      { id: "msg_p2", type: "message", role: "assistant", model: "claude-sonnet-5-5", stop_reason: "end_turn", stop_sequence: null, usage: usage(1), content: [
+        { type: "text", text: "*GitHub hoje*\n• foo/bar subiu 2 mil estrelas", citations: [
+          { type: "web_search_result_location", url: "https://github.com/trending", title: "Trending", encrypted_index: "e", cited_text: "foo/bar" },
+          { type: "web_search_result_location", url: "https://github.com/trending", title: "Trending", encrypted_index: "e", cited_text: "repetida" },
+        ] },
+      ] },
+    );
+    const { data: oldUsage } = await admin.from("ai_usage").select("id").eq("user_id", userId);
+    const a = await make({ title: "GitHub popular", instruction: "os repositórios mais populares do GitHub", sources: ["web"] });
+    const before = apiCalls.length;
+    expect((await runDueAutomations()).delivered).toBe(1);
+    expect(apiCalls.length - before).toBe(2);  // pausou e continuou
+
+    const first = apiCalls[before].body as unknown as { tools: Array<Record<string, unknown>>; system: string; messages: Array<{ role: string; content: unknown }> };
+    expect(first.tools).toEqual([{ type: "web_search_20260209", name: "web_search", max_uses: 5, user_location: { type: "approximate", country: "BR", timezone: "America/Sao_Paulo" } }]);
+    expect(first.system).toContain("pesquisa diária na internet");
+    expect(JSON.stringify(first.messages[0].content)).toContain("os repositórios mais populares do GitHub");
+    // a continuação leva o turno pausado de volta, sem mensagem nova da pessoa
+    const second = apiCalls[before + 1].body as unknown as { messages: Array<{ role: string }> };
+    expect(second.messages.map((m) => m.role)).toEqual(["user", "assistant"]);
+
+    const { data: notice } = await admin.from("notices").select("body").eq("user_id", userId).eq("title", "GitHub popular").single();
+    expect(notice!.body).toBe("*GitHub hoje*\n• foo/bar subiu 2 mil estrelas\n\n*Fontes*\n• https://github.com/trending");
+    const { data: rows } = await admin.from("ai_usage").select("calls, web_searches").eq("user_id", userId);
+    expect(rows!.length).toBe(oldUsage!.length + 1);
+    expect(rows!.at(-1)).toEqual({ calls: 2, web_searches: 3 });
+    expect(await runs(a.id)).toEqual([expect.objectContaining({ status: "delivered" })]);
   });
 });

@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { addDays, DEFAULT_TZ, localDate, zonedToUtc } from "@/lib/time";
 import { sameFact } from "@/lib/domain/memory";
-import { MAX_MEMORIES, type DataStore } from "./store";
+import { MAX_MEMORIES, type DataStore, type VaultMeta, type VaultRecord } from "./store";
 import { nextDate, nextFireAt, reopenFireAt } from "@/lib/domain/recurrence";
 import { seedFinance, seedHealth, seedOrganization, seedSettings } from "./seed-extra";
 
@@ -49,6 +49,8 @@ type State = {
   // fichas e planos criados pelo chat: quais itens são de cada um e qual vale agora (os de exemplo não têm grupo)
   plans?: Array<{ id: string; kind: "workout" | "meal"; active: boolean; ids: string[] }>;
   memories?: Memory[];
+  vault?: VaultMeta | null;      // cofre de senhas (só cifrado)
+  vaultItems?: VaultRecord[];
   settings: Settings;
 };
 
@@ -478,11 +480,32 @@ export const fakeStore: DataStore = {
   async createAutomation(input) {
     const a: Automation = {
       id: id(), title: input.title, prompt: input.prompt, schedule: input.schedule, weekdays: input.schedule === "daily" ? [0, 1, 2, 3, 4, 5, 6] : input.weekdays,
-      runOn: input.runOn, time: input.time, channel: input.channel, active: true, lastRunAt: null,
+      runOn: input.runOn, time: input.time, channel: input.channel, active: true, lastRunAt: null, sources: input.sources,
     };
     mutate((s) => s.automations.push(a));
     return a;
   },
+  async getVault() { return load().vault ?? null; },
+  async setupVault(meta) { mutate((s) => { if (s.vault) throw new Error("cofre já existe"); s.vault = meta; s.vaultItems = []; }); },
+  async listVaultItems() { return [...(load().vaultItems ?? [])]; },
+  async saveVaultItem(itemId, sealed) {
+    return mutate((s) => {
+      s.vaultItems ??= [];
+      const now = new Date().toISOString();
+      const found = itemId ? s.vaultItems.find((i) => i.id === itemId) : undefined;
+      if (found) { Object.assign(found, sealed, { updatedAt: now }); return { ...found }; }
+      const rec = { id: id(), ...sealed, updatedAt: now };
+      s.vaultItems.push(rec);
+      return rec;
+    });
+  },
+  async deleteVaultItem(itemId) {
+    return mutate((s) => { const before = (s.vaultItems ?? []).length; s.vaultItems = (s.vaultItems ?? []).filter((i) => i.id !== itemId); return s.vaultItems.length < before; });
+  },
+  async rekeyVault(meta, items) {
+    mutate((s) => { s.vault = meta; s.vaultItems = (s.vaultItems ?? []).map((i) => ({ ...i, ...(items.find((x) => x.id === i.id) ?? {}) })); });
+  },
+  async deleteVault() { mutate((s) => { s.vault = null; s.vaultItems = []; }); },
   async listMemories() {
     return [...(load().memories ?? [])].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   },

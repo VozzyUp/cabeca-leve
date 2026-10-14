@@ -43,9 +43,10 @@ export const MORE_GROUPS: NavGroup[] = [
     { href: "/lembretes", label: "Lembretes", hint: "avisos com dia e hora" },
     { href: "/projetos", label: "Projetos", hint: "entregas maiores, com etapas" },
     { href: "/notas", label: "Notas", hint: "ideias, cadernos e diário" },
+    { href: "/cofre", label: "Cofre de senhas", hint: "logins e senhas cifrados com a sua senha mestra" },
     { href: "/agenda", label: "Agenda", hint: "Google Agenda e Outlook" },
     { href: "/foco", label: "Modo foco", hint: "trabalhar com tempo marcado" },
-    { href: "/automacoes", label: "Revisões agendadas", hint: "resumos no dia e hora que você escolhe" },
+    { href: "/automacoes", label: "Revisões e pesquisas", hint: "resumos e pesquisas na internet no dia e hora que você escolhe" },
   ] },
   { title: "Dinheiro", items: [
     { href: "/dinheiro/extrato", label: "Extrato", hint: "todos os lançamentos, com busca" },

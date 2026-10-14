@@ -46,4 +46,7 @@ export function costUsd(model: string, t: Tokens): number | null {
   return (t.input * p.input + t.output * p.output + t.cacheRead * p.cacheRead + t.cacheWrite * p.cacheWrite) / 1_000_000;
 }
 
+// Busca na web (ferramenta da Anthropic): US$ 10 a cada 1.000 buscas, além dos tokens
+export const WEB_SEARCH_USD = 0.01;
+
 export const modelLabel = (id: string) => MODEL_OPTIONS.find((m) => m.id === id)?.label.split(":")[0] ?? id;

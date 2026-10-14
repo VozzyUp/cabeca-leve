@@ -1,4 +1,4 @@
-import { Bell, CalendarClock, CreditCard, FolderKanban, Info, LifeBuoy, Megaphone, Receipt, Sparkles, Target, Workflow } from "lucide-react";
+import { Bell, CalendarClock, Globe, CreditCard, FolderKanban, Info, LifeBuoy, Megaphone, Receipt, Sparkles, Target, Workflow } from "lucide-react";
 import Link from "next/link";
 import { markNoticesRead, setAutomationActive, setMilestoneDone } from "@/app/actions";
 import { ActionButton, ActionCheck, ActionSwitch } from "@/components/ui/action-controls";
@@ -153,7 +153,8 @@ function scheduleText(a: Automation) {
   const when = a.schedule === "monthly" ? "todo dia 1"
     : a.schedule === "once" ? (a.runOn ? `só em ${formatShortDate(a.runOn)}` : "uma vez")
     : a.weekdays.length === 1 && a.weekdays[0] === 0 ? "todo domingo" : describeWeekdays(a.weekdays);
-  return `${when.charAt(0).toUpperCase()}${when.slice(1)} às ${a.time} · por ${CHANNEL[a.channel]}`;
+  const kind = a.sources?.includes("web") ? " · pesquisa na internet" : "";
+  return `${when.charAt(0).toUpperCase()}${when.slice(1)} às ${a.time} · por ${CHANNEL[a.channel]}${kind}`;
 }
 
 export async function AutomationsScreen() {
@@ -166,7 +167,8 @@ export async function AutomationsScreen() {
       </PageHeader>
       <p className="max-w-2xl text-sm text-body">
         Resumos que o assistente monta com os seus dados e manda no dia e na hora que você escolher. Para criar uma, peça na conversa:
-        &ldquo;toda sexta às 18h me manda quanto gastei na semana&rdquo;.
+        &ldquo;toda sexta às 18h me manda quanto gastei na semana&rdquo;. Também dá para pedir uma pesquisa na internet todo dia:
+        &ldquo;todo dia às 8h me traz os repositórios mais populares do GitHub&rdquo;.
       </p>
       {automations.length === 0 ? (
         <EmptyState icon={<Workflow className="size-8" />} title="Nenhuma revisão agendada"
@@ -176,7 +178,8 @@ export async function AutomationsScreen() {
           {automations.map((a) => (
             <li key={a.id}>
               <Card className={cn("flex items-start gap-4", !a.active && "opacity-70")}>
-                <span aria-hidden className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface-2 text-body"><CalendarClock className="size-5" /></span>
+                <span aria-hidden className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface-2 text-body">
+                  {a.sources?.includes("web") ? <Globe className="size-5" /> : <CalendarClock className="size-5" />}</span>
                 <div className="flex min-w-0 flex-1 flex-col gap-1">
                   <h2 className="font-semibold text-text">{a.title}</h2>
                   <p className="text-sm text-body">{scheduleText(a)}</p>

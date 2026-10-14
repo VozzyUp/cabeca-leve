@@ -139,10 +139,13 @@ export async function exportData() {
     s.listAutomations(), s.listNotices(), s.listFocusSessions(), s.listWorkouts(), s.listWorkoutLogs(), s.listMeals(), s.listMealLogs(),
     s.listMeasurements(), s.listMessages(), s.listMemories(),
   ]);
+  // cofre: só cifrado (abre com a senha mestra, lib/vault-crypto.ts)
+  const vaultMeta = await s.getVault();
+  const vault = vaultMeta ? { ...vaultMeta, items: await s.listVaultItems(), aviso: "cifrado com a senha mestra (PBKDF2-SHA256 + AES-GCM)" } : null;
   return JSON.stringify({
     exportedAt: new Date().toISOString(), settings, tasks, reminders, habits, habitLogs, transactions, categories, accounts, cards,
     recurrences, installments, projects, goals, notes, automations, notices, focusSessions, workouts, workoutLogs, meals, mealLogs,
-    measurements, messages, memories,
+    measurements, messages, memories, vault,
   }, null, 2);
 }
 
@@ -349,4 +352,44 @@ export async function revealIntegrationInfo() {
     metaCallback: `${site}/api/webhooks/whatsapp`,
     metaVerifyToken: e.META_WEBHOOK_VERIFY_TOKEN ?? null,
   };
+}
+
+// ---- Cofre de senhas: o aparelho cifra e decifra; aqui só passa texto cifrado (base64) ----
+const b64 = (min: number, max: number) => z.string().min(min).max(max).regex(/^[A-Za-z0-9+/]+={0,2}$/);
+const sealedSchema = z.object({ iv: b64(12, 32), ciphertext: b64(16, 20000) });
+const vaultMetaSchema = z.object({ salt: b64(16, 64), iterations: z.number().int().min(100_000).max(5_000_000), verifier: z.object({ iv: b64(12, 32), ciphertext: b64(16, 200) }) });
+const MAX_VAULT_ITEMS = 500;
+
+export async function loadVault() {
+  const store = await getStore();
+  const meta = await store.getVault();
+  return { meta, items: meta ? await store.listVaultItems() : [] };
+}
+
+export async function createVault(meta: z.infer<typeof vaultMetaSchema>) {
+  const store = await getStore();
+  if (await store.getVault()) throw new Error("O cofre já existe");
+  await store.setupVault(vaultMetaSchema.parse(meta));
+}
+
+export async function saveVaultItem(id: string | null, sealed: z.infer<typeof sealedSchema>) {
+  const store = await getStore();
+  if (!(await store.getVault())) throw new Error("Crie o cofre antes");
+  if (!id && (await store.listVaultItems()).length >= MAX_VAULT_ITEMS) throw new Error(`O cofre guarda até ${MAX_VAULT_ITEMS} itens`);
+  return store.saveVaultItem(id === null ? null : uuid.parse(id), sealedSchema.parse(sealed));
+}
+
+export async function deleteVaultItem(id: string) {
+  return (await getStore()).deleteVaultItem(uuid.parse(id));
+}
+
+export async function changeVaultPassword(meta: z.infer<typeof vaultMetaSchema>, items: Array<{ id: string } & z.infer<typeof sealedSchema>>) {
+  const parsed = z.array(sealedSchema.extend({ id: uuid })).max(MAX_VAULT_ITEMS).parse(items);
+  await (await getStore()).rekeyVault(vaultMetaSchema.parse(meta), parsed);
+}
+
+// Esqueceu a senha mestra: não há como recuperar; apagar tudo deixa começar de novo
+export async function destroyVault(confirmation: string) {
+  if (confirmation.trim().toUpperCase() !== "APAGAR") throw new Error("Confirmação errada");
+  await (await getStore()).deleteVault();
 }

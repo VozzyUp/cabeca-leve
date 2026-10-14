@@ -4,7 +4,11 @@ import type {
   Budget, Memory, SupportTicket, Transaction, Workout, WorkoutLog,
 } from "./types";
 
-export type AiUsageInput = { model: string; calls: number; inputTokens: number; outputTokens: number; cacheReadTokens: number; cacheWriteTokens: number };
+export type Sealed = { iv: string; ciphertext: string };
+export type VaultMeta = { salt: string; iterations: number; verifier: Sealed };
+export type VaultRecord = { id: string; updatedAt: string } & Sealed;
+
+export type AiUsageInput = { model: string; calls: number; inputTokens: number; outputTokens: number; cacheReadTokens: number; cacheWriteTokens: number; webSearches?: number };
 
 // Criação pelo chat (treino, alimentação, projetos, metas e revisões agendadas)
 export type WorkoutPlanInput = {
@@ -18,7 +22,7 @@ export type MealPlanInput = {
 export type ProjectInput = { name: string; description: string; startsOn: string | null; dueOn: string | null; milestones: Array<{ title: string; dueOn: string | null }> };
 // targetValue e monthlyPlan em centavos quando unit = "money"
 export type GoalInput = { title: string; unit: "money" | "count"; targetValue: number; monthlyPlan: number | null; dueOn: string | null };
-export type AutomationSource = "tasks" | "projects" | "habits" | "goals" | "finance" | "notes";
+export type AutomationSource = "tasks" | "projects" | "habits" | "goals" | "finance" | "notes" | "web";
 export type AutomationInput = {
   title: string; prompt: string; schedule: Automation["schedule"]; weekdays: number[]; runOn: string | null; time: string;
   channel: Automation["channel"]; sources: AutomationSource[]; lookbackDays: number;
@@ -126,6 +130,15 @@ export interface DataStore {
   listMemories(): Promise<Memory[]>;
   addMemory(fact: string): Promise<MemoryResult>;
   clearMemories(): Promise<number>;
+
+  // cofre de senhas: só texto já cifrado no aparelho (lib/vault-crypto.ts); o servidor nunca vê a senha mestra
+  getVault(): Promise<VaultMeta | null>;
+  setupVault(meta: VaultMeta): Promise<void>;
+  listVaultItems(): Promise<VaultRecord[]>;
+  saveVaultItem(id: string | null, sealed: Sealed): Promise<VaultRecord>;
+  deleteVaultItem(id: string): Promise<boolean>;
+  rekeyVault(meta: VaultMeta, items: Array<{ id: string } & Sealed>): Promise<void>;
+  deleteVault(): Promise<void>;
 
   // saúde (M4)
   // a ficha nova passa a valer; a ativa antes dela fica em `replaced` (o desfazer a reativa)

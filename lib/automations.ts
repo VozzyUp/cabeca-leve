@@ -1,4 +1,4 @@
-import { agentEnabled, writeReview } from "@/lib/assistant/agent";
+import { agentEnabled, writeResearch, writeReview } from "@/lib/assistant/agent";
 import { storeForUser } from "@/lib/data";
 import type { AutomationSource } from "@/lib/data/store";
 import { nextAutomationRun } from "@/lib/domain/automation";
@@ -51,10 +51,17 @@ export async function runDueAutomations(now = new Date()): Promise<Record<Outcom
         need("finance") ? store.listBudgets() : [], need("notes") ? store.listNotes() : [],
       ]);
       const data: ReviewData = { tasks, projects, habits, habitLogs, goals, transactions, categories, budgets, notes };
-      const context = buildReviewContext(sources, data, { now, tz, lookbackDays: a.lookback_days });
-      if (!context) return await done("empty");  // nada a dizer: não gasta IA nem incomoda
-
-      const text = await writeReview(store, { title: a.title, prompt: a.instruction, name: settings.name, tone: settings.tone, today: localDate(now, tz), context });
+      const own = sources.filter((x) => x !== "web");
+      const context = own.length ? buildReviewContext(own, data, { now, tz, lookbackDays: a.lookback_days }) : null;
+      const base = { title: a.title, prompt: a.instruction, name: settings.name, tone: settings.tone, today: localDate(now, tz) };
+      let text: string;
+      if (need("web")) {
+        // pesquisa na internet: sempre tem o que buscar, os dados da pessoa entram só como apoio
+        text = await writeResearch(store, { ...base, timezone: tz, context });
+      } else {
+        if (!context) return await done("empty");  // nada a dizer: não gasta IA nem incomoda
+        text = await writeReview(store, { ...base, context });
+      }
       const notes_ = await deliverReview(a.user_id, a.id, scheduledFor, a.channel as "push" | "whatsapp" | "email", { title: a.title, text });
       await done("delivered", notes_.length ? notes_.join("; ") : null);
     } catch (error) {

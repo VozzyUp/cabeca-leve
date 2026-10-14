@@ -1,9 +1,9 @@
-import { costUsd, modelLabel, type Tokens } from "@/lib/assistant/models";
+import { costUsd, modelLabel, WEB_SEARCH_USD, type Tokens } from "@/lib/assistant/models";
 
 // Custo da IA por usuário e por modelo (tela /admin/custos). Os tokens vêm da tabela ai_usage
 // (somados por mensagem); o preço é calculado aqui com a tabela de preços do app.
 
-export type UsageRow = { user_id: string; model: string; turns: number; calls: number; input_tokens: number; output_tokens: number; cache_read_tokens: number; cache_write_tokens: number };
+export type UsageRow = { user_id: string; model: string; turns: number; calls: number; input_tokens: number; output_tokens: number; cache_read_tokens: number; cache_write_tokens: number; web_searches?: number };
 export type UserInfo = { name: string | null; email: string | null };
 
 export type ModelTotal = { model: string; label: string; messages: number; calls: number; tokens: Tokens; costUsd: number | null };
@@ -18,7 +18,9 @@ export function summarize(rows: UsageRow[], users: Map<string, UserInfo>): CostS
   const byModel = new Map<string, ModelTotal>();
   const byUser = new Map<string, UserTotal>();
   for (const r of rows) {
-    const tokens = tokensOf(r), messages = Number(r.turns), calls = Number(r.calls), cost = costUsd(r.model, tokens);
+    // buscas na web têm preço próprio, somado ao dos tokens
+    const tokens = tokensOf(r), messages = Number(r.turns), calls = Number(r.calls), base = costUsd(r.model, tokens);
+    const cost = base === null ? null : base + Number(r.web_searches ?? 0) * WEB_SEARCH_USD;
     const m = byModel.get(r.model) ?? { model: r.model, label: modelLabel(r.model), messages: 0, calls: 0, tokens: zero(), costUsd: costUsd(r.model, zero()) };
     m.messages += messages; m.calls += calls; m.tokens = add(m.tokens, tokens);
     m.costUsd = m.costUsd === null ? null : m.costUsd + (cost ?? 0);

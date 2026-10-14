@@ -167,6 +167,7 @@ export type Automation = {
   channel: "push" | "whatsapp" | "email";
   active: boolean;
   lastRunAt: string | null;
+  sources?: string[];         // de onde vêm os dados; "web" = pesquisa na internet
 };
 
 export type Notice = {

@@ -15,6 +15,11 @@ describe("custo da IA", () => {
     expect(costUsd("modelo-desconhecido", { input: 1, output: 1, cacheRead: 0, cacheWrite: 0 })).toBeNull();
   });
 
+  it("buscas na web entram no custo: US$ 0,01 cada", () => {
+    const s = summarize([row("a", "claude-sonnet-5-5", 1, { input_tokens: 1_000_000, web_searches: 5 })], new Map());
+    expect(s.byUser[0].costUsd).toBeCloseTo(2.05, 6);
+  });
+
   it("soma por usuário e por modelo, ordena pelo maior custo e mostra o detalhe por modelo", () => {
     const users = new Map([["a", { name: "Ana", email: "ana@x.com" }], ["b", { name: null, email: "bia@x.com" }]]);
     const s = summarize([
