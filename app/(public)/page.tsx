@@ -10,6 +10,10 @@ import { currentUser } from "@/lib/supabase/server";
 import { formatMoney } from "@/lib/time";
 import { WHATSAPP_PROMISE } from "@/lib/whatsapp/promise";
 
+// Sempre no pedido: no build não há banco nem sessão, e a página estática ficava presa no
+// redirecionamento para /conversa (com cache de 1 ano), sem nunca mostrar o início a quem não entrou
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = { title: `${BRAND.name} · seu assistente no WhatsApp e no app`, description: BRAND.description };
 
 const cta = "inline-flex h-12 items-center justify-center rounded-md px-6 text-base font-semibold";
