@@ -540,6 +540,13 @@ export const fakeStore: DataStore = {
       return true;
     });
   },
+  async setAutomationChannel(aid, channel) {
+    return mutate((s) => {
+      const a = s.automations.find((x) => x.id === aid);
+      if (a) a.channel = channel;
+      return !!a;
+    });
+  },
   async setAutomationActive(aid, active) {
     return mutate((s) => {
       const a = s.automations.find((x) => x.id === aid);

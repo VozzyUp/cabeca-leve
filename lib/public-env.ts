@@ -2,6 +2,11 @@
 // endereço do site e chave pública do push. São lidos quando o app RODA, não no build: assim
 // a mesma imagem Docker serve em qualquer ambiente, configurada só pelas variáveis do Portainer.
 // Os nomes sem prefixo valem na VPS; os NEXT_PUBLIC_* continuam valendo no desenvolvimento.
+// Chave VAPID no formato que o web-push e o navegador exigem: base64 de URL, sem "=" (copiar e colar
+// costuma trazer "+", "/" ou "=" no fim, e o envio falha com "must be a URL safe Base 64")
+export const urlSafeKey = (k: string | null | undefined) =>
+  k ? k.trim().replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "") || null : null;
+
 export type PublicEnv = { supabaseUrl: string | null; supabaseKey: string | null; siteUrl: string; vapidPublicKey: string | null };
 
 declare global {
@@ -14,7 +19,7 @@ export function serverPublicEnv(): PublicEnv {
     supabaseUrl: e.SUPABASE_URL || e["NEXT_PUBLIC_SUPABASE_URL"] || null,
     supabaseKey: e.SUPABASE_PUBLISHABLE_KEY || e["NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"] || null,
     siteUrl: (e.SITE_URL || e["NEXT_PUBLIC_SITE_URL"] || "http://localhost:3000").replace(/\/$/, ""),
-    vapidPublicKey: e.VAPID_PUBLIC_KEY || e["NEXT_PUBLIC_VAPID_PUBLIC_KEY"] || null,
+    vapidPublicKey: urlSafeKey(e.VAPID_PUBLIC_KEY || e["NEXT_PUBLIC_VAPID_PUBLIC_KEY"] || null),
   };
 }
 

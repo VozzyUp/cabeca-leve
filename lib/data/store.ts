@@ -114,6 +114,7 @@ export interface DataStore {
   listAutomations(): Promise<Automation[]>;
   createAutomation(input: AutomationInput): Promise<Automation>;
   setAutomationActive(id: string, active: boolean): Promise<boolean>;
+  setAutomationChannel(id: string, channel: Automation["channel"]): Promise<boolean>;
   // tira da tela: projeto e meta vão para arquivados, a ficha e o plano ficam inativos, a revisão é apagada
   removeItem(kind: RemovableKind, id: string): Promise<boolean>;
   listNotices(): Promise<Notice[]>;

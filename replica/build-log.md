@@ -229,3 +229,11 @@ Paridade 63,2/100; **40 de 40 obrigatórias completas**.
 - A cada abertura do app, a inscrição do aparelho é conferida e regravada (`components/push-keeper.tsx`).
 - O assunto VAPID sem configuração usa o e-mail do suporte ou o endereço https do site: a Apple recusa o de exemplo.
 - e2e: `e2e/iphone.spec.ts`.
+
+## 2026-10-14: pesquisas chegando no WhatsApp
+
+- **Causa:** as pesquisas foram criadas pela conversa sem a pessoa dizer o canal, e a IA escolheu "notificação no aparelho". E o envio da notificação também falhava: a chave VAPID salva tinha "=" (ou "+" e "/"), e o web-push só aceita base64 de URL.
+- Sem canal pedido, a revisão ou pesquisa vai para o **WhatsApp quando ele está vinculado** (senão, notificação). A IA só escolhe outro se a pessoa pedir.
+- Em Revisões e pesquisas, cada card tem **"Chega por"** (WhatsApp, notificação ou e-mail) para trocar na hora.
+- Chave VAPID normalizada sozinha (`urlSafeKey`), na pública e na privada.
+- Testes: agente (canal padrão), `e2e/revisoes.spec.ts`, `lib/push.test.ts`.

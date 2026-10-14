@@ -575,7 +575,7 @@ function buildTools(store: DataStore, now: Date, cards: ActionCardData[], channe
         title: z.string().min(1).max(120), prompt: z.string().min(3).max(1500).describe("O que o resumo deve trazer, nas palavras da pessoa"),
         repeat: z.enum(["daily", "weekly", "monthly", "once"]), weekdays: z.array(z.number().int().min(0).max(6)).max(7).describe("Só no semanal: 0 = domingo; senão vazio"),
         run_on: z.iso.date().nullable().describe("Só em once: o dia"), time: z.string().regex(/^\d{2}:\d{2}$/).describe("HH:MM no fuso da pessoa"),
-        channel: z.enum(["push", "whatsapp", "email"]),
+        channel: z.enum(["push", "whatsapp", "email"]).nullable().describe("Por onde chega. null = o canal principal da pessoa (WhatsApp, se ela tiver vinculado); só escolha outro se ela pedir"),
         sources: z.array(z.enum(["tasks", "projects", "habits", "goals", "finance", "notes", "web"])).min(1).max(7)
           .describe("De onde tirar os dados. web = pesquisar na internet sobre o assunto do prompt (sozinha, para assuntos de fora do app)"),
       }),
@@ -587,9 +587,11 @@ function buildTools(store: DataStore, now: Date, cards: ActionCardData[], channe
         }
         if (i.repeat === "weekly" && !i.weekdays.length) return "Erro: no semanal, diga os dias da semana.";
         if (i.repeat === "once" && (!i.run_on || i.run_on < today)) return "Erro: para uma vez só, informe um dia de hoje em diante.";
+        // sem canal pedido: WhatsApp quando vinculado (é onde a pessoa conversa), senão notificação no aparelho
+        const channelFor = i.channel ?? ((await store.getSettings()).channels.whatsappVerified ? "whatsapp" : "push");
         await addCard(() => createAutomation(store, {
           title: i.title, prompt: i.prompt, schedule: i.repeat, weekdays: i.repeat === "weekly" ? [...new Set(i.weekdays)].sort() : [], runOn: i.repeat === "once" ? i.run_on : null,
-          time: i.time, channel: i.channel, sources: [...new Set(i.sources)], lookbackDays: i.repeat === "daily" ? 1 : i.repeat === "weekly" ? 7 : 30,
+          time: i.time, channel: channelFor, sources: [...new Set(i.sources)], lookbackDays: i.repeat === "daily" ? 1 : i.repeat === "weekly" ? 7 : 30,
         }, now));
         return json({ ok: true });
       },

@@ -2,6 +2,7 @@ import { Bell, CalendarClock, Globe, CreditCard, FolderKanban, Info, LifeBuoy, M
 import Link from "next/link";
 import { markNoticesRead, setAutomationActive, setMilestoneDone } from "@/app/actions";
 import { ActionButton, ActionCheck, ActionSwitch } from "@/components/ui/action-controls";
+import { AutomationChannel } from "./automation-channel";
 import { Card, SectionLabel } from "@/components/ui/card";
 import { cn } from "@/components/ui/cn";
 import { EmptyState, Progress } from "@/components/ui/data";
@@ -147,14 +148,13 @@ export async function NotesScreen() {
 }
 
 // ---- S27 ----
-const CHANNEL: Record<Automation["channel"], string> = { push: "notificação", whatsapp: "WhatsApp", email: "e-mail" };
 
 function scheduleText(a: Automation) {
   const when = a.schedule === "monthly" ? "todo dia 1"
     : a.schedule === "once" ? (a.runOn ? `só em ${formatShortDate(a.runOn)}` : "uma vez")
     : a.weekdays.length === 1 && a.weekdays[0] === 0 ? "todo domingo" : describeWeekdays(a.weekdays);
   const kind = a.sources?.includes("web") ? " · pesquisa na internet" : "";
-  return `${when.charAt(0).toUpperCase()}${when.slice(1)} às ${a.time} · por ${CHANNEL[a.channel]}${kind}`;
+  return `${when.charAt(0).toUpperCase()}${when.slice(1)} às ${a.time}${kind}`;
 }
 
 export async function AutomationsScreen() {
@@ -184,6 +184,7 @@ export async function AutomationsScreen() {
                   <h2 className="font-semibold text-text">{a.title}</h2>
                   <p className="text-sm text-body">{scheduleText(a)}</p>
                   <p className="text-sm text-muted">&ldquo;{a.prompt}&rdquo;</p>
+                  <AutomationChannel id={a.id} title={a.title} channel={a.channel} />
                   <p className="text-xs text-muted">
                     {!a.active ? "pausada" : a.lastRunAt
                       ? `última: ${formatDayLabel(localDate(new Date(a.lastRunAt), tz), now, tz)} às ${formatTime(a.lastRunAt, tz)}`

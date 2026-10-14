@@ -63,6 +63,12 @@ export async function setAutomationActive(id: string, active: boolean) {
   revalidatePath("/automacoes");
 }
 
+// Por onde a revisão ou pesquisa chega: notificação, WhatsApp ou e-mail
+export async function setAutomationChannel(id: string, channel: string) {
+  await (await getStore()).setAutomationChannel(uuid.parse(id), z.enum(["push", "whatsapp", "email"]).parse(channel));
+  revalidatePath("/automacoes");
+}
+
 export async function markNoticesRead(ids: string[] | "all") {
   await (await getStore()).markNoticesRead(ids === "all" ? "all" : z.array(uuid).parse(ids));
   revalidatePath("/avisos");

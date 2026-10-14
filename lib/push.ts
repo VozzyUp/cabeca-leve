@@ -1,5 +1,5 @@
 import webpush from "web-push";
-import { serverPublicEnv } from "@/lib/public-env";
+import { serverPublicEnv, urlSafeKey } from "@/lib/public-env";
 import { getAdmin } from "@/lib/supabase/server";
 
 // Web Push (VAPID): chega com o app fechado. No iPhone, só com o app instalado na tela inicial.
@@ -17,7 +17,7 @@ export function vapidSubject(env: Record<string, string | undefined> = process.e
 
 export async function sendPush(userId: string, payload: { title: string; body: string; url: string }) {
   if (!pushEnabled()) return 0;
-  webpush.setVapidDetails(vapidSubject(), serverPublicEnv().vapidPublicKey!, process.env.VAPID_PRIVATE_KEY!);
+  webpush.setVapidDetails(vapidSubject(), serverPublicEnv().vapidPublicKey!, urlSafeKey(process.env.VAPID_PRIVATE_KEY)!);
   const db = getAdmin();
   const { data: subs } = await db.from("push_subscriptions").select("id, endpoint, p256dh, auth").eq("user_id", userId);
   let sent = 0;

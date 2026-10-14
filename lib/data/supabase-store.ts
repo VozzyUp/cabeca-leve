@@ -521,6 +521,9 @@ export async function createSupabaseStore(db: Admin, userId: string, email: stri
       }
       return must(await db.from("automations").update(patch).eq("id", id).eq("user_id", userId).select("id")).length > 0;
     },
+    async setAutomationChannel(id, channel) {
+      return must(await db.from("automations").update({ channel }).eq("id", id).eq("user_id", userId).select("id")).length > 0;
+    },
     async addNotice(n) {
       must(await db.from("notices").insert({ user_id: userId, kind: n.kind, title: n.title.slice(0, 120), body: n.body, href: n.href }));
     },

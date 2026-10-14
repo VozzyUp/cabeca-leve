@@ -341,6 +341,21 @@ describe.skipIf(!run)("agente", () => {
     expect((await store.listTransactions()).find((t) => t.description === "Feira")!.author).toBe("Ana");
   });
 
+  it("pesquisa sem canal pedido vai para o WhatsApp quando ele está vinculado; sem WhatsApp, notificação", async () => {
+    const { runAgent } = await import("./agent");
+    const ask = { title: "GitHub", prompt: "repositórios mais populares", repeat: "daily", weekdays: [], run_on: null, time: "08:00", channel: null, sources: ["web"] };
+    replies.push(msg([{ type: "tool_use", id: "toolu_auto_1", name: "create_automation", input: ask }], "tool_use"), msg([{ type: "text", text: "Agendado." }], "end_turn"));
+    await runAgent({ store, text: "todo dia às 8h me traz o GitHub", channel: "web", now: new Date("2026-10-08T17:00:00Z") });
+    const { data: first } = await admin.from("automations").select("channel").eq("user_id", userId).eq("title", "GitHub").single();
+    expect(first!.channel).toBe("push");  // conta sem WhatsApp vinculado
+    await admin.from("channel_links").insert({ user_id: userId, channel: "whatsapp", external_id: "+5511955554444", verified_at: new Date().toISOString() });
+    replies.push(msg([{ type: "tool_use", id: "toolu_auto_2", name: "create_automation", input: { ...ask, title: "GitHub 2" } }], "tool_use"), msg([{ type: "text", text: "Agendado." }], "end_turn"));
+    await runAgent({ store, text: "outra às 8h", channel: "web", now: new Date("2026-10-08T17:01:00Z") });
+    const { data: second } = await admin.from("automations").select("channel").eq("user_id", userId).eq("title", "GitHub 2").single();
+    expect(second!.channel).toBe("whatsapp");
+    await admin.from("channel_links").delete().eq("user_id", userId).eq("external_id", "+5511955554444");
+  });
+
   it("conta fixa pelo chat: cadastra, aparece em a resolver e paguei confirma no vencimento (sem lançar gasto avulso)", async () => {
     const { runAgent } = await import("./agent");
     const call = (name: string, input: object, n: string) => ({ type: "tool_use", id: `toolu_${name}_${n}`, name, input });
