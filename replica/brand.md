@@ -2,9 +2,55 @@
 
 Data: 2026-10-08. O posicionamento vem do `fixes.md`: "o assistente que responde quando você precisa". Para quem pagou e ficou sem resposta, sem acesso ou cobrado depois de cancelar, e para quem quer tirar a vida da cabeça.
 
-**Nome de trabalho já aplicado no app: Cabeça Leve.** Ele está em `lib/brand.ts`, `public/sw.js`, `supabase/templates/` e nos assuntos de `supabase/config.toml`. Para trocar, mude nesses lugares e rode o sweep do fim. Não registre nem pague nada pelo nome antes das checagens marcadas "a rodar", principalmente o INPI.
+**Nome aplicado no app desde 2026-10-15: Peraí** (antes, o nome de trabalho era Cabeça Leve). Ele está em `lib/brand.ts`, `public/sw.js`, `supabase/templates/` e nos assuntos de `supabase/config.toml`. Não registre nem pague nada pelo nome antes das checagens marcadas "a rodar", principalmente o INPI. A rodada que levou ao Peraí está em `brand-tdah.md`.
 
-## 1. Nome
+## 0. Peraí (decisão de 2026-10-15)
+
+**Frase da marca:** "Peraí, o que eu ia fazer mesmo?"
+
+**Duplo foco:** para qualquer pessoa que se organiza melhor falando do que preenchendo formulário, e para quem tem TDAH ou se identifica com a cabeça acelerada. O nome não diz TDAH de propósito: ele fica na apresentação ("com ou sem TDAH") e não aparece na tela do celular de ninguém. O app não diagnostica, não trata e não substitui acompanhamento profissional, e o texto da landing e das lojas diz isso.
+
+**Paleta: mantida.** O laranja `#fb923c` já é de outra família que o azul do original e passa a checagem de contraste (23 pares, 0 falhas AA, `contrast.py`). Trocar agora só mudaria tudo sem ganho. Na marca, o laranja é o "peraí": o sinal de atenção, não de alarme.
+
+**Ícone:** balão de conversa com três pontos ("peraí…", o momento de lembrar), escuro sobre o laranja. Feito em `public/icon.svg` e `public/icons/` (192, 512, maskable 512, ícone do iPhone) e `app/favicon.ico`.
+
+### Briefing do logo
+
+- **Ideia:** o instante em que você diz "peraí" e a conversa espera. O balão com três pontos é isso, e ao mesmo tempo é a conversa do WhatsApp onde o app mora.
+- **Tipo:** símbolo mais palavra. O símbolo vale sozinho como ícone do app.
+- **Tem que funcionar** em 16 px (favicon) e como ícone de 1024 px. O desenho atual é um rascunho de trabalho: peça a um designer a versão final (a palavra "Peraí" com acento e uma versão em uma cor só).
+- **Entregas:** SVG, ícone 1024x1024 sem transparência para o iOS, favicons, imagem social 1200x630.
+- **Não pode lembrar** o ícone do WhatsApp (verde, balão com telefone) nem o balão azul do Messenger: a cor e o desenho precisam continuar claramente outros. O rascunho atual é laranja com balão escuro, mas coloque o ícone final ao lado dos dois, na tela de um celular, antes de publicar.
+
+### Voz
+
+Três palavras, e o que cada uma não quer dizer:
+
+- **Sem pressa, não lento.** Uma coisa de cada vez, sem lista enorme. Não é enrolar.
+- **Parceiro, não palhaço.** Do lado da pessoa, bem-humorado quando ela quer. Não é piada o tempo todo.
+- **Direto, não seco.** Diz o que fez em uma frase. Não é frio.
+
+Faça e não faça:
+
+| faça | não faça |
+| --- | --- |
+| "Anotei. Quer que eu te lembre às 18h?" | "Você esqueceu de novo." |
+| "Tudo bem, bora de novo." | "Atrasada há 3 dias." |
+| "Peraí, qual foi o valor?" | Perguntar cinco coisas de uma vez |
+| "Quebrei em 3 passos. O primeiro é só abrir o e-mail." | "Basta se concentrar." |
+| "Isso é com o seu médico. Posso te lembrar da consulta." | Opinar sobre remédio ou diagnóstico |
+
+Textos já reescritos nessa voz: o título da landing, o bloco "Feito para cabeças que não param", a pergunta "É um app para TDAH?" e a regra do assistente sobre respostas curtas, passos pequenos e nada de bronca (`lib/assistant/agent.ts`).
+
+### O que ainda é decisão e ação sua
+
+- **INPI, WIPO, EUA e UE:** a rodar para o Peraí (ver `brand-tdah.md`). Por ser uma expressão comum, vale uma busca de anterioridade por um advogado de marcas antes de investir.
+- **Domínio:** `peraiapp.com.br` e `peraiapp.com` estavam livres em 2026-10-15; `perai.com.br`, `perai.com` e `perai.app` estão ocupados. Hoje o app responde em `cabeca.vozzyup.com.br`; trocar o endereço mexe em DNS, `SITE_URL` e na cobrança.
+- **Remetente dos e-mails:** o `EMAIL_FROM` do Portainer (ou em Admin > Configuração do sistema) ainda diz "Cabeça Leve <...>". Troque para "Peraí <...>".
+- **Nomes internos que continuam** (trocar quebraria o que já existe): a imagem `ghcr.io/vozzyup/cabeca-leve`, os serviços `cabecaleve_*` do Portainer e a frase interna que confere a senha mestra do cofre (`cabeca-leve-cofre-v1`).
+- **WhatsApp da Meta:** os modelos de mensagem aprovados no Gerenciador citam o nome antigo? Se citam, é preciso criar de novo.
+
+## 1. Nome (rodada original, do Cabeça Leve)
 
 ### Os 20 candidatos
 

@@ -3,7 +3,7 @@ import { expect, login, noHorizontalScroll, test } from "./fixtures";
 test.describe("Início e páginas legais", () => {
   test("PUB-H1 quem não entrou vê a página inicial, com preço e os links legais", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByRole("heading", { level: 1, name: /Seu assistente no WhatsApp/ })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Peraí, o que eu ia fazer mesmo?" })).toBeVisible();
     await expect(page.getByRole("img", { name: /O app de verdade/ })).toBeVisible();
     // cada correção do fixes.md aparece; nada de prova inventada
     for (const fix of ["Uma pessoa de verdade", "Cancelou, parou", "Pagou, entrou", "Lembrete que chega", "Conta que bate", "Seu WhatsApp fica intacto"]) {

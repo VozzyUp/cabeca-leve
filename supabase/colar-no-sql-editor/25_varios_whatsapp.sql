@@ -1,4 +1,4 @@
--- Cabeça Leve, passo 25 de 25: vários WhatsApps na mesma conta.
+-- Peraí, passo 25 de 25: vários WhatsApps na mesma conta.
 -- Supabase > SQL Editor > New query > cole TUDO > Run. Rode uma vez, depois do 24.
 -- (Se a Action de deploy já aplicou as migrações, este arquivo não muda nada.)
 -- Deve terminar com uma linha de conferência: varios_numeros = true, quem_lancou = true, migracoes_no_historico = 14.

@@ -43,7 +43,7 @@ export const CONFIG_GROUPS: ConfigGroup[] = [
   ] },
   { title: "E-mail (Resend)", fields: [
     { key: "RESEND_API_KEY", label: "Chave da API", secret: true },
-    { key: "EMAIL_FROM", label: "Remetente", secret: false, hint: "ex.: Cabeça Leve <ola@seudominio.com.br>" },
+    { key: "EMAIL_FROM", label: "Remetente", secret: false, hint: "ex.: Peraí <ola@seudominio.com.br>" },
   ] },
   { title: "Notificações no aparelho (push)", fields: [
     { key: "VAPID_PUBLIC_KEY", label: "Chave pública", secret: false, generate: "vapid" },

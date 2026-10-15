@@ -63,7 +63,7 @@ test("ADM-H1 o dono salva chaves pela tela; segredo não volta inteiro; vale na 
 
   // apagar volta ao valor do stack
   await page.locator("form").filter({ hasText: "E-mail (Resend)" }).getByRole("button", { name: "Apagar" }).click();
-  await expect(page.locator("form").filter({ hasText: "E-mail (Resend)" }).getByText(/vem do stack: Cabeça Leve <oi@exemplo.com.br>/)).toBeVisible();
+  await expect(page.locator("form").filter({ hasText: "E-mail (Resend)" }).getByText(/vem do stack: Peraí <oi@exemplo.com.br>/)).toBeVisible();
   await admin.from("app_settings").delete().in("key", ["ASAAS_API_KEY", "META_WEBHOOK_VERIFY_TOKEN"]);
 });
 

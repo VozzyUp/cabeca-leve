@@ -3,7 +3,7 @@ import { operator, privacySections, termsSections } from "./legal";
 
 describe("textos legais", () => {
   it("usa os dados da empresa quando existem e cai no nome do app quando não", () => {
-    expect(operator({})).toEqual({ name: "Cabeça Leve", document: null, email: null });
+    expect(operator({})).toEqual({ name: "Peraí", document: null, email: null });
     expect(operator({ LEGAL_COMPANY_NAME: "Acme Ltda", LEGAL_COMPANY_DOCUMENT: "00.000.000/0001-00", SUPPORT_EMAIL: "oi@acme.com" }))
       .toEqual({ name: "Acme Ltda", document: "00.000.000/0001-00", email: "oi@acme.com" });
     expect(operator({ LEGAL_CONTACT_EMAIL: "dpo@acme.com", SUPPORT_EMAIL: "oi@acme.com" }).email).toBe("dpo@acme.com");

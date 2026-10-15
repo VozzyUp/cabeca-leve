@@ -1,4 +1,4 @@
--- Cabeça Leve, passo 4 de 22: banco principal (tabelas recurrences, project_templates, projects, milestones).
+-- Peraí, passo 4 de 22: banco principal (tabelas recurrences, project_templates, projects, milestones).
 -- Supabase > SQL Editor > New query > cole TUDO > Run. Rode os passos em ordem, uma vez cada.
 -- Deve terminar com: Success. No rows returned.
 

@@ -1,4 +1,4 @@
--- Cabeça Leve, passo 24 de 24: tom "Sem filtro" do assistente.
+-- Peraí, passo 24 de 24: tom "Sem filtro" do assistente.
 -- Supabase > SQL Editor > New query > cole TUDO > Run. Rode uma vez, depois do 23.
 -- (Se a Action de deploy já aplicou as migrações, este arquivo não muda nada.)
 -- Deve terminar com uma linha de conferência: aceita_sem_filtro = true, migracoes_no_historico = 13.

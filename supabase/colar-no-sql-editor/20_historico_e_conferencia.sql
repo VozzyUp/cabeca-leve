@@ -1,4 +1,4 @@
--- Cabeça Leve, passo 20 de 22: histórico e conferência.
+-- Peraí, passo 20 de 22: histórico e conferência.
 -- Supabase > SQL Editor > New query > cole TUDO > Run. Rode os passos em ordem, uma vez cada.
 -- Deve terminar com: Success. No rows returned.
 

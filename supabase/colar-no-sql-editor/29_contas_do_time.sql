@@ -1,4 +1,4 @@
--- Cabeça Leve, passo 29 de 29: contas do time (lista de contas com plano e uso, e registro das ações do time).
+-- Peraí, passo 29 de 29: contas do time (lista de contas com plano e uso, e registro das ações do time).
 -- Supabase > SQL Editor > New query > cole TUDO > Run. Rode uma vez, depois do 28.
 -- (Se a Action de deploy já aplicou as migrações, não rode: a tabela já existiria e dá erro.)
 -- Deve terminar com uma linha de conferência: registro = true, funcao = true, migracoes_no_historico = 18.

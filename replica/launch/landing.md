@@ -1,17 +1,21 @@
 # Landing page
 
-Data: 2026-10-14. Ângulo: **A. O assistente que responde quando você precisa** (`fixes.md`, seção 5). Voz: leve, direta, presente (`brand.md`).
-Construída em `app/(public)/page.tsx`. A captura é do app de verdade (`public/landing/conversa.png`, gerada pelo Playwright com uma conta de teste).
+Data: 2026-10-14; topo e bloco novo reescritos em 2026-10-15, com o nome Peraí e o duplo foco (organização e TDAH). Ângulo da página: **A. O assistente que responde quando você precisa** (`fixes.md`, seção 5), agora sob a frase "Peraí, o que eu ia fazer mesmo?". Voz: sem pressa, parceiro, direto (`brand.md`).
+Construída em `app/(public)/page.tsx`. A captura é do app de verdade (`public/landing/conversa.png`, gerada pelo Playwright com uma conta de teste; refeita em 2026-10-15 para mostrar o nome Peraí no topo).
 
 Regras seguidas: sem depoimento, sem número de usuários, sem nota de loja, sem logo de imprensa. Nenhuma frase de avaliador. O nome do original não aparece.
 
 ## 1. Topo
 
-- **Título:** Seu assistente no WhatsApp. E uma pessoa de verdade quando você precisar.
-- **Linha de baixo:** Tarefas, lembretes e dinheiro numa conversa. 7 dias grátis sem cartão, cancelamento em um toque com comprovante.
+- **Título:** Peraí, o que eu ia fazer mesmo?
+- **Linha de baixo:** O assistente no WhatsApp que guarda o que passa pela sua cabeça: tarefas, lembretes e contas, numa conversa. Para quem se perde no meio do dia, com ou sem TDAH. E uma pessoa de verdade quando você precisar. Embaixo, em letra menor: 7 dias grátis sem cartão, cancelamento em um toque com comprovante.
 - **Botão:** Começar 7 dias grátis → `/entrar?modo=criar`
 - **Ao lado:** captura da conversa (lançamento, lembrete e tarefa criados, com Desfazer).
 - **Embaixo:** "Você conversa com o nosso número. Nunca pedimos acesso ao seu WhatsApp."
+
+## 1b. Feito para cabeças que não param (novo)
+
+Quatro cartões, só com o que o app faz hoje: **Mande do jeito que vier** (áudio, frase solta, foto da nota; card com Desfazer), **Lembrete que volta** (Feito e Adiar, no celular e no WhatsApp, sem bronca), **Um passo de cada vez** (respostas curtas, quebrar tarefa grande em passos pequenos) e **Do seu jeito, sem julgamento** (escolher o tom; nunca humilha). Embaixo, o aviso: o app é ferramenta de organização, não faz diagnóstico, não trata TDAH e não substitui acompanhamento profissional. Nada de promessa de tratamento, número de usuários ou depoimento. A dúvida "É um app para TDAH?" abre a lista de dúvidas, e a chamada final virou "Anote antes que escape".
 
 ## 2. O problema
 

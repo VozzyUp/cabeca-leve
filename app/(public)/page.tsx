@@ -1,5 +1,5 @@
 import {
-  BellRing, Check, CircleSlash, Dumbbell, FileText, Globe, HeartHandshake, KeyRound, LifeBuoy, ReceiptText, ShieldCheck, Users, WalletCards, type LucideIcon,
+  BellRing, Check, CircleSlash, Dumbbell, FileText, Globe, HeartHandshake, KeyRound, LifeBuoy, MessageCircle, ReceiptText, ShieldCheck, Sparkles, Timer, Users, WalletCards, type LucideIcon,
 } from "lucide-react";
 import type { Metadata } from "next";
 import Image from "next/image";
@@ -19,7 +19,7 @@ import { WHATSAPP_PROMISE } from "@/lib/whatsapp/promise";
 // redirecionamento para /conversa (com cache de 1 ano), sem nunca mostrar o início a quem não entrou
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = { title: `${BRAND.name} · seu assistente no WhatsApp e no app`, description: BRAND.description };
+export const metadata: Metadata = { title: `${BRAND.name} · o assistente no WhatsApp para a cabeça que não para`, description: BRAND.description };
 
 // Landing (replica/launch/landing.md): ângulo "o assistente que responde quando você precisa".
 // Sem depoimento, número de usuários ou nota inventada; a captura é do app de verdade.
@@ -30,6 +30,14 @@ const secondary = "border border-border text-text hover:bg-surface-2";
 const PROBLEMS: { title: string; text: string }[] = [
   { title: "Você pagou e ficou sem resposta", text: "Acesso que não libera, suporte que é só robô e cobrança que continua depois de cancelar." },
   { title: "Você anota e ele não acha", text: "Lembrete que não chega e relatório que não bate com o que você lançou." },
+];
+
+// Para quem se perde no meio do dia, com ou sem TDAH. Só o que o app faz hoje; nada de promessa de tratamento.
+const MINDS: { icon: LucideIcon; title: string; text: string }[] = [
+  { icon: MessageCircle, title: "Mande do jeito que vier", text: "Um áudio no meio da rua, uma frase solta, a foto da nota. Sem formulário, sem escolher categoria: o assistente organiza e confirma com um card que dá para desfazer." },
+  { icon: BellRing, title: "Lembrete que volta", text: "O aviso chega no celular e no WhatsApp com Feito e Adiar. Não deu agora? Toque em Adiar e ele volta daqui a pouco, sem bronca." },
+  { icon: Timer, title: "Um passo de cada vez", text: "Respostas curtas e uma pergunta por vez. Dá para pedir para quebrar uma tarefa grande em passos pequenos." },
+  { icon: Sparkles, title: "Do seu jeito, sem julgamento", text: "Escolha o tom: acolhedor, direto, divertido ou sem filtro. Ele nunca humilha: no máximo cobra com bom humor, e só se você pedir." },
 ];
 
 const STEPS = [
@@ -59,6 +67,7 @@ const ALSO: { icon: LucideIcon; text: string }[] = [
 ];
 
 const FAQ: [string, string][] = [
+  ["É um app para TDAH?", `Foi pensado para quem se perde no meio do dia, tenha ou não TDAH: manda do jeito que vier, recebe lembrete com Feito e Adiar e respostas curtas. Não é tratamento, não faz diagnóstico e não substitui o acompanhamento de um profissional. Quem tem TDAH não precisa dizer isso a ninguém para usar.`],
   ["Posso testar antes de pagar?", `Sim, ${TRIAL_DAYS} dias, sem cartão. No fim, você escolhe se assina. Tudo o que anotou continua guardado.`],
   ["E se eu quiser cancelar?", "Um toque em Configurações. Comprovante na hora, nenhuma cobrança nova e acesso até o fim do período pago. Cobrança que chegar depois é estornada sozinha."],
   ["Vocês acessam o meu WhatsApp?", WHATSAPP_PROMISE],
@@ -77,16 +86,31 @@ export default async function Page() {
       <section aria-labelledby="titulo" className="grid items-center gap-10 pt-4 lg:grid-cols-[1.2fr_1fr]">
         <div className="flex flex-col items-start gap-5">
           <h1 id="titulo" className="text-4xl font-bold leading-tight text-text sm:text-5xl">
-            Seu assistente no WhatsApp. E uma pessoa de verdade quando você precisar.
+            Peraí, o que eu ia fazer mesmo?
           </h1>
           <p className="max-w-xl text-lg text-body">
-            Tarefas, lembretes e dinheiro numa conversa. {TRIAL_DAYS} dias grátis sem cartão, cancelamento em um toque com comprovante.
+            O assistente no WhatsApp que guarda o que passa pela sua cabeça: tarefas, lembretes e contas, numa conversa. Para quem se perde no meio do dia, com ou sem TDAH. E uma pessoa de verdade quando você precisar.
           </p>
+          <p className="max-w-xl text-sm text-muted">{TRIAL_DAYS} dias grátis sem cartão, cancelamento em um toque com comprovante.</p>
           <Link href="/entrar?modo=criar" className={cn(cta, primary)}>Começar {TRIAL_DAYS} dias grátis</Link>
           <p className="text-sm text-muted">{WHATSAPP_PROMISE}</p>
         </div>
         <Image src={conversa} alt="O app de verdade: na conversa, um lembrete e uma tarefa criados a partir de frases comuns, cada um com o botão Desfazer"
           priority sizes="(min-width: 1024px) 380px, 90vw" className="mx-auto w-full max-w-[380px] rounded-2xl border border-border shadow-pop" />
+      </section>
+
+      <section aria-labelledby="cabecas" className="flex flex-col gap-6">
+        <h2 id="cabecas" className="text-2xl font-bold text-text">Feito para cabeças que não param</h2>
+        <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {MINDS.map(({ icon: Icon, title, text }) => (
+            <li key={title} className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-5">
+              <Icon aria-hidden className="size-6 text-accent" />
+              <h3 className="font-semibold text-text">{title}</h3>
+              <p className="text-sm text-body">{text}</p>
+            </li>
+          ))}
+        </ul>
+        <p className="text-sm text-muted">O {BRAND.name} é uma ferramenta de organização. Não faz diagnóstico, não trata TDAH e não substitui o acompanhamento de um profissional de saúde.</p>
       </section>
 
       <section aria-labelledby="problema" className="flex flex-col gap-6">
@@ -172,7 +196,7 @@ export default async function Page() {
       </section>
 
       <section aria-labelledby="final" className="flex flex-col items-center gap-4 rounded-lg border border-border bg-surface p-8 text-center">
-        <h2 id="final" className="text-2xl font-bold text-text">Tire a vida da cabeça hoje</h2>
+        <h2 id="final" className="text-2xl font-bold text-text">Anote antes que escape</h2>
         <p className="text-body">Comece pelo que está pesando agora: uma conta, um lembrete, uma tarefa.</p>
         <Link href="/entrar?modo=criar" className={cn(cta, primary)}>Começar {TRIAL_DAYS} dias grátis</Link>
         <Link href="/entrar" className={cn(cta, secondary, "h-10 text-sm")}>Já tenho conta</Link>

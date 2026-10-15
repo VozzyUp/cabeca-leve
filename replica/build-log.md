@@ -299,3 +299,14 @@ Paridade 63,2/100; **40 de 40 obrigatórias completas**.
 - **Ajustes** ficou só com o que é de quem usa (assinatura, jeito do assistente, falar com uma pessoa, privacidade, termos, conta).
 - **Menu da conta:** uma seção "Time" com um único atalho, Administração, só para o time. No computador, o menu lateral ganha o grupo "Time"; no celular, "Tudo" ganha o grupo "Time".
 - O "voltar" das telas do time sobe para Administração. Os testes do time agora entram por Administração (`openAdmin` em `e2e/fixtures.ts`) e conferem que Ajustes não mostra nada do time e que quem não é do time não vê o atalho em lugar nenhum (menu, "Tudo" e `/admin`).
+
+## 2026-10-15: o app passa a se chamar Peraí
+
+- **Nome:** Peraí, com "Peraí, o que eu ia fazer mesmo?" e duplo foco: organização para qualquer pessoa e para quem tem TDAH ou se identifica. Rodada de nomes em `replica/brand-tdah.md`, decisão e briefing em `replica/brand.md`.
+- **Trocado:** `lib/brand.ts`, `public/sw.js`, e-mails de cadastro (assunto e texto), o prompt do assistente, a mensagem de número não vinculado, a promessa do WhatsApp, a ficha das lojas, os testes, os cabeçalhos dos arquivos SQL para colar.
+- **Landing:** título "Peraí, o que eu ia fazer mesmo?", bloco "Feito para cabeças que não param" (só o que o app faz hoje: mandar do jeito que vier, lembrete com Feito e Adiar, um passo de cada vez, tom sem julgamento), pergunta "É um app para TDAH?" e aviso de que não é tratamento nem diagnóstico. Chamada final: "Anote antes que escape".
+- **Assistente:** regra nova de respostas curtas, uma pergunta por vez, sem bronca por esquecimento, quebrar tarefa grande em passos pequenos e nunca diagnosticar nem opinar sobre remédio.
+- **Ícones:** balão com três pontos ("peraí…"), em SVG, 192, 512, maskable e o do iPhone, e o favicon. Rascunho de trabalho; o logo final é com um designer.
+- **Paleta mantida** (laranja; 23 pares, 0 falhas AA).
+- **Não mudou, de propósito:** o endereço (cabeca.vozzyup.com.br), a imagem `ghcr.io/vozzyup/cabeca-leve`, os serviços `cabecaleve_*` do Portainer e a frase `cabeca-leve-cofre-v1` do cofre (trocar essa invalidaria todos os cofres criados).
+- **Sweep** (`sweep.py --avoid "Cabeça Leve"`): só sobram esses identificadores internos.

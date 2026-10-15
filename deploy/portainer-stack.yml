@@ -1,4 +1,4 @@
-# Stack do Cabeça Leve para o Portainer (Swarm + Traefik, rede "cloud").
+# Stack do Peraí para o Portainer (Swarm + Traefik, rede "cloud").
 # Troque os 7 valores TROQUE_… e faça o deploy. Todas as outras chaves (Anthropic, Groq, UAZAPI,
 # Asaas, Resend, push, Meta, suporte) se configuram depois no app, em /admin/configuracoes.
 # Passo a passo: replica/deploy-vps.md

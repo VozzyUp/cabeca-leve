@@ -38,7 +38,7 @@ test.describe("F1 cancelar com comprovante", () => {
     const note = page.getByRole("note").filter({ hasText: "Assinatura cancelada em" });
     await expect(note).toBeVisible();
     await expect(note).toContainText(/CL-[A-Z2-9]{6}/);
-    await expect.poll(async () => (await emailsTo(user.email)).map((c) => c.body.subject)).toContain("Cabeça Leve: comprovante de cancelamento");
+    await expect.poll(async () => (await emailsTo(user.email)).map((c) => c.body.subject)).toContain("Peraí: comprovante de cancelamento");
     await page.goto("/avisos");
     await expect(page.getByText("Assinatura cancelada").first()).toBeVisible();
 
@@ -109,7 +109,7 @@ test.describe("F3 falar com uma pessoa", () => {
     const protocol = (await status.locator(".font-mono").textContent())!.trim();
     expect(protocol).toMatch(/^CL-[A-Z2-9]{6}$/);
     // o time é avisado na hora, por e-mail e WhatsApp
-    await expect.poll(async () => (await emailsTo("time@exemplo.com.br")).map((c) => c.body.subject)).toContain(`[Cabeça Leve] Chamado ${protocol}`);
+    await expect.poll(async () => (await emailsTo("time@exemplo.com.br")).map((c) => c.body.subject)).toContain(`[Peraí] Chamado ${protocol}`);
     expect((await mockCalls()).some((c) => (c.url === "/send/text" || c.url === "/send/menu") && c.body.number === "5511988887777" && String(c.body.text).includes(protocol))).toBe(true);
 
     // painel do time
@@ -129,7 +129,7 @@ test.describe("F3 falar com uma pessoa", () => {
     await page.goto("/ajustes/suporte");
     await expect(page.getByText("O Pix foi confirmado agora; seu plano já está ativo.")).toBeVisible();
     await expect(page.getByText("respondido")).toBeVisible();
-    await expect.poll(async () => (await emailsTo(user.email)).map((c) => c.body.subject)).toContain(`Cabeça Leve: resposta ao chamado ${protocol}`);
+    await expect.poll(async () => (await emailsTo(user.email)).map((c) => c.body.subject)).toContain(`Peraí: resposta ao chamado ${protocol}`);
   });
 
   test("F3-N1 quem não é do time não vê o painel", async ({ page, user }) => {

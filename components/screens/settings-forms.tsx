@@ -213,7 +213,7 @@ export function PushSwitch({ checked, onChange }: { checked: boolean; onChange: 
           let r: Awaited<ReturnType<typeof subscribePush>>;
           try { r = await subscribePush(); }
           catch (e) { setNote(`Não deu para ligar neste aparelho (${(e as Error).name || "erro"}: ${(e as Error).message}). Tente de novo; se continuar, avise o suporte com esta mensagem.`); return; }
-          if (r === "denied") { setNote(isIos() ? "As notificações estão bloqueadas. Libere em Ajustes do iPhone > Notificações > Cabeça Leve." : "O navegador bloqueou as notificações. Libere nas permissões do site."); return; }
+          if (r === "denied") { setNote(isIos() ? "As notificações estão bloqueadas. Libere em Ajustes do iPhone > Notificações > Peraí." : "O navegador bloqueou as notificações. Libere nas permissões do site."); return; }
           if (r !== "ok") { setNote("Não deu para ligar neste aparelho agora. Tente de novo."); return; }
         } else {
           await unsubscribePush().catch(() => {});

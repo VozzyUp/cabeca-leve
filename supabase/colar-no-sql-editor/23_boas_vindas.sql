@@ -1,4 +1,4 @@
--- Cabeça Leve, passo 23 de 23: configuração inicial para quem acabou de se cadastrar.
+-- Peraí, passo 23 de 23: configuração inicial para quem acabou de se cadastrar.
 -- Supabase > SQL Editor > New query > cole TUDO > Run. Rode uma vez, depois do 22.
 -- (Se a Action de deploy já aplicou as migrações, este arquivo não muda nada.)
 -- Deve terminar com uma linha de conferência: coluna = true, migracoes_no_historico = 12.

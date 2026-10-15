@@ -20,7 +20,7 @@ export const E2E_ENV = {
   CRON_SECRET: "dev-cron-secret",
   RESEND_API_KEY: "chave-e2e",
   RESEND_API_URL: MOCK,
-  EMAIL_FROM: "Cabeça Leve <oi@exemplo.com.br>",
+  EMAIL_FROM: "Peraí <oi@exemplo.com.br>",
   SUPPORT_EMAIL: "time@exemplo.com.br",
   SUPPORT_WHATSAPP: "5511988887777",
   ADMIN_EMAILS: "dono-e2e@exemplo.com.br,config-e2e@exemplo.com.br",  // o 2º é só do admin.spec: o F3 apaga e recria o 1º

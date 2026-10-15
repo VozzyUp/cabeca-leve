@@ -1,4 +1,4 @@
--- Cabeça Leve, passo 26 de 26: pesquisa diária na web e cofre de senhas.
+-- Peraí, passo 26 de 26: pesquisa diária na web e cofre de senhas.
 -- Supabase > SQL Editor > New query > cole TUDO > Run. Rode uma vez, depois do 25.
 -- (Se a Action de deploy já aplicou as migrações, não rode: a tabela do cofre já existiria e dá erro.)
 -- Deve terminar com uma linha de conferência: pesquisa_web = true, cofre = true, migracoes_no_historico = 15.

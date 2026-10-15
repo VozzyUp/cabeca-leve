@@ -7,7 +7,7 @@ test.describe("App no iPhone", () => {
     const res = await page.request.get("/manifest.webmanifest");
     expect(res.status()).toBe(200);
     const m = await res.json();
-    expect(m).toMatchObject({ display: "standalone", start_url: "/conversa", scope: "/", name: "Cabeça Leve" });
+    expect(m).toMatchObject({ display: "standalone", start_url: "/conversa", scope: "/", name: "Peraí" });
     expect(m.icons.map((i: { sizes: string }) => i.sizes)).toEqual(expect.arrayContaining(["192x192", "512x512"]));
     for (const i of m.icons) expect((await page.request.get(i.src)).status()).toBe(200);
     await page.goto("/entrar");

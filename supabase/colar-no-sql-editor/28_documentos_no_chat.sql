@@ -1,4 +1,4 @@
--- Cabeça Leve, passo 28 de 28: documentos pelo chat e pelo WhatsApp (anexos estacionados por 24 h e limpeza de PDF do histórico).
+-- Peraí, passo 28 de 28: documentos pelo chat e pelo WhatsApp (anexos estacionados por 24 h e limpeza de PDF do histórico).
 -- Supabase > SQL Editor > New query > cole TUDO > Run. Rode uma vez, depois do 27.
 -- (Se a Action de deploy já aplicou as migrações, não rode: a tabela já existiria e dá erro.)
 -- Deve terminar com uma linha de conferência: estacionamento = true, limpeza_de_pdf = true, migracoes_no_historico = 17.

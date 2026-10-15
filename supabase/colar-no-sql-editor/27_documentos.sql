@@ -1,4 +1,4 @@
--- Cabeça Leve, passo 27 de 27: documentos (notas fiscais, recibos, pedidos médicos) com pastas, status de reembolso e prazo.
+-- Peraí, passo 27 de 27: documentos (notas fiscais, recibos, pedidos médicos) com pastas, status de reembolso e prazo.
 -- Supabase > SQL Editor > New query > cole TUDO > Run. Rode uma vez, depois do 26.
 -- (Se a Action de deploy já aplicou as migrações, não rode: as tabelas já existiriam e dá erro.)
 -- Cria também o bucket PRIVADO "documents" no Storage. Deve terminar com uma linha de conferência:

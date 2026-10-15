@@ -1,4 +1,4 @@
--- Cabeça Leve, passo 22 de 22: fotos no chat (limpeza das fotos antigas).
+-- Peraí, passo 22 de 22: fotos no chat (limpeza das fotos antigas).
 -- Supabase > SQL Editor > New query > cole TUDO > Run. Rode uma vez, depois do 21.
 -- Deve terminar com uma linha de conferência: funcao = true, indice = true, migracoes_no_historico = 11.
 
