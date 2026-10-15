@@ -1,12 +1,13 @@
 import { storeForUser } from "@/lib/data";
 import { buildBriefing } from "@/lib/domain/briefing";
 import { dayItems } from "@/lib/domain/day";
+import { deadlineOf, deadlineText, nextAlertStage } from "@/lib/domain/documents";
 import { nextFireAt } from "@/lib/domain/recurrence";
 import { variableSpending } from "@/lib/domain/money";
 import { emailEnabled, sendEmail } from "@/lib/email";
 import { pushEnabled, sendPush } from "@/lib/push";
 import { getAdmin } from "@/lib/supabase/server";
-import { formatTime, localDate, zonedParts } from "@/lib/time";
+import { formatMoney, formatTime, localDate, zonedParts } from "@/lib/time";
 import { reminderButtons, testButtons } from "@/lib/whatsapp/buttons";
 import { noticeNumbers } from "@/lib/whatsapp/link";
 import { whatsapp, type Button, type Proactive } from "@/lib/whatsapp/provider";
@@ -17,7 +18,7 @@ import { whatsapp, type Button, type Proactive } from "@/lib/whatsapp/provider";
 
 type Channel = "push" | "whatsapp" | "email";
 
-async function claim(userId: string, source: "reminder" | "briefing" | "automation", sourceId: string | null, channel: Channel, key: string, payload: Record<string, string>) {
+async function claim(userId: string, source: "reminder" | "briefing" | "automation" | "alert", sourceId: string | null, channel: Channel, key: string, payload: Record<string, string>) {
   const { error } = await getAdmin().from("scheduled_deliveries").insert({
     user_id: userId, source_type: source, source_id: sourceId, channel, send_at: new Date().toISOString(), payload, dedupe_key: key, status: "scheduled",
   });
@@ -41,7 +42,7 @@ async function channelsFor(userId: string) {
 // Chave de cada número: o primeiro mantém o formato antigo; os outros levam os dígitos
 const waKey = (base: string, i: number, number: string) => (i === 0 ? `${base}:whatsapp` : `${base}:whatsapp:${number.replace(/\D/g, "")}`);
 
-async function send(userId: string, source: "reminder" | "briefing", sourceId: string | null, keyBase: string,
+async function send(userId: string, source: "reminder" | "briefing" | "alert", sourceId: string | null, keyBase: string,
   { template, buttons, ...msg }: { title: string; body: string; url: string; whatsappText: string; template: Proactive; buttons?: Button[] }) {
   const ch = await channelsFor(userId);
   const wa = whatsapp();
@@ -105,6 +106,48 @@ export async function deliverBriefings(now = new Date()) {
     await send(p.user_id, "briefing", null, key, { title: "Seu dia", body: b.summary, url: "/briefing", whatsappText: text,
       template: { template: "resumo", params: [b.summary], text: "" } });
     await db.from("notices").insert({ user_id: p.user_id, kind: "briefing", title: "Seu dia", body: b.summary, href: "/briefing" });
+    count++;
+  }
+  return count;
+}
+
+// Prazo do reembolso: uma mensagem por pessoa, 7 e 2 dias antes do prazo de cada nota pendente, a partir das 9h no fuso dela.
+// O estágio do aviso (alert_stage) fica na nota: o mesmo prazo não avisa duas vezes, e mudar o prazo ou o status zera.
+export const DOC_ALERT_HOUR = 9;
+
+export async function deliverDocumentAlerts(now = new Date()) {
+  const db = getAdmin();
+  const horizon = new Date(now.getTime() + 9 * 86_400_000).toISOString().slice(0, 10);  // 7 dias + margem de fuso
+  const { data } = await db.from("documents").select("id, user_id, title, due_on, status, alert_stage, amount_cents")
+    .eq("status", "pending").not("due_on", "is", null).lte("due_on", horizon).lt("alert_stage", 2).order("due_on").limit(1000);
+  const byUser = new Map<string, NonNullable<typeof data>>();
+  for (const d of data ?? []) byUser.set(d.user_id, [...(byUser.get(d.user_id) ?? []), d]);
+  if (!byUser.size) return 0;
+  const { data: profiles } = await db.from("profiles").select("user_id, timezone").in("user_id", [...byUser.keys()]);
+  let count = 0;
+  for (const p of profiles ?? []) {
+    if (zonedParts(now, p.timezone).hour < DOC_ALERT_HOUR) continue;  // cedo demais para a pessoa: espera as 9h
+    const today = localDate(now, p.timezone);
+    const due = (byUser.get(p.user_id) ?? []).flatMap((d) => {
+      const doc = { status: d.status as "pending", dueOn: d.due_on, alertStage: d.alert_stage as 0 | 1 | 2 };
+      const stage = nextAlertStage(doc, today);
+      const dl = deadlineOf(doc, today);
+      return stage && dl ? [{ ...d, stage, line: `• ${d.title}${d.amount_cents === null ? "" : ` (${formatMoney(d.amount_cents)})`}: ${deadlineText(dl)}` }] : [];
+    });
+    if (!due.length) continue;
+    const total = due.reduce((n, d) => n + (d.amount_cents ?? 0), 0);
+    const headline = due.length === 1 ? "1 nota está perto do prazo do reembolso" : `${due.length} notas estão perto do prazo do reembolso`;
+    const body = `${headline}${total ? ` (${formatMoney(total)})` : ""}`;
+    const list = due.slice(0, 8).map((d) => d.line).join("\n") + (due.length > 8 ? `\n… e mais ${due.length - 8}` : "");
+    await send(p.user_id, "alert", null, `docalert:${p.user_id}:${today}`, {
+      title: "Prazo do reembolso", body, url: "/documentos?situacao=pending", whatsappText: `📎 ${body}:\n${list}\n\nQuando pedir, é só dizer “marca como enviado”.`,
+      template: { template: "aviso", params: [`${body}: ${due.slice(0, 3).map((d) => d.title).join(", ")}`], text: "" },
+    });
+    await db.from("notices").insert({ user_id: p.user_id, kind: "system", title: "Prazo do reembolso", body, href: "/documentos?situacao=pending" });
+    for (const stage of [1, 2] as const) {
+      const ids = due.filter((d) => d.stage === stage).map((d) => d.id);
+      if (ids.length) await db.from("documents").update({ alert_stage: stage }).in("id", ids).eq("user_id", p.user_id);
+    }
     count++;
   }
   return count;

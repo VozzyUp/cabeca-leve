@@ -270,3 +270,11 @@ Paridade 63,2/100; **40 de 40 obrigatórias completas**.
 - Migração `20261015000200_documentos_no_chat` (arquivo 28 para colar). Testes: `agent.int.test.ts` (3 novos), `whatsapp.int.test.ts` (2 novos), `supabase-store.int.test.ts`, `e2e/documentos.spec.ts` (DOC-W1).
 - **Atenção:** o envio de arquivo pelos provedores foi testado contra servidores falsos que seguem a documentação (UAZAPI `/send/media`, Meta `/media` + `/messages`). Precisa de uma conferência com a conta real antes de contar com ele.
 - **Falta (etapa 3):** avisos de prazo (7 e 2 dias) e exportar a pasta em PDF único e planilha.
+
+## 2026-10-15: documentos, etapa 3 (prazos e exportação)
+
+- **Aviso de prazo** (`deliverDocumentAlerts`, na varredura de cada minuto): 7 e 2 dias antes do prazo de cada nota **pendente**, a partir das 9h no fuso da pessoa. Uma mensagem por pessoa e por dia (lista as notas e o total), pelos mesmos canais dos outros avisos (notificação, cada WhatsApp que recebe avisos) e em Avisos. `alert_stage` na nota evita avisar duas vezes o mesmo prazo; mudar o prazo ou o status zera. Vencida não avisa de novo (o app mostra em vermelho). O link do aviso abre em Documentos já filtrado em Pendentes (`?situacao=pending`).
+- **Exportar** (`lib/document-export.ts`, `POST /api/documents/export`): **PDF único** (capa com a lista, o total e a soma por situação; depois cada foto numa página e cada PDF com as páginas como veio) e **planilha** (CSV com ponto e vírgula, BOM e vírgula decimal, total no fim; texto que começa com = + - @ ganha apóstrofo contra fórmula). Até 100 documentos e 80 MB por vez. Exporta os marcados ou, sem marcação, tudo o que está na tela.
+- **Pelo WhatsApp:** `send_documents` com `merged` junta tudo num PDF único e manda como um arquivo só ("junta as notas pendentes da viagem num PDF"); sem `merged`, cada arquivo vai separado (até 10).
+- Landing: "notas e pedidos médicos para reembolso" entre as outras funções.
+- Testes: `document-export.test.ts`, `deliveries.int.test.ts` (aviso), `agent.int.test.ts` (merged), `e2e/documentos.spec.ts` (DOC-P1). Suíte completa: 162 unitários, 58 de integração, 94 e2e.

@@ -1,5 +1,5 @@
 import { runDueAutomations } from "@/lib/automations";
-import { deliverBriefings, deliverDueReminders } from "@/lib/deliveries";
+import { deliverBriefings, deliverDocumentAlerts, deliverDueReminders } from "@/lib/deliveries";
 import { verifyQStash } from "@/lib/queue";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getAdmin } from "@/lib/supabase/server";
@@ -13,7 +13,7 @@ async function handle(request: Request) {
   if (!bearer && !(await verifyQStash(request, raw))) return new Response("forbidden", { status: 401 });
   if (!isSupabaseConfigured()) return Response.json({ skipped: "modo de demonstração" });
   const now = new Date();
-  const [reminders, briefings, automations] = await Promise.all([deliverDueReminders(now), deliverBriefings(now), runDueAutomations(now)]);
+  const [reminders, briefings, automations, documentAlerts] = await Promise.all([deliverDueReminders(now), deliverBriefings(now), runDueAutomations(now), deliverDocumentAlerts(now)]);
   // uma vez por hora: troca por texto as fotos de conversas de mais de 2 dias (não guarda comprovantes para sempre)
   let photosPurged = 0, stagedPurged = 0;
   if (now.getUTCMinutes() === 11) {
@@ -22,7 +22,7 @@ async function handle(request: Request) {
     // anexos que ninguém guardou como documento em 24 h
     stagedPurged = await purgeStagedFiles(getAdmin(), now);
   }
-  return Response.json({ reminders, briefings, automations, photosPurged, stagedPurged });
+  return Response.json({ reminders, briefings, automations, documentAlerts, photosPurged, stagedPurged });
 }
 
 export const GET = handle;

@@ -209,3 +209,44 @@ test("DOC-W1 PDF enviado pelo WhatsApp aparece em Documentos e o original baixa 
   const res2 = await page.request.get(`/api/documents/${data!.id}/file?download=1`);
   expect(Buffer.from(await res2.body()).equals(Buffer.from(original))).toBe(true);
 });
+
+test("DOC-P1 exporta o que está na tela em PDF único e em planilha; o link do aviso de prazo abre em Pendentes", async ({ page, user }) => {
+  await login(page, user, "/documentos");
+  for (const [name, buffer, mimeType] of [["nota-um.png", await samplePng(), "image/png"], ["recibo.pdf", await samplePdf(2), "application/pdf"]] as const) {
+    const up = await page.request.post("/api/documents", { multipart: { file: { name, mimeType, buffer } } });
+    expect(up.status()).toBe(200);
+  }
+  // um deles já foi pedido: o link do aviso (situacao=pending) mostra só o outro
+  const { data: rows } = await admin.from("documents").select("id, title").eq("user_id", user.id).order("created_at");
+  await admin.from("documents").update({ status: "submitted", amount_cents: 18750, title: "Recibo enviado" }).eq("id", rows![1].id);
+  await admin.from("documents").update({ amount_cents: 35000, title: "Consulta pendente" }).eq("id", rows![0].id);
+  await page.goto("/documentos?situacao=pending", { waitUntil: "networkidle" });
+  await expect(page.getByRole("button", { name: "Abrir Consulta pendente" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Abrir Recibo enviado" })).toHaveCount(0);
+  await expect(page.getByText("Exportar o que está na tela (1)")).toBeVisible();
+
+  // tudo: PDF único = capa + a foto + 2 páginas do recibo
+  await page.getByRole("group", { name: "Filtrar por situação" }).getByRole("button", { name: "Todos" }).click();
+  const pdfDownload = page.waitForEvent("download");
+  await page.getByRole("button", { name: "PDF único" }).click();
+  const pdf = await pdfDownload;
+  expect(pdf.suggestedFilename()).toMatch(/^reembolso-\d{4}-\d{2}-\d{2}\.pdf$/);
+  const out = await PDFDocument.load(await (await import("node:fs/promises")).readFile((await pdf.path())!));
+  expect(out.getPageCount()).toBe(1 + 1 + 2);
+
+  // só os marcados: a planilha leva um documento e o total dele
+  await page.getByLabel("Selecionar Consulta pendente").check();
+  await expect(page.getByText("Exportar os 1 marcados")).toBeVisible();
+  const csvDownload = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Planilha" }).click();
+  const csv = (await (await import("node:fs/promises")).readFile((await (await csvDownload).path())!, "utf8"));
+  expect(csv.startsWith("﻿Data;Nome;")).toBe(true);
+  expect(csv).toContain("Consulta pendente");
+  expect(csv).not.toContain("Recibo enviado");
+  expect(csv).toContain(";TOTAL;;;;;350,00;");
+  expect(await a11y(page)).toEqual([]);
+
+  // a rota recusa o que não é da pessoa e pede ao menos um documento
+  expect((await page.request.post("/api/documents/export", { data: { ids: [], format: "pdf" } })).status()).toBe(400);
+  expect((await page.request.post("/api/documents/export", { data: { ids: ["00000000-0000-4000-8000-000000000000"], format: "csv" } })).status()).toBe(404);
+});

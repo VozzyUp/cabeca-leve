@@ -1,5 +1,6 @@
 "use client";
-import { CalendarClock, FileImage, FileText, FolderOpen, Pencil, Plus, Search, Upload } from "lucide-react";
+import { CalendarClock, Download, FileImage, FileText, FolderOpen, Pencil, Plus, Search, Table2, Upload } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { useMemo, useRef, useState, useTransition } from "react";
 import { loadDocuments, setDocumentsStatus } from "@/app/actions";
 import { Button } from "@/components/ui/button";
@@ -21,7 +22,9 @@ const ACCEPT = "image/jpeg,image/png,image/webp,application/pdf";
 // S41: notas fiscais, recibos e pedidos em pastas, com status de reembolso e prazo
 export function DocumentsScreen() {
   const { data, error, reload } = useResource(loadDocuments);
-  const [status, setStatus] = useState<StatusFilter>("all");
+  const params = useSearchParams();
+  const fromLink = params.get("situacao");
+  const [status, setStatus] = useState<StatusFilter>(fromLink === "pending" || fromLink === "submitted" || fromLink === "reimbursed" || fromLink === "stored" ? fromLink : "all");
   const [chosenFolder, setFolder] = useState<string>("all");  // "all", "none" ou o id da pasta
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -75,6 +78,22 @@ export function DocumentsScreen() {
       try { await setDocumentsStatus(ids, to); setSelected(new Set()); reload(); setNotice({ tone: "ok", text: `${ids.length} ${ids.length === 1 ? "documento atualizado" : "documentos atualizados"}.` }); }
       catch { setNotice({ tone: "error", text: "Não deu para atualizar. Tente de novo." }); }
     });
+  }
+
+  // exporta o que está marcado ou, sem marcação, tudo o que está na tela (na ordem da lista)
+  async function exportDocs(format: "pdf" | "csv") {
+    const ids = (selected.size ? visible.filter((d) => selected.has(d.id)) : visible).map((d) => d.id);
+    setBusy(format === "pdf" ? "Montando o PDF" : "Montando a planilha");
+    try {
+      const res = await fetch("/api/documents/export", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids, format }) });
+      if (!res.ok) { const json = await res.json().catch(() => ({})); setNotice({ tone: "error", text: json.error ?? "Não deu para exportar. Tente de novo." }); return; }
+      const name = /filename="([^"]+)"/.exec(res.headers.get("content-disposition") ?? "")?.[1] ?? `documentos.${format}`;
+      const url = URL.createObjectURL(await res.blob());
+      Object.assign(document.createElement("a"), { href: url, download: name }).click();
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+      setNotice({ tone: "ok", text: `${format === "pdf" ? "PDF" : "Planilha"} pronto (${ids.length} ${ids.length === 1 ? "documento" : "documentos"}).` });
+    } catch { setNotice({ tone: "error", text: "Sem conexão. Tente de novo." }); }
+    finally { setBusy(null); }
   }
 
   const toggle = (id: string) => setSelected((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
@@ -150,6 +169,14 @@ export function DocumentsScreen() {
               ))}
             </div>
           </div>
+
+          {visible.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Exportar">
+              <span className="text-sm text-muted">{selected.size ? `Exportar os ${selected.size} marcados` : `Exportar o que está na tela (${visible.length})`}:</span>
+              <Button size="sm" variant="secondary" icon={<Download className="size-4" />} disabled={!!busy} onClick={() => exportDocs("pdf")}>PDF único</Button>
+              <Button size="sm" variant="secondary" icon={<Table2 className="size-4" />} disabled={!!busy} onClick={() => exportDocs("csv")}>Planilha</Button>
+            </div>
+          )}
 
           <label className="flex w-fit items-center gap-2 text-sm text-body">
             <input type="checkbox" checked={storeOnly} onChange={(e) => setStoreOnly(e.target.checked)} className="size-4 accent-[var(--accent)]" />

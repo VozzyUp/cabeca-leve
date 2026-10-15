@@ -1,5 +1,5 @@
 import {
-  BellRing, Check, CircleSlash, Dumbbell, Globe, HeartHandshake, KeyRound, LifeBuoy, ReceiptText, ShieldCheck, Users, WalletCards, type LucideIcon,
+  BellRing, Check, CircleSlash, Dumbbell, FileText, Globe, HeartHandshake, KeyRound, LifeBuoy, ReceiptText, ShieldCheck, Users, WalletCards, type LucideIcon,
 } from "lucide-react";
 import type { Metadata } from "next";
 import Image from "next/image";
@@ -52,6 +52,7 @@ const ALSO: { icon: LucideIcon; text: string }[] = [
   { icon: WalletCards, text: "contas fixas, parcelas e cartões" },
   { icon: Dumbbell, text: "treino, alimentação e metas" },
   { icon: Globe, text: "pesquisa diária na internet" },
+  { icon: FileText, text: "notas e pedidos médicos para reembolso" },
   { icon: KeyRound, text: "cofre de senhas" },
   { icon: Users, text: "conta para o casal ou a família" },
   { icon: HeartHandshake, text: "o tom que combina com você" },

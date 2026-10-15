@@ -11,7 +11,7 @@ import { parseBudget, parseMessage, wantsHuman } from "./rule-parser";
 import type { ChatImage } from "@/lib/image";
 import { createHabit, createReminder, createTask, recordTransaction, setBudgetByName } from "./tools";
 
-export type AssistantReply = { text: string; cards: ActionCardData[]; replies?: string[]; files?: string[] };  // files: ids de documentos a mandar de volta  // replies: respostas rápidas (botões no WhatsApp)
+export type AssistantReply = { text: string; cards: ActionCardData[]; replies?: string[]; files?: string[]; merged?: boolean };  // files: ids de documentos a mandar de volta; merged: num PDF único  // replies: respostas rápidas (botões no WhatsApp)
 
 // Intérprete de regras: reserva para quando não há chave da Anthropic (testes e demonstração).
 // O agente de verdade (agent.ts) usa as mesmas ferramentas (tools.ts).

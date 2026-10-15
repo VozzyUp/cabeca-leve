@@ -83,4 +83,51 @@ describe.skipIf(!run)("entregas", () => {
     await deliverBriefings();
     expect(sent.filter((s) => s.text.includes("Bia."))).toHaveLength(1);
   });
+
+  it("prazo do reembolso: avisa 7 e 2 dias antes, só depois das 9h, uma vez por prazo e só do que está pendente", async () => {
+    const { deliverDocumentAlerts } = await import("./deliveries");
+    const row = (title: string, due: string | null, status: string | null, cents: number | null) => ({
+      user_id: userId, title, due_on: due, status, amount_cents: cents, file_path: `${userId}/${title}.pdf`, file_name: `${title}.pdf`, mime_type: "application/pdf", size_bytes: 1000,
+    });
+    await admin.from("documents").insert([
+      row("Sete dias", "2026-10-27", "pending", 35000),       // 7 dias depois de 20/10
+      row("Dois dias", "2026-10-22", "pending", 18750),
+      row("Longe", "2026-11-30", "pending", 100),
+      row("Enviada", "2026-10-22", "submitted", 100),         // já pedida: não avisa
+      row("Vencida", "2026-10-18", "pending", 100),           // passou: o app mostra em vermelho, não avisa
+      row("Pedido", null, null, null),                        // só guardado
+    ]);
+    const mine = () => sent.filter((s) => s.text.includes("prazo do reembolso"));
+    const stages = async () => Object.fromEntries(((await admin.from("documents").select("title, alert_stage").eq("user_id", userId)).data ?? []).map((d) => [d.title, d.alert_stage]));
+
+    // 07h em São Paulo: cedo demais
+    expect(await deliverDocumentAlerts(new Date("2026-10-20T10:00:00Z"))).toBe(0);
+    expect(mine()).toHaveLength(0);
+
+    // 10h: uma mensagem só, com as duas notas que entraram na janela
+    expect(await deliverDocumentAlerts(new Date("2026-10-20T13:00:00Z"))).toBe(1);
+    expect(mine()).toHaveLength(1);
+    expect(mine()[0].text).toMatch(/2 notas estão perto do prazo do reembolso/);
+    expect(mine()[0].text).toMatch(/R\$\s537,50/);  // 350 + 187,50
+    expect(mine()[0].text).toContain("Sete dias");
+    expect(mine()[0].text).toContain("vence em 7 dias");
+    expect(mine()[0].text).toContain("Dois dias");
+    for (const out of ["Longe", "Enviada", "Vencida", "Pedido"]) expect(mine()[0].text).not.toContain(out);
+    expect(await stages()).toMatchObject({ "Sete dias": 1, "Dois dias": 2, Longe: 0, Enviada: 0, Vencida: 0 });
+    expect((await admin.from("notices").select("title").eq("user_id", userId).eq("title", "Prazo do reembolso")).data).toHaveLength(1);
+
+    // varredura repetida (e duas ao mesmo tempo): nada novo
+    await Promise.all([deliverDocumentAlerts(new Date("2026-10-20T13:01:00Z")), deliverDocumentAlerts(new Date("2026-10-20T13:01:00Z"))]);
+    expect(mine()).toHaveLength(1);
+    // no dia seguinte, os dois já foram avisados naquele prazo
+    expect(await deliverDocumentAlerts(new Date("2026-10-21T13:00:00Z"))).toBe(0);
+
+    // 25/10: a "Sete dias" entra na janela de 2 dias e avisa de novo, só ela (a outra já venceu)
+    expect(await deliverDocumentAlerts(new Date("2026-10-25T13:00:00Z"))).toBe(1);
+    expect(mine()).toHaveLength(2);
+    expect(mine()[1].text).toMatch(/1 nota está perto do prazo/);
+    expect(mine()[1].text).toContain("vence em 2 dias");
+    expect(mine()[1].text).not.toContain("Dois dias");
+    expect(await stages()).toMatchObject({ "Sete dias": 2 });
+  });
 });

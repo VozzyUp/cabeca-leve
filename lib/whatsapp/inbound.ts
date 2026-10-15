@@ -13,6 +13,8 @@ import type { DataStore, StagedFile } from "@/lib/data/store";
 import type { ChatPdf } from "@/lib/assistant/agent";
 import { DocumentError, pdfForReading, prepareFile, stageOriginal } from "@/lib/documents";
 import { agentEnabled } from "@/lib/assistant/agent";
+import { buildPdf, exportName } from "@/lib/document-export";
+import { localDate } from "@/lib/time";
 
 const KIND: Record<ActionCardData["kind"], string> = {
   reminder: "Lembrete", transaction: "Lançamento", task: "Tarefa", habit: "Hábito", workout: "Ficha de treino", meal: "Plano alimentar",
@@ -101,7 +103,7 @@ export async function processInbound(msg: Inbound) {
     // o assistente pode propor respostas rápidas; senão, o que acabou de ser registrado ganha Desfazer e Alterar
     const buttons = reply.replies?.length ? reply.replies.map((r) => ({ id: `q:${r}`, title: r })) : cardButtons(reply.cards);
     await sendReply(wa, msg.from, formatReply(reply.text, reply.cards), buttons);
-    if (reply.files?.length) await sendDocuments(wa, store, msg.from, reply.files);
+    if (reply.files?.length) await sendDocuments(wa, store, msg.from, reply.files, reply.merged);
   } catch (error) {
     // o provedor reenviou a mesma mensagem: já foi processada
     if (error instanceof Error && /duplicate key|external_message_id/.test(error.message)) return;
@@ -112,8 +114,22 @@ export async function processInbound(msg: Inbound) {
 const MAX_PDF_READ_BYTES = 5 * 1024 * 1024;  // PDF maior que isso (mesmo cortado em 10 páginas) é guardado sem a IA ler
 
 // Manda de volta os arquivos que o assistente separou, um por mensagem, com o nome do documento na legenda
-export async function sendDocuments(wa: NonNullable<ReturnType<typeof whatsapp>>, store: DataStore, to: string, ids: string[]) {
-  const titles = new Map((await store.listDocuments()).map((d) => [d.id, d.title]));
+export async function sendDocuments(wa: NonNullable<ReturnType<typeof whatsapp>>, store: DataStore, to: string, ids: string[], merged = false) {
+  const all = await store.listDocuments();
+  const titles = new Map(all.map((d) => [d.id, d.title]));
+  if (merged) {
+    // vários documentos juntos: um PDF só, com capa, lista e total
+    try {
+      const docs = ids.map((id) => all.find((d) => d.id === id)).filter((d) => !!d);
+      const name = (await store.getSettings()).name;
+      const pdf = await buildPdf(store, docs, await store.listDocFolders(), name);
+      await wa.sendFile(to, { bytes: pdf, mimeType: "application/pdf", fileName: exportName("pdf", localDate(new Date(), store.timezone())), caption: `${docs.length} ${docs.length === 1 ? "documento" : "documentos"} para o reembolso` });
+    } catch (error) {
+      console.error("PDF único não enviado", error instanceof Error ? error.message : error);
+      await wa.sendText(to, `Não consegui montar o PDF por aqui. Exporte em ${site()}/documentos (botão PDF único).`);
+    }
+    return;
+  }
   for (const id of ids) {
     try {
       const file = await store.readDocumentFile(id);

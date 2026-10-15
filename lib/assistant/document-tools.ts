@@ -147,9 +147,9 @@ export async function updateDocuments(store: DataStore, input: UpdateInput) {
 }
 
 // Documentos que o assistente vai mandar de volta: confere que são da pessoa e respeita o limite por mensagem
-export async function pickForSending(store: DataStore, ids: string[]) {
+export async function pickForSending(store: DataStore, ids: string[], max = MAX_SEND) {
   const docs = await store.listDocuments();
   const wanted = [...new Set(ids)].map((id) => docs.find((d) => d.id === id)).filter((d): d is Doc => !!d);
-  return { send: wanted.slice(0, MAX_SEND), skipped: Math.max(0, wanted.length - MAX_SEND), missing: new Set(ids).size - wanted.length };
+  return { send: wanted.slice(0, max), skipped: Math.max(0, wanted.length - max), missing: new Set(ids).size - wanted.length };
 }
 

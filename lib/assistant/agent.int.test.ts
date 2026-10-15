@@ -504,6 +504,15 @@ describe.skipIf(!run)("agente", () => {
     };
     expect((await ask("whatsapp")).files).toEqual([doc.id]);
     expect((await ask("web")).files).toBeUndefined();
+    // vários documentos: um PDF único (merged) com até 100, em vez de um arquivo por mensagem
+    replies.push(
+      msg([{ type: "tool_use", id: "toolu_merged", name: "send_documents", input: { ids: after.map((d) => d.id), merged: true } }], "tool_use"),
+      msg([{ type: "text", text: "Juntei tudo num PDF." }], "end_turn"),
+    );
+    const bundle = await runAgent({ store, text: "junta tudo num pdf", channel: "whatsapp", now: new Date("2026-10-15T15:09:00Z") });
+    expect(bundle.merged).toBe(true);
+    expect(bundle.files).toHaveLength(after.length);
+    expect((await ask("whatsapp")).merged).toBeUndefined();  // sem merged, cada arquivo vai separado
 
     // 7) Desfazer apaga o documento e o arquivo do Storage
     const { data: path } = await admin.from("documents").select("file_path").eq("id", doc.id).single();
