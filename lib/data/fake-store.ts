@@ -58,6 +58,7 @@ type State = {
 
 const id = () => crypto.randomUUID();
 const demoFiles = new Map<string, import("./store").DocumentFile>();
+const demoStaged = new Map<string, import("./store").DocumentFile>();
 
 // tira da vista as fichas e planos que um novo substituiu (continuam guardados, para o desfazer)
 function hidden(s: State) {
@@ -355,6 +356,7 @@ export const fakeStore: DataStore = {
       else if (a.entity === "recurrence") s.recurrences = s.recurrences.filter((x) => x.id !== a.entityId);
       else if (a.entity === "goal") s.goals = s.goals.filter((g) => g.id !== a.entityId);
       else if (a.entity === "automation") s.automations = s.automations.filter((x) => x.id !== a.entityId);
+      else if (a.entity === "document") { s.documents = (s.documents ?? []).filter((d) => d.id !== a.entityId); demoFiles.delete(a.entityId); }
       else if (a.entity === "workout_plan" || a.entity === "meal_plan") {
         const kind = a.entity === "workout_plan" ? "workout" : "meal";
         const plan = (s.plans ?? []).find((p) => p.id === a.entityId);
@@ -545,6 +547,9 @@ export const fakeStore: DataStore = {
   },
   async readDocumentFile(docId) { return demoFiles.get(docId) ?? null; },
   async documentBytesUsed() { return (load().documents ?? []).reduce((sum, d) => sum + d.sizeBytes, 0); },
+  async stageFile(file) { const ref = id(); demoStaged.set(ref, file); return { ref, fileName: file.fileName, mimeType: file.mimeType, sizeBytes: file.bytes.length }; },
+  async readStagedFile(ref) { return demoStaged.get(ref) ?? null; },
+  async dropStagedFile(ref) { demoStaged.delete(ref); },
   async getVault() { return load().vault ?? null; },
   async setupVault(meta) { mutate((s) => { if (s.vault) throw new Error("cofre já existe"); s.vault = meta; s.vaultItems = []; }); },
   async listVaultItems() { return [...(load().vaultItems ?? [])]; },

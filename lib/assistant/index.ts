@@ -1,7 +1,8 @@
-import type { DataStore } from "@/lib/data/store";
+import type { DataStore, StagedFile } from "@/lib/data/store";
 import type { ActionCardData, ChatMessage } from "@/lib/data/types";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import { agentEnabled, runAgent } from "./agent";
+import { agentEnabled, runAgent, type ChatPdf } from "./agent";
+import { saveStagedDocument } from "./document-tools";
 import { limitReply, limitsFor } from "@/lib/limits";
 import { periodRange } from "@/lib/ai-costs";
 import { siteUrl } from "@/lib/public-env";
@@ -10,7 +11,7 @@ import { parseBudget, parseMessage, wantsHuman } from "./rule-parser";
 import type { ChatImage } from "@/lib/image";
 import { createHabit, createReminder, createTask, recordTransaction, setBudgetByName } from "./tools";
 
-export type AssistantReply = { text: string; cards: ActionCardData[]; replies?: string[] };  // replies: respostas rápidas (botões no WhatsApp)
+export type AssistantReply = { text: string; cards: ActionCardData[]; replies?: string[]; files?: string[] };  // files: ids de documentos a mandar de volta  // replies: respostas rápidas (botões no WhatsApp)
 
 // Intérprete de regras: reserva para quando não há chave da Anthropic (testes e demonstração).
 // O agente de verdade (agent.ts) usa as mesmas ferramentas (tools.ts).
@@ -59,9 +60,12 @@ async function callHuman(store: DataStore, text: string, channel: "web" | "whats
 export async function respond(store: DataStore, text: string, opts: {
   channel: "web" | "whatsapp" | "voice"; clientMessageId?: string; externalMessageId?: string; now?: Date;
   images?: ChatImage[];  // fotos desta mensagem (já reduzidas); o texto pode ser a legenda ou vazio
+  pdfs?: ChatPdf[];      // PDFs desta mensagem (primeiras páginas), para o modelo ler
+  files?: StagedFile[];  // originais estacionados (foto ou PDF) que o assistente pode guardar como documento
   sender?: string | null;  // nome do WhatsApp que mandou, quando a conta tem mais de uma pessoa
 }): Promise<{ user: ChatMessage | null; reply: AssistantReply; stored?: false }> {
   if (opts.images?.length) text = text.trim() ? `📷 ${text.trim()}` : "📷 Foto";
+  else if (opts.pdfs?.length || opts.files?.some((f) => f.mimeType === "application/pdf")) text = text.trim() ? `📎 ${text.trim()}` : `📎 ${opts.files?.[0]?.fileName ?? "Documento"}`;
   // teste grátis acabou e não há assinatura: guarda a mensagem e explica, sem rodar o assistente
   if (isSupabaseConfigured() && (await store.getSettings()).plan === "none") {
     const site = siteUrl();
@@ -81,7 +85,7 @@ export async function respond(store: DataStore, text: string, opts: {
 }
 
 async function turn(store: DataStore, text: string, opts: {
-  channel: "web" | "whatsapp" | "voice"; clientMessageId?: string; externalMessageId?: string; now?: Date; images?: ChatImage[]; sender?: string | null;
+  channel: "web" | "whatsapp" | "voice"; clientMessageId?: string; externalMessageId?: string; now?: Date; images?: ChatImage[]; pdfs?: ChatPdf[]; files?: StagedFile[]; sender?: string | null;
 }): Promise<{ user: ChatMessage | null; reply: AssistantReply; stored?: false }> {
   // limite de uso por plano: protege o custo de IA (e o número de WhatsApp) contra abuso
   const settings = await store.getSettings();
@@ -100,10 +104,23 @@ async function turn(store: DataStore, text: string, opts: {
     return { user: null, reply };
   }
   const user = await store.appendMessage({ role: "user", text, cards: [], channel: opts.channel, clientMessageId: opts.clientMessageId, externalMessageId: opts.externalMessageId });
-  // sem a IA ligada (demonstração e testes) não há como ler a foto
-  const reply = opts.images?.length
-    ? { text: "Ainda não leio fotos neste app. Escreva o que tem nela, por exemplo “gastei 45 no mercado”.", cards: [] }
-    : await handleMessage(store, text, opts.now, opts.channel);
+  // sem a IA ligada (demonstração e testes) não há como ler a foto; o PDF, porém, dá para guardar em Documentos sem ler
+  const pdf = opts.files?.find((f) => f.mimeType === "application/pdf");
+  const reply = pdf
+    ? await keepWithoutReading(store, pdf, opts.channel)
+    : opts.images?.length
+      ? { text: "Ainda não leio fotos neste app. Escreva o que tem nela, por exemplo “gastei 45 no mercado”.", cards: [] }
+      : await handleMessage(store, text, opts.now, opts.channel);
   await store.appendMessage({ role: "assistant", text: reply.text, cards: reply.cards, channel: opts.channel });
   return { user, reply };
+}
+
+// Sem a IA: o PDF vai para Documentos, sem pasta e como pendente, com o nome do arquivo; a pessoa completa os dados no app
+async function keepWithoutReading(store: DataStore, file: StagedFile, channel: "web" | "whatsapp" | "voice"): Promise<AssistantReply> {
+  const r = await saveStagedDocument(store, {
+    fileRef: file.ref, title: file.fileName.replace(/\.pdf$/i, "").slice(0, 120) || "Documento", issuer: null, beneficiary: null, category: null, docDate: null,
+    amountReais: null, folder: null, deadlineDays: null, reimbursable: true, notes: null,
+  }, channel === "whatsapp" ? "whatsapp" : "web");
+  if ("error" in r) return { text: r.error, cards: [] };
+  return { text: `Guardei em Documentos, sem pasta. Complete os dados e escolha a pasta em ${siteUrl()}/documentos.`, cards: [r.card] };
 }

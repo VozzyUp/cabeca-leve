@@ -257,3 +257,16 @@ Paridade 63,2/100; **40 de 40 obrigatórias completas**.
 - Corrigido junto: o limite de corpo do proxy subiu para 26 MB (PDF de até 25 MB); o teste das contas fixas usava a data UTC, e entre 21h e 24h no Brasil falhava.
 - Migração `20261015000100_documentos` (arquivo 27 para colar). Testes: `lib/domain/documents.test.ts`, `lib/documents.test.ts`, integração do store e `e2e/documentos.spec.ts` (DOC-H1, DOC-E1, DOC-X1).
 - **Falta (etapas 2 e 3):** guardar e achar pelo WhatsApp e reenviar o arquivo lá; avisos de prazo (7 e 2 dias); exportar a pasta em PDF único e planilha.
+
+## 2026-10-15: documentos, etapa 2 (assistente e WhatsApp)
+
+- **Receber:** o WhatsApp aceita foto e **documento** (PDF) nos dois provedores (UAZAPI e Meta). O original (foto em JPEG de até 2400 px, PDF como veio) fica **estacionado por 24 h** em `document_staging`; a mensagem para o assistente leva o `ref` do anexo. Teto de 100 MB estacionados por conta (os mais antigos saem primeiro). A varredura de hora em hora apaga o que passou de 24 h.
+- **Ferramentas do assistente** (`lib/assistant/document-tools.ts`): `save_document` (guarda o anexo numa pasta, cria a pasta se não existir, devolve card com Desfazer que apaga documento e arquivo), `set_doc_folder`, `find_documents` (contagem e soma por status calculadas no servidor, 25 itens, o prazo mais urgente primeiro), `update_documents` (status, pasta, dados; várias de uma vez) e `send_documents` (devolve o arquivo original, até 10 por vez).
+- **Mandar de volta:** `sendFile` nos dois provedores. UAZAPI: `/send/media` com o arquivo em base64. Meta: sobe a mídia e manda com o id. No app, o assistente explica onde baixar.
+- Perguntas como "quais notas tenho pendentes?" e "as notas da Dra. Roberta" passam por `find_documents`; o prompt proíbe somar de cabeça. As pastas e os prazos entram no contexto do dia.
+- **PDF na conversa** entra no histórico do dia (o assistente enxerga nas mensagens seguintes) e vira "[documento removido]" depois de 2 dias, como a foto. PDF maior que 5 MB (mesmo cortado em 10 páginas) é guardado sem a IA ler.
+- **Sem a IA ligada** (demonstração e e2e), o PDF vai para Documentos sem pasta, como pendente, com o nome do arquivo.
+- Foto mandada no app ou no WhatsApp também guarda o original estacionado, para o "guarda na pasta Convênio" vir na mensagem seguinte.
+- Migração `20261015000200_documentos_no_chat` (arquivo 28 para colar). Testes: `agent.int.test.ts` (3 novos), `whatsapp.int.test.ts` (2 novos), `supabase-store.int.test.ts`, `e2e/documentos.spec.ts` (DOC-W1).
+- **Atenção:** o envio de arquivo pelos provedores foi testado contra servidores falsos que seguem a documentação (UAZAPI `/send/media`, Meta `/media` + `/messages`). Precisa de uma conferência com a conta real antes de contar com ele.
+- **Falta (etapa 3):** avisos de prazo (7 e 2 dias) e exportar a pasta em PDF único e planilha.

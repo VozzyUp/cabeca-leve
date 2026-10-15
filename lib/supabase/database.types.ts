@@ -423,6 +423,20 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"document_staging": {
+                  Row: {
+                    "created_at": string,"file_name": string,"file_path": string,"id": string,"mime_type": string,"size_bytes": number,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"file_name": string,"file_path": string,"id"?: string,"mime_type": string,"size_bytes": number,"user_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"file_name"?: string,"file_path"?: string,"id"?: string,"mime_type"?: string,"size_bytes"?: number,"user_id"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"documents": {
                   Row: {
                     "alert_stage": number,"amount_cents": number | null,"beneficiary": string | null,"category": string | null,"created_at": string,"doc_date": string | null,"due_on": string | null,"file_name": string,"file_path": string,"folder_id": string | null,"id": string,"issuer": string | null,"mime_type": string,"notes": string | null,"reimbursed_on": string | null,"size_bytes": number,"source": string,"status": string | null,"submitted_on": string | null,"title": string,"updated_at": string,"user_id": string

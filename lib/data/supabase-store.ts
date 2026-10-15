@@ -8,7 +8,7 @@ import { newProtocol, notifyOwner, supportDueAt } from "@/lib/support";
 import { daysInMonth, shiftMonth } from "@/lib/domain/money";
 import { addDays, localDate, zonedToUtc } from "@/lib/time";
 import { sameFact } from "@/lib/domain/memory";
-import { FOLDER_EXISTS, MAX_MEMORIES, type DataStore, type DocumentFile } from "./store";
+import { FOLDER_EXISTS, MAX_MEMORIES, STAGING_HOURS, type DataStore, type DocumentFile } from "./store";
 import type {
   ActionCardData, ActionRecord, Automation, BodyMeasurement, CalendarEvent, ChatMessage, Note, Reminder, Settings, Task, Transaction,
   SupportTicket,
@@ -29,13 +29,14 @@ function must<T>(r: Result<T>): NonNullable<T> {
 
 const ENTITY_TABLE = {
   reminder: "reminders", transaction: "transactions", task: "tasks", habit: "habits",
-  project: "projects", goal: "goals", automation: "automations", workout_plan: "workout_plans", meal_plan: "diet_plans", recurrence: "recurrences",
+  project: "projects", goal: "goals", automation: "automations", workout_plan: "workout_plans", meal_plan: "diet_plans", recurrence: "recurrences", document: "documents",
 } as const;
 const TABLE_ENTITY = Object.fromEntries(Object.entries(ENTITY_TABLE).map(([k, v]) => [v, k])) as Record<string, ActionRecord["entity"]>;
 const UI_METHODS = new Set(["pix", "debit", "credit", "cash", "other"]);
 const hm = (t: string | null | undefined) => (t ? t.slice(0, 5) : null);
 
 const DOC_BUCKET = "documents";
+const STAGING_MAX_BYTES = 100 * 1024 * 1024;
 const DOC_EXT: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "application/pdf": "pdf" };
 const DOC_COLUMNS = "id, folder_id, title, issuer, beneficiary, category, doc_date, amount_cents, status, due_on, submitted_on, reimbursed_on, alert_stage, notes, file_name, mime_type, size_bytes, source, created_at";
 const mapFolder = (r: { id: string; name: string; deadline_days: number | null; created_at: string }): DocFolder => ({ id: r.id, name: r.name, deadlineDays: r.deadline_days, createdAt: r.created_at });
@@ -290,7 +291,8 @@ export async function createSupabaseStore(db: Admin, userId: string, email: stri
       if (a.undone_at) return { ok: false, reason: "already_undone" };
       // desfazer uma criação = remover o item criado (hábito leva os registros junto, em cascata)
       const table = a.entity_table as (typeof ENTITY_TABLE)[keyof typeof ENTITY_TABLE];
-      must(await db.from(table).delete().eq("id", a.entity_id).eq("user_id", userId));
+      if (table === "documents") await this.deleteDocument(a.entity_id);  // leva o arquivo do Storage junto
+      else must(await db.from(table).delete().eq("id", a.entity_id).eq("user_id", userId));
       // ficha ou plano alimentar que este trocou: o anterior volta a valer
       const replaced = a.after?.replaced ?? [];
       if (replaced.length && (table === "workout_plans" || table === "diet_plans")) {
@@ -863,6 +865,35 @@ export async function createSupabaseStore(db: Admin, userId: string, email: stri
     async documentBytesUsed() {
       return must(await db.from("documents").select("size_bytes").eq("user_id", userId)).reduce((sum, r) => sum + r.size_bytes, 0);
     },
+    async stageFile(file) {
+      // teto de 100 MB estacionados por conta: se passar, os mais antigos saem primeiro (anexo em enxurrada não enche o disco)
+      const staged = must(await db.from("document_staging").select("id, file_path, size_bytes").eq("user_id", userId).order("created_at"));
+      let total = staged.reduce((n, r) => n + r.size_bytes, 0) + file.bytes.length;
+      const evict: typeof staged = [];
+      for (const r of staged) { if (total <= STAGING_MAX_BYTES) break; evict.push(r); total -= r.size_bytes; }
+      if (evict.length) {
+        await db.storage.from(DOC_BUCKET).remove(evict.map((r) => r.file_path));
+        must(await db.from("document_staging").delete().in("id", evict.map((r) => r.id)).eq("user_id", userId));
+      }
+      const id = crypto.randomUUID();
+      const path = `${userId}/staging/${id}.${DOC_EXT[file.mimeType] ?? "bin"}`;
+      const up = await db.storage.from(DOC_BUCKET).upload(path, file.bytes, { contentType: file.mimeType, upsert: false });
+      if (up.error) throw new Error(`arquivo não guardado: ${up.error.message}`);
+      const r = await db.from("document_staging").insert({ id, user_id: userId, file_path: path, file_name: file.fileName, mime_type: file.mimeType, size_bytes: file.bytes.length }).select("id").single();
+      if (r.error) { await db.storage.from(DOC_BUCKET).remove([path]); throw new Error(r.error.message); }
+      return { ref: id, fileName: file.fileName, mimeType: file.mimeType, sizeBytes: file.bytes.length };
+    },
+    async readStagedFile(ref) {
+      const row = must(await db.from("document_staging").select("file_path, file_name, mime_type, created_at").eq("id", ref).eq("user_id", userId).maybeSingle());
+      if (!row || Date.parse(row.created_at) < Date.now() - STAGING_HOURS * 3_600_000) return null;
+      const dl = await db.storage.from(DOC_BUCKET).download(row.file_path);
+      if (dl.error || !dl.data) return null;
+      return { bytes: Buffer.from(await dl.data.arrayBuffer()), mimeType: row.mime_type, fileName: row.file_name };
+    },
+    async dropStagedFile(ref) {
+      const rows = must(await db.from("document_staging").delete().eq("id", ref).eq("user_id", userId).select("file_path"));
+      if (rows[0]) await db.storage.from(DOC_BUCKET).remove([rows[0].file_path]);
+    },
     async getVault() {
       const v = must(await db.from("vaults").select("salt, iterations, verifier_iv, verifier").eq("user_id", userId).maybeSingle());
       return v ? { salt: v.salt, iterations: v.iterations, verifier: { iv: v.verifier_iv, ciphertext: v.verifier } } : null;
@@ -897,7 +928,10 @@ export async function createSupabaseStore(db: Admin, userId: string, email: stri
     },
     async deleteAllData() {
       // os arquivos dos documentos ficam no Storage, fora da cascata: saem primeiro
-      const files = must(await db.from("documents").select("file_path").eq("user_id", userId)).map((r) => r.file_path);
+      const files = [
+        ...must(await db.from("documents").select("file_path").eq("user_id", userId)).map((r) => r.file_path),
+        ...must(await db.from("document_staging").select("file_path").eq("user_id", userId)).map((r) => r.file_path),
+      ];
       for (let i = 0; i < files.length; i += 100) await db.storage.from(DOC_BUCKET).remove(files.slice(i, i + 100));
       // apagar o usuário do Auth apaga tudo dele em cascata (FKs on delete cascade)
       const { error } = await db.auth.admin.deleteUser(userId);
@@ -905,4 +939,15 @@ export async function createSupabaseStore(db: Admin, userId: string, email: stri
     },
   };
   return store;
+}
+
+// Varredura: apaga os arquivos estacionados há mais de STAGING_HOURS (de todas as contas). Devolve quantos saíram.
+export async function purgeStagedFiles(db: Admin, now = new Date()): Promise<number> {
+  const cutoff = new Date(now.getTime() - STAGING_HOURS * 3_600_000).toISOString();
+  const rows = must(await db.from("document_staging").select("id, file_path").lt("created_at", cutoff).limit(500));
+  if (!rows.length) return 0;
+  const paths = rows.map((r) => r.file_path);
+  await db.storage.from(DOC_BUCKET).remove(paths);
+  must(await db.from("document_staging").delete().in("id", rows.map((r) => r.id)));
+  return rows.length;
 }

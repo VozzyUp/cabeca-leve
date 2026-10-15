@@ -42,6 +42,8 @@ export type DocumentInput = {
 export type DocumentPatch = Partial<Pick<Doc, "folderId" | "title" | "issuer" | "beneficiary" | "category" | "docDate" | "amountCents" | "status" | "dueOn" | "submittedOn" | "reimbursedOn" | "alertStage" | "notes">>;
 export type DocumentFile = { bytes: Buffer; mimeType: string; fileName: string };
 export const MAX_DOCUMENT_BYTES = 25 * 1024 * 1024;
+export type StagedFile = { ref: string; fileName: string; mimeType: string; sizeBytes: number };
+export const STAGING_HOURS = 24;
 export const FOLDER_EXISTS = "Já existe uma pasta com esse nome.";
 export type MemoryResult = { ok: true; memory: Memory } | { ok: false; reason: "duplicate" | "full" };
 
@@ -154,6 +156,10 @@ export interface DataStore {
   deleteDocument(id: string): Promise<boolean>;  // apaga o arquivo também
   readDocumentFile(id: string): Promise<DocumentFile | null>;
   documentBytesUsed(): Promise<number>;
+  // arquivo recebido (WhatsApp, chat) que ainda não tem pasta: fica estacionado por 24 h, para o "guarda na pasta X" da próxima mensagem
+  stageFile(file: DocumentFile): Promise<StagedFile>;
+  readStagedFile(ref: string): Promise<DocumentFile | null>;
+  dropStagedFile(ref: string): Promise<void>;
 
   // cofre de senhas: só texto já cifrado no aparelho (lib/vault-crypto.ts); o servidor nunca vê a senha mestra
   getVault(): Promise<VaultMeta | null>;

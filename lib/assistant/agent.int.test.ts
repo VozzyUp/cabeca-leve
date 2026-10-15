@@ -426,4 +426,155 @@ describe.skipIf(!run)("agente", () => {
       delete process.env.ANTHROPIC_MODEL; delete process.env.ANTHROPIC_EFFORT;
     }
   });
+
+  it("documentos: guarda o anexo estacionado em pasta nova, acha e soma por status, muda o status, manda de volta e o Desfazer apaga o documento e o arquivo", async () => {
+    const { runAgent } = await import("./agent");
+    const original = Buffer.from("%PDF-1.4 conteudo-do-pdf-de-mentira");
+    const staged = await store.stageFile({ bytes: original, mimeType: "application/pdf", fileName: "consulta.pdf" });
+    const toolResult = (req: Req) => JSON.stringify((req.body.messages.at(-1)!.content as Array<{ type: string; content: unknown }>).filter((b) => b.type === "tool_result"));
+
+    // 1) o PDF chega com a legenda; a IA lê e guarda numa pasta que ainda não existe
+    replies.push(
+      msg([{ type: "tool_use", id: "toolu_doc1", name: "save_document", input: { file_ref: staged.ref, title: "Consulta Dra. Roberta", issuer: "Dra. Roberta Lima", beneficiary: "Ana", category: "Consulta", doc_date: "2026-10-05", amount: 350, folder: "Convênio", deadline_days: 30, reimbursable: true, notes: null } }], "tool_use"),
+      msg([{ type: "text", text: "Guardei na pasta Convênio." }], "end_turn"),
+    );
+    const n1 = requests.length;
+    const saved = await runAgent({ store, text: "📎 guarda no convênio", channel: "whatsapp", now: new Date("2026-10-15T15:00:00Z"), files: [staged], pdfs: [{ data: "UERGLWRlLW1lbnRpcmE=" }] });
+    const first = requests[n1].body.messages.at(-1)!.content as Array<{ type: string; text?: string; source?: { media_type: string; data: string } }>;
+    expect(first.map((b) => b.type)).toEqual(["text", "document"]);
+    expect(first[0].text).toContain(`Anexo recebido: ref=${staged.ref} · PDF · consulta.pdf`);
+    expect(first[1].source).toMatchObject({ media_type: "application/pdf", data: "UERGLWRlLW1lbnRpcmE=" });
+    expect(JSON.stringify(requests[n1].body.system)).toContain("Documentos (notas fiscais");
+    expect(saved.cards).toHaveLength(1);
+    expect(saved.cards[0]).toMatchObject({ kind: "document", title: "Consulta Dra. Roberta", value: expect.stringMatching(/350,00/), href: "/documentos", meta: expect.stringContaining("Convênio") });
+    const folder = (await store.listDocFolders()).find((f) => f.name === "Convênio")!;
+    expect(folder.deadlineDays).toBe(30);
+    const doc = (await store.listDocuments()).find((d) => d.title === "Consulta Dra. Roberta")!;
+    expect(doc).toMatchObject({ folderId: folder.id, issuer: "Dra. Roberta Lima", beneficiary: "Ana", amountCents: 35000, status: "pending", dueOn: "2026-11-04", source: "whatsapp" });
+    expect((await store.readDocumentFile(doc.id))!.bytes.equals(original)).toBe(true);
+    expect(await store.readStagedFile(staged.ref)).toBeNull();  // o estacionado foi usado
+
+    // 2) segunda nota, de outra pessoa, e um pedido médico (não entra na conta)
+    const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==", "base64");
+    await store.addDocument({ folderId: folder.id, title: "Jantar em SP", issuer: "Restaurante Sol", beneficiary: null, category: "Refeição", docDate: "2026-10-06", amountCents: 18750, status: "pending", dueOn: "2026-11-05", notes: null, fileName: "jantar.png", mimeType: "image/png", source: "web" }, png);
+    await store.addDocument({ folderId: null, title: "Pedido de ressonância", issuer: "Dr. João", beneficiary: "Ana", category: "Exame", docDate: "2026-10-07", amountCents: null, status: null, dueOn: null, notes: null, fileName: "pedido.png", mimeType: "image/png", source: "web" }, png);
+
+    // 3) "quais notas estão pendentes?": a soma vem da ferramenta
+    replies.push(
+      msg([{ type: "tool_use", id: "toolu_doc2", name: "find_documents", input: { who: null, query: null, status: "pending", folder: null, from: null, to: null } }], "tool_use"),
+      msg([{ type: "text", text: "São 2 notas pendentes." }], "end_turn"),
+    );
+    const n2 = requests.length;
+    await runAgent({ store, text: "quais notas tenho pendentes de reembolso?", channel: "whatsapp", now: new Date("2026-10-15T15:05:00Z") });
+    const found = toolResult(requests[n2 + 1]);
+    expect(found).toMatch(/R\$\s537,50/);        // 350 + 187,50 (o real vem com espaço sem quebra)
+    expect(found).toContain('\\"count\\":2');
+    expect(found).not.toContain("Pedido de ressonância");  // só guardado fica fora do filtro de pendentes
+    expect(found).toContain(doc.id);
+
+    // 4) "as notas da Dra. Roberta"
+    replies.push(
+      msg([{ type: "tool_use", id: "toolu_doc3", name: "find_documents", input: { who: "roberta", query: null, status: null, folder: null, from: null, to: null } }], "tool_use"),
+      msg([{ type: "text", text: "Uma nota da Dra. Roberta." }], "end_turn"),
+    );
+    const n3 = requests.length;
+    await runAgent({ store, text: "quais as notas fiscais da dra Roberta?", channel: "whatsapp", now: new Date("2026-10-15T15:06:00Z") });
+    expect(toolResult(requests[n3 + 1])).toContain('\\"count\\":1');
+    expect(toolResult(requests[n3 + 1])).not.toContain("Restaurante Sol");
+
+    // 5) marcar como enviadas as duas pendentes; o status e a data mudam no banco
+    const all = (await store.listDocuments()).filter((d) => d.status === "pending").map((d) => d.id);
+    replies.push(
+      msg([{ type: "tool_use", id: "toolu_doc4", name: "update_documents", input: { ids: all, status: "submitted" } }], "tool_use"),
+      msg([{ type: "text", text: "Marquei as 2 como enviadas." }], "end_turn"),
+    );
+    await runAgent({ store, text: "pedi o reembolso dessas duas", channel: "whatsapp", now: new Date("2026-10-15T15:07:00Z") });
+    const after = await store.listDocuments();
+    expect(after.filter((d) => d.status === "submitted")).toHaveLength(2);
+    expect(after.find((d) => d.id === doc.id)!.submittedOn).toMatch(/^2026-10-1[45]$/);
+    expect(after.find((d) => d.title === "Pedido de ressonância")!.status).toBeNull();  // o pedido médico não mudou
+
+    // 6) mandar o arquivo de volta: no WhatsApp a resposta leva os ids; no app, só a explicação
+    const ask = async (channel: "whatsapp" | "web") => {
+      replies.push(
+        msg([{ type: "tool_use", id: `toolu_send_${channel}`, name: "send_documents", input: { ids: [doc.id, "00000000-0000-4000-8000-000000000000"] } }], "tool_use"),
+        msg([{ type: "text", text: "Mandei." }], "end_turn"),
+      );
+      return runAgent({ store, text: "manda o arquivo da consulta", channel, now: new Date("2026-10-15T15:08:00Z") });
+    };
+    expect((await ask("whatsapp")).files).toEqual([doc.id]);
+    expect((await ask("web")).files).toBeUndefined();
+
+    // 7) Desfazer apaga o documento e o arquivo do Storage
+    const { data: path } = await admin.from("documents").select("file_path").eq("id", doc.id).single();
+    expect(await store.undoAction(saved.cards[0].actionId)).toEqual({ ok: true });
+    expect((await store.listDocuments()).some((d) => d.id === doc.id)).toBe(false);
+    expect((await admin.storage.from("documents").download(path!.file_path)).error).toBeTruthy();
+  });
+
+  it("documentos: anexo expirado, de outra conta ou sem espaço volta como erro para o modelo, e nada é gravado", async () => {
+    const { runAgent } = await import("./agent");
+    const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==", "base64");
+    const input = (ref: string) => ({ file_ref: ref, title: "Nota", issuer: null, beneficiary: null, category: null, doc_date: null, amount: 10, folder: null, deadline_days: null, reimbursable: true, notes: null });
+    const attempt = async (ref: string, n: number) => {
+      replies.push(msg([{ type: "tool_use", id: `toolu_err${n}`, name: "save_document", input: input(ref) }], "tool_use"), msg([{ type: "text", text: "Não deu." }], "end_turn"));
+      const at = requests.length;
+      const r = await runAgent({ store, text: "guarda", channel: "whatsapp", now: new Date(`2026-10-15T16:0${n}:00Z`) });
+      return { reply: r, result: JSON.stringify(requests[at + 1].body.messages.at(-1)!.content) };
+    };
+    const count = async () => (await store.listDocuments()).length;
+    const start = await count();
+
+    // inventado
+    const a = await attempt("00000000-0000-4000-8000-000000000000", 1);
+    expect(a.result).toContain("Erro: Esse arquivo não está mais disponível");
+    expect(a.reply.cards).toEqual([]);
+
+    // de outra conta
+    const { data: other } = await admin.auth.admin.createUser({ email: `agente-b-${Date.now()}@teste.local`, password: "x".repeat(12), email_confirm: true });
+    try {
+      const theirs = await (await createSupabaseStore(admin, other.user!.id, null)).stageFile({ bytes: png, mimeType: "image/png", fileName: "dela.png" });
+      expect((await attempt(theirs.ref, 2)).result).toContain("Erro: Esse arquivo não está mais disponível");
+    } finally { await admin.auth.admin.deleteUser(other.user!.id); }
+
+    // passou de 24 horas
+    const old = await store.stageFile({ bytes: png, mimeType: "image/png", fileName: "velha.png" });
+    await admin.from("document_staging").update({ created_at: new Date(Date.now() - 25 * 3_600_000).toISOString() }).eq("id", old.ref);
+    expect((await attempt(old.ref, 3)).result).toContain("Erro: Esse arquivo não está mais disponível");
+
+    // espaço do plano cheio (teste: 100 MB): o arquivo continua estacionado para tentar de novo depois de abrir espaço
+    const fresh = await store.stageFile({ bytes: png, mimeType: "image/png", fileName: "nova.png" });
+    const { data: filler } = await admin.from("documents").insert(Array.from({ length: 4 }, (_, i) => ({
+      user_id: userId, title: `Enchimento ${i}`, file_path: `${userId}/enchimento-${i}.pdf`, file_name: "x.pdf", mime_type: "application/pdf", size_bytes: 25 * 1024 * 1024, status: null,
+    }))).select("id");
+    try {
+      const full = await attempt(fresh.ref, 4);
+      expect(full.result).toContain("espaço para documentos está cheio");
+      expect(await store.readStagedFile(fresh.ref)).not.toBeNull();
+    } finally { await admin.from("documents").delete().in("id", filler!.map((r) => r.id)); }
+    expect(await count()).toBe(start);
+
+    // a varredura apaga o que passou de 24 h (e só isso)
+    const { purgeStagedFiles } = await import("@/lib/data/supabase-store");
+    expect(await purgeStagedFiles(admin)).toBeGreaterThanOrEqual(1);
+    expect((await admin.from("document_staging").select("id").eq("id", old.ref)).data).toEqual([]);
+    expect(await store.readStagedFile(fresh.ref)).not.toBeNull();
+    await store.dropStagedFile(fresh.ref);
+  });
+
+  it("PDF na conversa entra no histórico do dia e, depois de alguns dias, vira um aviso de texto como a foto", async () => {
+    const { runAgent } = await import("./agent");
+    const data = Buffer.from("%PDF-1.4 historico-do-dia").toString("base64");
+    replies.push(msg([{ type: "text", text: "Li o PDF." }], "end_turn"));
+    await runAgent({ store, text: "📎 o que é isso?", channel: "web", now: new Date("2026-10-15T17:00:00Z"), pdfs: [{ data }] });
+    replies.push(msg([{ type: "text", text: "É a nota." }], "end_turn"));
+    const n = requests.length;
+    await runAgent({ store, text: "e o valor?", channel: "web", now: new Date("2026-10-15T17:01:00Z") });
+    expect(JSON.stringify(requests[n].body.messages)).toContain(data);  // o PDF continua na conversa do dia
+    const { error } = await admin.rpc("purge_old_message_images", { p_days: 0 });
+    expect(error).toBeNull();
+    const { data: rows } = await admin.from("messages").select("content").eq("user_id", userId);
+    expect(JSON.stringify(rows)).not.toContain(data);
+    expect(JSON.stringify(rows)).toContain("[documento removido]");
+  });
 });

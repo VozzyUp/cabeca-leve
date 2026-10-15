@@ -1,6 +1,6 @@
 import { PDFDocument } from "pdf-lib";
 import sharp from "sharp";
-import { a11y, admin, createUser, expect, login, noHorizontalScroll, test } from "./fixtures";
+import { a11y, admin, createUser, expect, login, mockCalls, noHorizontalScroll, test } from "./fixtures";
 
 async function samplePdf(pages = 1) {
   const doc = await PDFDocument.create();
@@ -182,4 +182,30 @@ test.describe("Documentos", () => {
     // o dono continua baixando
     expect((await page.request.get(`/api/documents/${doc.id}/file`)).status()).toBe(200);
   });
+});
+
+// WhatsApp -> Documentos: o PDF mandado como arquivo chega pelo webhook, é guardado (sem IA, o e2e não tem chave)
+// e aparece no app com o original disponível. Com a IA ligada, quem decide a pasta é o assistente (testado em agent.int.test.ts).
+test("DOC-W1 PDF enviado pelo WhatsApp aparece em Documentos e o original baixa igual", async ({ page, user }) => {
+  const number = `55119${String(Date.now()).slice(-8)}`;
+  await admin.from("channel_links").insert({ user_id: user.id, channel: "whatsapp", external_id: `+${number}`, verified_at: new Date().toISOString() });
+  const res = await fetch("http://localhost:3000/api/webhooks/whatsapp?secret=segredo-e2e", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ EventType: "messages", token: "token-e2e", message: {
+      messageid: `DOC-${number}`, id: "DOC-REF", chatid: `${number}@s.whatsapp.net`, sender_pn: `${number}@s.whatsapp.net`, fromMe: false, isGroup: false, wasSentByApi: false,
+      messageType: "DocumentMessage", content: { mimetype: "application/pdf", fileName: "nota-hotel.pdf" }, messageTimestamp: Date.now(),
+    } }),
+  });
+  expect(res.status).toBe(200);
+  await expect.poll(async () => (await mockCalls()).some((c) => c.url === "/send/text" || c.url === "/send/menu" ? String(c.body.number) === number && /Guardei em Documentos/.test(String(c.body.text)) : false), { timeout: 20_000 }).toBe(true);
+
+  await login(page, user, "/documentos");
+  const row = page.getByRole("button", { name: "Abrir nota-hotel" });
+  await expect(row).toBeVisible();
+  await expect(row).toContainText("Pendente");
+  const { data } = await admin.from("documents").select("id, source, size_bytes").eq("user_id", user.id).single();
+  expect(data!.source).toBe("whatsapp");
+  const original = await (await fetch("http://127.0.0.1:4010/files/nota-hotel.pdf")).arrayBuffer();
+  const res2 = await page.request.get(`/api/documents/${data!.id}/file?download=1`);
+  expect(Buffer.from(await res2.body()).equals(Buffer.from(original))).toBe(true);
 });

@@ -60,7 +60,7 @@ export type Transaction = {
 // Card que o assistente devolve no chat para cada item que criou
 export type ActionCardData = {
   actionId: string;
-  kind: "reminder" | "transaction" | "task" | "habit" | "workout" | "meal" | "project" | "goal" | "automation" | "recurring";
+  kind: "reminder" | "transaction" | "task" | "habit" | "workout" | "meal" | "project" | "goal" | "automation" | "recurring" | "document";
   title: string;
   value: string;
   valueTone: "neutral" | "income" | "expense";
@@ -82,7 +82,7 @@ export type ChatMessage = {
 
 export type ActionRecord = {
   id: string;
-  entity: "reminder" | "transaction" | "task" | "habit" | "workout_plan" | "meal_plan" | "project" | "goal" | "automation" | "recurrence";
+  entity: "reminder" | "transaction" | "task" | "habit" | "workout_plan" | "meal_plan" | "project" | "goal" | "automation" | "recurrence" | "document";
   entityId: string;
   // o que a criação trocou (ex.: ficha ativa anterior): o desfazer devolve
   replaced?: string[];

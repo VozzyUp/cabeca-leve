@@ -10,6 +10,7 @@ export type Inbound = {
   text: string | null;
   audio: { ref: string } | null; // referência para baixar o áudio depois, na fila
   image?: { ref: string; caption: string | null } | null;  // foto (comprovante, fatura...): baixada e reduzida na fila
+  file?: { ref: string; mimeType: string | null; fileName: string | null; caption: string | null } | null;  // documento (PDF, nota): baixado e estacionado na fila
   button?: { id: string } | null;  // a pessoa tocou num botão que mandamos (o id é o que demos ao botão)
   at: Date;
 };
@@ -40,6 +41,9 @@ export interface WhatsAppProvider {
   sendButtons(to: string, text: string, buttons: Button[]): Promise<void>;
   downloadAudio(ref: string): Promise<{ data: ArrayBuffer; mimeType: string }>;
   downloadImage(ref: string): Promise<{ data: ArrayBuffer; mimeType: string }>;
+  downloadFile(ref: string): Promise<{ data: ArrayBuffer; mimeType: string }>;
+  // manda um arquivo (foto ou PDF) para a pessoa, com legenda; só dentro da conversa que ela iniciou
+  sendFile(to: string, file: { bytes: Buffer; mimeType: string; fileName: string; caption?: string }): Promise<void>;
 }
 
 // WHATSAPP_BUTTONS (tela de admin): "button" (formato atual, padrão), "button_legacy" (formato antigo da UAZAPI) ou "off"
@@ -107,12 +111,16 @@ function uazapi(): WhatsAppProvider {
       const type = String(m.messageType ?? "");
       const isAudio = /audio|ptt/i.test(type);
       const isImage = /image/i.test(type);  // figurinha (sticker) não entra
+      const isFile = /document/i.test(type);  // PDF, nota enviada como arquivo
       const text = typeof m.text === "string" && m.text.trim() ? m.text.trim() : null;
       const buttonId = typeof m.buttonOrListid === "string" && m.buttonOrListid.trim() ? m.buttonOrListid.trim() : null;
-      if (!text && !isAudio && !isImage && !buttonId) return [];
+      if (!text && !isAudio && !isImage && !isFile && !buttonId) return [];
       const id = String(m.messageid ?? m.id ?? "");
-      return [{ externalId: id, from: digitsOnly(jid.split("@")[0]), text: isAudio || isImage ? null : text, button: buttonId ? { id: buttonId } : null,
+      const content = (m.content && typeof m.content === "object" ? m.content : {}) as Record<string, unknown>;
+      const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
+      return [{ externalId: id, from: digitsOnly(jid.split("@")[0]), text: isAudio || isImage || isFile ? null : text, button: buttonId ? { id: buttonId } : null,
         audio: isAudio ? { ref: String(m.id ?? id) } : null, image: isImage ? { ref: String(m.id ?? id), caption: text } : null,
+        file: isFile ? { ref: String(m.id ?? id), mimeType: str(content.mimetype) ?? str(m.mimetype), fileName: str(content.fileName) ?? str(m.fileName) ?? str(m.docName), caption: text } : null,
         at: new Date(Number(m.messageTimestamp) || Date.now()) }];
     },
     async sendText(to, text) {
@@ -134,6 +142,16 @@ function uazapi(): WhatsAppProvider {
     },
     async downloadImage(ref) {
       return download(ref, {}, "image/jpeg");
+    },
+    async downloadFile(ref) {
+      return download(ref, {}, "application/pdf");
+    },
+    async sendFile(to, file) {
+      // /send/media: o arquivo vai em base64; foto sai como imagem e PDF como documento (com o nome do arquivo)
+      const image = file.mimeType.startsWith("image/");
+      await ok(await fetch(`${base}/send/media`, { method: "POST", headers, body: JSON.stringify({
+        number: digitsOnly(to), type: image ? "image" : "document", file: file.bytes.toString("base64"), docName: file.fileName, text: file.caption ?? "",
+      }) }), "uazapi send/media");
     },
   };
 }
@@ -162,11 +180,14 @@ function meta(): WhatsAppProvider {
         const text = type === "text" ? ((m.text as { body?: string })?.body ?? "").trim() : "";
         const audio = type === "audio" ? (m.audio as { id: string }) : null;
         const image = type === "image" ? (m.image as { id: string; caption?: string }) : null;
+        const doc = type === "document" ? (m.document as { id: string; caption?: string; filename?: string; mime_type?: string }) : null;
         const reply = type === "interactive" ? (m.interactive as { button_reply?: { id: string; title?: string }; list_reply?: { id: string; title?: string } }) : null;
         const picked = reply?.button_reply ?? reply?.list_reply ?? null;
-        if (!text && !audio && !image && !picked) continue;
+        if (!text && !audio && !image && !doc && !picked) continue;
         out.push({ externalId: String(m.id), from: digitsOnly(String(m.from)), text: text || picked?.title || null, button: picked ? { id: picked.id } : null, audio: audio ? { ref: audio.id } : null,
-          image: image ? { ref: image.id, caption: image.caption?.trim() || null } : null, at: new Date(Number(m.timestamp) * 1000) });
+          image: image ? { ref: image.id, caption: image.caption?.trim() || null } : null,
+          file: doc ? { ref: doc.id, mimeType: doc.mime_type ?? null, fileName: doc.filename ?? null, caption: doc.caption?.trim() || null } : null,
+          at: new Date(Number(m.timestamp) * 1000) });
       }
       return out;
     },
@@ -208,6 +229,25 @@ function meta(): WhatsAppProvider {
       const info = (await (await ok(await fetch(`${graph}/${ref}`, { headers: auth }), "meta media")).json()) as { url: string; mime_type: string };
       const file = await ok(await fetch(info.url, { headers: auth }), "meta media file");
       return { data: await file.arrayBuffer(), mimeType: info.mime_type };
+    },
+    async downloadFile(ref) {
+      return this.downloadImage(ref);  // na Meta, qualquer mídia baixa pelo id
+    },
+    async sendFile(to, file) {
+      // 1) sobe a mídia e pega o id; 2) manda a mensagem com o id (a janela de 24 h vale: é resposta a um pedido da pessoa)
+      const form = new FormData();
+      form.set("messaging_product", "whatsapp");
+      form.set("type", file.mimeType);
+      form.set("file", new Blob([new Uint8Array(file.bytes)], { type: file.mimeType }), file.fileName);
+      const { id } = (await (await ok(await fetch(`${graph}/${phoneId}/media`, { method: "POST", headers: auth, body: form }), "meta media upload")).json()) as { id: string };
+      const image = file.mimeType.startsWith("image/");
+      await ok(await fetch(`${graph}/${phoneId}/messages`, {
+        method: "POST", headers: { ...auth, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messaging_product: "whatsapp", to: digitsOnly(to), type: image ? "image" : "document",
+          ...(image ? { image: { id, caption: file.caption } } : { document: { id, filename: file.fileName, caption: file.caption } }),
+        }),
+      }), "meta messages (arquivo)");
     },
   };
 }

@@ -3,6 +3,8 @@
 import http from "node:http";
 
 const calls = [];
+// PDF mínimo (só precisa começar com %PDF-); o teste compara os bytes do que o app guardou
+const SAMPLE_PDF = Buffer.from("%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 200 200]>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n");
 let n = 0;
 http.createServer((req, res) => {
   let data = "";
@@ -13,12 +15,18 @@ http.createServer((req, res) => {
       if (req.method === "DELETE") calls.length = 0;
       return res.end(JSON.stringify(calls));
     }
+    // arquivo para o app baixar (documento enviado pelo WhatsApp)
+    if (req.url === "/files/nota-hotel.pdf") {
+      res.setHeader("content-type", "application/pdf");
+      return res.end(SAMPLE_PDF);
+    }
     let body = null;
     try { body = data ? JSON.parse(data) : null; } catch { body = data; }
     calls.push({ method: req.method, url: req.url, headers: req.headers, body });
     if (req.url === "/v3/checkouts") return res.end(JSON.stringify({ id: `chk_e2e_${Date.now()}_${++n}` }));
     if (req.url.startsWith("/v3/subscriptions/")) return res.end(JSON.stringify({ deleted: true, id: req.url.split("/").pop() }));
-    if (req.url === "/send/text" || req.url === "/send/menu") return res.end(JSON.stringify({ messageid: `out_${++n}` }));
+    if (req.url === "/send/text" || req.url === "/send/menu" || req.url === "/send/media") return res.end(JSON.stringify({ messageid: `out_${++n}` }));
+    if (req.url === "/message/download") return res.end(JSON.stringify({ fileURL: "http://127.0.0.1:4010/files/nota-hotel.pdf", mimetype: "application/pdf" }));
     if (/^\/v3\/payments\/[^/]+\/refund$/.test(req.url)) return res.end(JSON.stringify({ status: "REFUNDED" }));
     if (req.url === "/emails") return res.end(JSON.stringify({ id: `email_${++n}` }));
     res.end("{}");

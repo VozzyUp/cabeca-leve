@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import http from "node:http";
 import type { AddressInfo } from "node:net";
+import { PDFDocument } from "pdf-lib";
 import sharp from "sharp";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Database } from "@/lib/supabase/database.types";
@@ -17,11 +18,16 @@ describe.skipIf(!run)("WhatsApp (UAZAPI)", () => {
   let userId = "";
   const admin = createClient<Database>("http://127.0.0.1:54321", (process.env.SUPABASE_SECRET_KEY ?? ""), { auth: { persistSession: false } });
   let png: Buffer = Buffer.alloc(0);
+  let pdf: Buffer = Buffer.alloc(0);
+  const media: Array<{ url: string; body: Record<string, unknown> | string }> = [];  // /send/media da UAZAPI e a API da Meta (envio de arquivo)
   const number = "+5511987650000";
   const fromWithout9 = "551187650000";  // o WhatsApp às vezes manda sem o 9
 
   beforeAll(async () => {
     png = await sharp({ create: { width: 2000, height: 1000, channels: 3, background: "#cc3333" } }).png().toBuffer();
+    const doc = await PDFDocument.create();
+    doc.addPage([300, 300]);
+    pdf = Buffer.from(await doc.save());
     server = http.createServer((req, res) => {
       let data = "";
       req.on("data", (c) => (data += c));
@@ -33,8 +39,18 @@ describe.skipIf(!run)("WhatsApp (UAZAPI)", () => {
           sent.push(JSON.parse(data)); return res.end("{}");
         }
         if (req.url === "/message/download") {
-          const photo = String((JSON.parse(data || "{}") as { id?: string }).id).startsWith("IMG");
+          const id = String((JSON.parse(data || "{}") as { id?: string }).id);
+          if (id.startsWith("DOCTXT")) return res.end(JSON.stringify({ fileURL: `${base}/nota.txt`, mimetype: "text/plain" }));
+          if (id.startsWith("DOC")) return res.end(JSON.stringify({ fileURL: `${base}/nota.pdf`, mimetype: "application/pdf" }));
+          const photo = id.startsWith("IMG");
           return res.end(JSON.stringify(photo ? { fileURL: `${base}/foto.png`, mimetype: "image/png" } : { fileURL: `${base}/file.mp3`, mimetype: "audio/mpeg" }));
+        }
+        if (req.url === "/nota.pdf") { res.setHeader("content-type", "application/pdf"); return res.end(pdf); }
+        if (req.url === "/nota.txt") { res.setHeader("content-type", "text/plain"); return res.end("isto não é um documento"); }
+        if (req.url === "/send/media" || /^\/PHONE123\/(media|messages)$/.test(req.url ?? "")) {
+          const json = (req.headers["content-type"] ?? "").includes("json");
+          media.push({ url: req.url!, body: json ? JSON.parse(data) : data });
+          return res.end(JSON.stringify({ id: "MEDIA1" }));
         }
         if (req.url === "/foto.png") { res.setHeader("content-type", "image/png"); return res.end(png); }
         if (req.url === "/file.mp3") { res.setHeader("content-type", "audio/mpeg"); return res.end(Buffer.from("ID3fake")); }
@@ -223,6 +239,80 @@ describe.skipIf(!run)("WhatsApp (UAZAPI)", () => {
     const { data: msgs } = await admin.from("messages").select("role, text_preview, content").eq("user_id", userId).order("seq", { ascending: false }).limit(2);
     const user = msgs!.find((m) => m.role === "user")!;
     expect(user.text_preview).toContain("📷 comprovante do mercado");
+  });
+
+  it("documento chega como arquivo: sem IA, o PDF vai para Documentos sem pasta, com o original no Storage; tipo errado é recusado", async () => {
+    const { whatsapp } = await import("./provider");
+    const { processInbound } = await import("./inbound");
+    const wa = whatsapp()!;
+    // UAZAPI: o webhook entende o documento, com o nome e o tipo
+    const hook = (extra: object) => ({ EventType: "messages", message: { messageid: "D1", id: "DOC-D1", chatid: `${fromWithout9}@s.whatsapp.net`, fromMe: false, isGroup: false, messageType: "DocumentMessage", messageTimestamp: 1760000000000, ...extra } });
+    expect(wa.parseWebhook(hook({ text: "nota do hotel", content: { mimetype: "application/pdf", fileName: "nota-hotel.pdf" } }))).toEqual([
+      expect.objectContaining({ text: null, audio: null, image: null, file: { ref: "DOC-D1", mimeType: "application/pdf", fileName: "nota-hotel.pdf", caption: "nota do hotel" } }),
+    ]);
+
+    const before = sent.length;
+    await processInbound({ externalId: "DC2", from: fromWithout9, text: null, audio: null, file: { ref: "DOC-D2", mimeType: "application/pdf", fileName: "nota-hotel.pdf", caption: null }, at: new Date() });
+    expect(sent.length).toBe(before + 1);
+    expect(sent.at(-1)!.text).toMatch(/Guardei em Documentos, sem pasta/);
+    expect(sent.at(-1)!.text).toMatch(/✅ Documento: nota-hotel/);
+    const { data: docs } = await admin.from("documents").select("id, title, status, source, mime_type, size_bytes, file_path, folder_id").eq("user_id", userId);
+    expect(docs).toHaveLength(1);
+    expect(docs![0]).toMatchObject({ title: "nota-hotel", status: "pending", source: "whatsapp", mime_type: "application/pdf", size_bytes: pdf.length, folder_id: null });
+    const stored = await admin.storage.from("documents").download(docs![0].file_path);
+    expect(Buffer.from(await stored.data!.arrayBuffer()).equals(pdf)).toBe(true);
+    // o anexo estacionado foi usado e saiu
+    expect((await admin.from("document_staging").select("id").eq("user_id", userId)).data).toEqual([]);
+    // a mensagem do chat mostra o arquivo, não o PDF inteiro
+    const { data: msgs } = await admin.from("messages").select("role, text_preview").eq("user_id", userId).order("seq", { ascending: false }).limit(2);
+    expect(msgs!.find((m) => m.role === "user")!.text_preview).toBe("📎 nota-hotel.pdf");
+
+    // arquivo que não é foto nem PDF
+    await processInbound({ externalId: "DC3", from: fromWithout9, text: null, audio: null, file: { ref: "DOCTXT-D3", mimeType: "text/plain", fileName: "x.txt", caption: null }, at: new Date() });
+    expect(sent.at(-1)!.text).toMatch(/Só aceito foto .* e PDF/);
+    expect((await admin.from("documents").select("id").eq("user_id", userId)).data).toHaveLength(1);
+
+    // a Meta entrega o documento com outro formato
+    Object.assign(process.env, { WHATSAPP_PROVIDER: "meta", META_WHATSAPP_TOKEN: "t" });
+    try {
+      const meta = whatsapp()!;
+      expect(meta.name).toBe("meta");
+      expect(meta.parseWebhook({ entry: [{ changes: [{ value: { messages: [{ id: "wamid.1", from: "551187650000", type: "document", timestamp: "1760000000", document: { id: "MID1", mime_type: "application/pdf", filename: "recibo.pdf", caption: "da consulta" } }] } }] }] }))
+        .toEqual([expect.objectContaining({ text: null, file: { ref: "MID1", mimeType: "application/pdf", fileName: "recibo.pdf", caption: "da consulta" } })]);
+    } finally { Object.assign(process.env, { WHATSAPP_PROVIDER: "uazapi" }); delete process.env.META_WHATSAPP_TOKEN; }
+  });
+
+  it("mandar o arquivo de volta: a UAZAPI recebe o PDF em base64 como documento e a foto como imagem; a Meta sobe a mídia e manda com o id", async () => {
+    const { whatsapp } = await import("./provider");
+    const { sendDocuments } = await import("./inbound");
+    const { storeForUser } = await import("@/lib/data");
+    const store = await storeForUser(userId);
+    const [doc] = await store.listDocuments();
+    media.length = 0;
+    await sendDocuments(whatsapp()!, store, number, [doc.id]);
+    expect(media).toHaveLength(1);
+    expect(media[0].url).toBe("/send/media");
+    const body = media[0].body as { number: string; type: string; file: string; docName: string; text: string };
+    expect(body).toMatchObject({ number: "5511987650000", type: "document", docName: "nota-hotel.pdf", text: "nota-hotel" });
+    expect(Buffer.from(body.file, "base64").equals(pdf)).toBe(true);
+    const wa = whatsapp()!;
+    await wa.sendFile(number, { bytes: png, mimeType: "image/jpeg", fileName: "foto.jpg", caption: "Jantar" });
+    expect((media[1].body as { type: string }).type).toBe("image");
+
+    // documento que não existe: não manda nada
+    media.length = 0;
+    await sendDocuments(wa, store, number, ["00000000-0000-4000-8000-000000000000"]);
+    expect(media).toHaveLength(0);
+
+    // Meta: 1) sobe o arquivo (multipart) 2) manda a mensagem com o id da mídia
+    Object.assign(process.env, { WHATSAPP_PROVIDER: "meta", META_WHATSAPP_TOKEN: "t", META_WHATSAPP_PHONE_NUMBER_ID: "PHONE123", META_GRAPH_URL: base });
+    try {
+      await whatsapp()!.sendFile(number, { bytes: pdf, mimeType: "application/pdf", fileName: "recibo.pdf", caption: "Consulta" });
+      expect(media[0].url).toBe("/PHONE123/media");
+      expect(String(media[0].body)).toContain('name="type"');
+      expect(String(media[0].body)).toContain("recibo.pdf");
+      expect(media[1]).toMatchObject({ url: "/PHONE123/messages", body: { messaging_product: "whatsapp", to: "5511987650000", type: "document", document: { id: "MEDIA1", filename: "recibo.pdf", caption: "Consulta" } } });
+    } finally { Object.assign(process.env, { WHATSAPP_PROVIDER: "uazapi" }); for (const k of ["META_WHATSAPP_TOKEN", "META_WHATSAPP_PHONE_NUMBER_ID", "META_GRAPH_URL"]) delete process.env[k]; }
   });
 
   it("áudio é transcrito e processado", async () => {

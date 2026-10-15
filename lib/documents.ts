@@ -1,5 +1,5 @@
 import { PDFDocument } from "pdf-lib";
-import type { DataStore, DocumentInput, DocumentPatch } from "@/lib/data/store";
+import type { DataStore, DocumentInput, DocumentPatch, StagedFile } from "@/lib/data/store";
 import { MAX_DOCUMENT_BYTES } from "@/lib/data/store";
 import type { Doc, DocStatus } from "@/lib/data/types";
 import { dueDateFor, followsFolderDeadline, statusPatch } from "@/lib/domain/documents";
@@ -128,4 +128,15 @@ export async function changeFolderDeadline(store: DataStore, folderId: string, d
     await store.updateDocument(d.id, { dueOn: dueDateFor(d.docDate, deadlineDays), alertStage: 0 });
   }
   return updated;
+}
+
+// O original de uma foto fica estacionado por 24 h, para o assistente guardá-lo como documento numa mensagem seguinte.
+// Se não der (disco, bucket), segue só com a leitura da IA, sem a opção de guardar: nunca derruba a conversa.
+export async function stageOriginal(store: DataStore, original: Buffer, mime: string, name: string): Promise<StagedFile[] | undefined> {
+  try {
+    return [await store.stageFile(await prepareFile(original, mime, name))];
+  } catch (error) {
+    console.error("anexo não estacionado", error instanceof Error ? error.message : error);
+    return undefined;
+  }
 }

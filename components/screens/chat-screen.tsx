@@ -25,6 +25,7 @@ const CARD = {
   goal: { feminine: true, kind: "Meta", open: "Ver nas metas" },
   automation: { feminine: true, kind: "Revisão agendada", open: "Ver nas revisões" },
   recurring: { feminine: true, kind: "Conta fixa", open: "Ver os fixos" },
+  document: { kind: "Documento", open: "Ver nos documentos" },
 } as const;
 
 const SUGGESTIONS = [
