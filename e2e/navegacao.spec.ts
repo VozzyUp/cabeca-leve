@@ -7,9 +7,9 @@ test.describe("Navegação e configuração inicial", () => {
     const bell = page.getByRole("link", { name: /Avisos \(\d+ novos?\)/ });
     await expect(bell).toBeVisible();
     await page.getByRole("button", { name: "Sua conta" }).click();
-    await expect(page.getByRole("link", { name: "Jeito do assistente" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Configurar assistente" })).toBeVisible();
     await page.keyboard.press("Escape");
-    await expect(page.getByRole("link", { name: "Jeito do assistente" })).toBeHidden();
+    await expect(page.getByRole("link", { name: "Configurar assistente" })).toBeHidden();
     await bell.click();
     await expect(page).toHaveURL(/\/avisos/);
     await page.getByRole("button", { name: "Sua conta" }).click();

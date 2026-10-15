@@ -1,7 +1,7 @@
 "use client";
 import { useEffect } from "react";
 
-// Aplica o tema escolhido em Ajustes no <html>. Sem atributo vale o escuro (padrão dos tokens).
+// Aplica o tema escolhido em Configurações no <html>. Sem atributo vale o escuro (padrão dos tokens).
 export function ThemeSync({ theme }: { theme: "dark" | "light" | "system" }) {
   useEffect(() => {
     const root = document.documentElement;

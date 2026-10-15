@@ -83,7 +83,7 @@ function LinkCode({ result }: { result: LinkResult }) {
 }
 
 // Vincular um WhatsApp: número (e, na conta dividida, o nome de quem usa) e o código de confirmação.
-// Usado em Ajustes e na configuração inicial.
+// Usado em Configurações e na configuração inicial.
 export function WhatsAppLinkForm({ channels, label = "WhatsApp", owner, askName = false, onDone, onResult }: {
   channels?: Settings["channels"]; label?: string; owner?: string | null; askName?: boolean; onDone?: () => void;
   onResult?: (r: LinkResult) => void;  // quem chama mostra o código (o formulário some quando a lista atualiza)
@@ -327,7 +327,7 @@ export const TONES: Array<{ id: Settings["tone"]; label: string; hint: string }>
   { id: "tough", label: "Sem filtro", hint: "zoa, cobra e puxa a orelha (pode soltar palavrão leve)" },
 ];
 
-// Escolha do tom com um exemplo de resposta em cada opção (Ajustes e configuração inicial)
+// Escolha do tom com um exemplo de resposta em cada opção (Configurações e configuração inicial)
 export function ToneChooser({ value, onChange }: { value: Settings["tone"]; onChange: (t: Settings["tone"]) => void }) {
   return (
     <fieldset className="grid grid-cols-1 gap-2 sm:grid-cols-2">

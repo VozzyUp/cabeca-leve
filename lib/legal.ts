@@ -17,7 +17,7 @@ export function operator(env: Record<string, string | undefined> = process.env) 
 }
 
 const who = (o: ReturnType<typeof operator>) => `${o.name}${o.document ? ` (CNPJ/CPF ${o.document})` : ""}`;
-const contact = (o: ReturnType<typeof operator>) => (o.email ? `pelo e-mail ${o.email}` : "pelo chamado dentro do app (Ajustes > Falar com uma pessoa)");
+const contact = (o: ReturnType<typeof operator>) => (o.email ? `pelo e-mail ${o.email}` : "pelo chamado dentro do app (Configurações > Suporte humano)");
 
 export function privacySections(o = operator()): Section[] {
   return [
@@ -32,7 +32,7 @@ export function privacySections(o = operator()): Section[] {
         "Número de WhatsApp que você vincula, para o assistente reconhecer você e responder.",
         "O que você pede ao assistente: mensagens, tarefas, lembretes, gastos, contas, hábitos, metas, notas, treino, alimentação e medidas que você registra.",
         "Fotos que você envia na conversa e a transcrição de áudios que você manda (o áudio em si não fica guardado).",
-        "Fatos que você pede para o assistente lembrar (a “memória”), que você vê e apaga em Ajustes.",
+        "Fatos que você pede para o assistente lembrar (a “memória”), que você vê e apaga em Configurações.",
         "Documentos que você guarda (notas fiscais, recibos, pedidos médicos, receitas): o arquivo original, em área privada que só a sua conta acessa, e os dados que a IA lê dele (nome, quem emitiu, para quem, data e valor). Um pedido médico ou receita revela dado de saúde.",
         "Cofre de senhas: os itens são cifrados no seu aparelho com a sua senha mestra antes de chegar ao servidor. Guardamos só o conteúdo cifrado. Nem o time nem o assistente conseguem ler, e sem a senha mestra não há como recuperar.",
         "Pesquisas agendadas: o assunto que você pede para pesquisar vai para a busca na internet feita pela Anthropic.",
@@ -47,7 +47,7 @@ export function privacySections(o = operator()): Section[] {
         "Cobrar a assinatura e emitir comprovantes (execução de contrato e obrigação legal).",
         "Proteger o serviço contra abuso e controlar o custo, com limites de uso por dia (legítimo interesse).",
         "Atender seus pedidos de suporte (execução de contrato).",
-        "Mandar avisos do serviço por e-mail, notificação e WhatsApp, que você liga e desliga em Ajustes (consentimento).",
+        "Mandar avisos do serviço por e-mail, notificação e WhatsApp, que você liga e desliga em Configurações (consentimento).",
       ] },
       "Não vendemos seus dados, não usamos o que você escreve para fazer propaganda e não treinamos modelos de IA com a sua conversa.",
     ] },
@@ -75,12 +75,12 @@ export function privacySections(o = operator()): Section[] {
         "Seus registros ficam enquanto a conta existir.",
         "Fotos enviadas na conversa são apagadas automaticamente depois de 2 dias. O texto da conversa permanece.",
         "Documentos que você guarda em Documentos (notas fiscais, recibos, pedidos médicos) ficam até você apagá-los ou excluir a conta. Ao apagar, o arquivo é removido.",
-        "Ao excluir a conta em Ajustes, apagamos seus dados. Alguns registros de cobrança podem ser mantidos pelo prazo que a lei exigir.",
+        "Ao excluir a conta em Configurações, apagamos seus dados. Alguns registros de cobrança podem ser mantidos pelo prazo que a lei exigir.",
       ] },
     ] },
     { title: "Seus direitos", body: [
       "Pela LGPD, você pode pedir confirmação de que tratamos seus dados, acesso, correção, portabilidade, informação sobre com quem compartilhamos, revogação de consentimento e exclusão.",
-      "Em Ajustes você mesmo pode baixar todos os seus dados, editar ou apagar a memória do assistente e excluir a conta. Para qualquer outro pedido, escreva " + contact(o) + ". Respondemos em até 15 dias.",
+      "Em Configurações você mesmo pode baixar todos os seus dados, editar ou apagar a memória do assistente e excluir a conta. Para qualquer outro pedido, escreva " + contact(o) + ". Respondemos em até 15 dias.",
       "Se achar que seus dados foram tratados de forma indevida, você também pode reclamar à Autoridade Nacional de Proteção de Dados (ANPD).",
     ] },
     { title: "Segurança", body: [
@@ -106,7 +106,7 @@ export function termsSections(o = operator()): Section[] {
     { title: "Teste grátis, assinatura e cobrança", body: [
       `Novos usuários têm ${TRIAL_DAYS} dias grátis. Depois, é preciso assinar um plano (mensal ou anual) para continuar a usar o assistente. Tudo o que você anotou continua guardado.`,
       "Os valores e as formas de pagamento estão em Planos. A cobrança é feita pela Asaas, e a assinatura se renova no fim de cada período até ser cancelada.",
-      "Você pode cancelar quando quiser, em Ajustes. Você recebe um comprovante com protocolo, nenhuma cobrança nova é feita e o acesso continua até o fim do período já pago.",
+      "Você pode cancelar quando quiser, em Configurações. Você recebe um comprovante com protocolo, nenhuma cobrança nova é feita e o acesso continua até o fim do período já pago.",
       "Direito de arrependimento: em compras feitas pela internet, você pode desistir em até 7 dias corridos da contratação e receber o valor pago de volta, conforme o Código de Defesa do Consumidor. Peça por " + (o.email ? `e-mail (${o.email})` : "chamado dentro do app") + ".",
     ] },
     { title: "Uso do assistente", body: [
@@ -126,10 +126,10 @@ export function termsSections(o = operator()): Section[] {
       "Você conversa com o número do assistente. Nós nunca pedimos acesso ao seu WhatsApp pessoal, e o assistente nunca escreve para os seus contatos. O WhatsApp é um serviço de terceiros e pode ter instabilidades ou mudar suas regras, o que pode afetar o envio e o recebimento de mensagens.",
     ] },
     { title: "Seus conteúdos", body: [
-      "O que você registra continua sendo seu. Você nos autoriza a tratar esses conteúdos apenas para prestar o serviço, como descrito na Política de Privacidade. Você pode baixar tudo ou excluir a conta a qualquer momento, em Ajustes.",
+      "O que você registra continua sendo seu. Você nos autoriza a tratar esses conteúdos apenas para prestar o serviço, como descrito na Política de Privacidade. Você pode baixar tudo ou excluir a conta a qualquer momento, em Configurações.",
     ] },
     { title: "Disponibilidade e suporte", body: [
-      "Trabalhamos para o serviço ficar no ar sempre, mas não garantimos funcionamento sem interrupção, porque ele depende de fornecedores como a IA, o WhatsApp e a hospedagem. Se precisar de ajuda, peça para falar com uma pessoa em Ajustes ou na conversa. O chamado tem protocolo, e respondemos em até 1 dia útil.",
+      "Trabalhamos para o serviço ficar no ar sempre, mas não garantimos funcionamento sem interrupção, porque ele depende de fornecedores como a IA, o WhatsApp e a hospedagem. Se precisar de ajuda, peça para falar com uma pessoa em Configurações ou na conversa. O chamado tem protocolo, e respondemos em até 1 dia útil.",
     ] },
     { title: "Responsabilidade", body: [
       "Respondemos pelos danos que a lei determina. Na medida permitida em lei, não nos responsabilizamos por decisões tomadas apenas com base em respostas da IA, nem por falhas causadas por fornecedores ou por fatos fora do nosso controle. Nada aqui retira direitos que o Código de Defesa do Consumidor garante a você.",

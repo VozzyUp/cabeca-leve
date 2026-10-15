@@ -67,7 +67,7 @@ Por quê:
 
 **Hoje o código tem só Mensal (R$ 39,90) e Anual (R$ 359)**, e o número de WhatsApps sai do período (padrão: mensal 2, anual 3). A landing nova mostra exatamente isso, porque é o que existe. Para lançar Pessoal e Casa é preciso mudar o código: plano com nível e período, checkout com o valor certo, limite de WhatsApps pelo nível e a tela de planos. É uma mudança média; faça só se aprovar esta tabela.
 
-Ajustes que valem já, sem código:
+Configurações que valem já, sem código:
 
 1. **Modelo:** deixe o Haiku 5.5 como padrão (Admin > Configurações > Modelo).
 2. **Teto diário de custo por pessoa:** baixe de US$ 2 para **US$ 0,30** (Admin > Configurações > Limites de uso). Com o Haiku isso dá mais de 100 mensagens por dia, e o pior caso do mês fica abaixo do preço.

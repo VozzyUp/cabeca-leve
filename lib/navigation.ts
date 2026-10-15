@@ -38,7 +38,7 @@ export function showBackOnDesktop(path: string) {
   return parts.length >= 2 && !TABBED_AREAS.includes(parts[0]);
 }
 
-// Área do time (só ADMIN_EMAILS): fica fora de Ajustes e do menu comum, em Administração
+// Área do time (só ADMIN_EMAILS): fica fora de Configurações e do menu comum, em Administração
 export const ADMIN_HOME: NavLink = { href: "/admin", label: "Administração", hint: "contas e planos, suporte, custo da IA e chaves do sistema" };
 export const ADMIN_LINKS: NavLink[] = [
   { href: "/admin/contas", label: "Contas e planos", hint: "quem criou conta, plano, teste e renovação manual" },
@@ -79,8 +79,8 @@ export const MORE_GROUPS: NavGroup[] = [
   ] },
   { title: "Conta", items: [
     { href: "/avisos", label: "Avisos", hint: "o que o assistente mandou para você" },
-    { href: "/ajustes", label: "Ajustes", hint: "conta, WhatsApp, notificações e dados" },
-    { href: "/ajustes/assistente", label: "Jeito do assistente", hint: "tom, voz, memória e tema" },
-    { href: "/ajustes/suporte", label: "Falar com uma pessoa" },
+    { href: "/ajustes", label: "Configurações", hint: "conta, WhatsApp, notificações e dados" },
+    { href: "/ajustes/assistente", label: "Configurar assistente", hint: "tom, voz, memória e tema" },
+    { href: "/ajustes/suporte", label: "Suporte humano" },
   ] },
 ];

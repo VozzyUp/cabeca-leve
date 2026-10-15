@@ -20,11 +20,11 @@ const INCLUDED = [
   "Uso generoso todos os dias, sem contar mensagem por mensagem",
 ];
 const FAQ = [
-  ["Posso cancelar quando quiser?", "Pode, em Ajustes, com um toque. Você recebe um comprovante com protocolo, nenhuma cobrança nova é feita e o acesso continua até o fim do período já pago."],
+  ["Posso cancelar quando quiser?", "Pode, em Configurações, com um toque. Você recebe um comprovante com protocolo, nenhuma cobrança nova é feita e o acesso continua até o fim do período já pago."],
   ["Preciso instalar alguma coisa?", "Não. Funciona no navegador do celular e do computador, e pelo WhatsApp."],
   ["Vocês acessam o meu WhatsApp?", WHATSAPP_PROMISE],
-  ["E se eu precisar de ajuda?", "Em Ajustes ou na conversa, peça para falar com uma pessoa: o chamado tem protocolo e alguém do time responde em até 1 dia útil."],
-  ["Meus dados ficam com quem?", "Só com você. Dá para baixar tudo ou excluir a conta a qualquer momento, em Ajustes."],
+  ["E se eu precisar de ajuda?", "Em Configurações ou na conversa, peça para falar com uma pessoa: o chamado tem protocolo e alguém do time responde em até 1 dia útil."],
+  ["Meus dados ficam com quem?", "Só com você. Dá para baixar tudo ou excluir a conta a qualquer momento, em Configurações."],
 ];
 
 // S32: planos. Quem já entrou vai direto para a página de pagamento da Asaas; quem não, para o cadastro.

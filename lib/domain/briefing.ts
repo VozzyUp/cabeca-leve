@@ -12,7 +12,7 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
 const brl = (cents: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(cents / 100);
 
 // Resumo do dia em texto curto: compromissos, tarefas, hábitos e contas que vencem em até 3 dias.
-// Hoje é montado por regras; no /replica-backend o Claude reescreve no tom escolhido em Ajustes.
+// Hoje é montado por regras; no /replica-backend o Claude reescreve no tom escolhido em Configurações.
 export function buildBriefing(input: {
   name: string; hour: number; today: string; items: DayItem[]; recurrences: Recurrence[];
   monthSpentCents: number; lastMonthSamePeriodCents: number;

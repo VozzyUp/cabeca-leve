@@ -296,7 +296,7 @@ describe.skipIf(!run)("agente", () => {
       expect(systems(n)).toHaveLength(1);
       expect(systems(n)[0]).toContain("ACOLHEDOR");
 
-      // muda o tom em Ajustes: a próxima mensagem já leva o contexto novo, avisando que mudou
+      // muda o tom em Configurações: a próxima mensagem já leva o contexto novo, avisando que mudou
       await s3.updateSettings({ tone: "tough" });
       replies.push(msg([{ type: "text", text: "Fala!" }], "end_turn"));
       n = requests.length;

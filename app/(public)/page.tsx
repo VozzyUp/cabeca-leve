@@ -40,10 +40,10 @@ const STEPS = [
 
 // Cada item é uma correção do fixes.md (F1 a F7); o que é preço de entrada fica na linha de baixo
 const FIXES: { icon: LucideIcon; title: string; text: string }[] = [
-  { icon: LifeBuoy, title: "Uma pessoa de verdade", text: "Peça na conversa ou em Ajustes: o chamado tem protocolo e alguém do time responde em até 1 dia útil. O assistente nunca finge ser o suporte." },
-  { icon: CircleSlash, title: "Cancelou, parou", text: "Um toque em Ajustes e o comprovante com protocolo sai na hora. Se uma cobrança chegar depois, ela é estornada sozinha." },
+  { icon: LifeBuoy, title: "Uma pessoa de verdade", text: "Peça na conversa ou em Configurações: o chamado tem protocolo e alguém do time responde em até 1 dia útil. O assistente nunca finge ser o suporte." },
+  { icon: CircleSlash, title: "Cancelou, parou", text: "Um toque em Configurações e o comprovante com protocolo sai na hora. Se uma cobrança chegar depois, ela é estornada sozinha." },
   { icon: Check, title: "Pagou, entrou", text: "Enquanto o pagamento confirma, o acesso continua. Nada de “assinatura inválida”." },
-  { icon: BellRing, title: "Lembrete que chega", text: "No celular e no WhatsApp, com Feito e Adiar. Dá para testar o aviso na hora, em Ajustes." },
+  { icon: BellRing, title: "Lembrete que chega", text: "No celular e no WhatsApp, com Feito e Adiar. Dá para testar o aviso na hora, em Configurações." },
   { icon: ReceiptText, title: "Conta que bate", text: "Os totais vêm do que você lançou, não de um palpite da IA. O teto por categoria avisa em 80% e em 100%." },
   { icon: ShieldCheck, title: "Seu WhatsApp fica intacto", text: "Você manda mensagem para o assistente. Ele não entra na sua conta nem escreve para os seus contatos." },
 ];
@@ -60,7 +60,7 @@ const ALSO: { icon: LucideIcon; text: string }[] = [
 
 const FAQ: [string, string][] = [
   ["Posso testar antes de pagar?", `Sim, ${TRIAL_DAYS} dias, sem cartão. No fim, você escolhe se assina. Tudo o que anotou continua guardado.`],
-  ["E se eu quiser cancelar?", "Um toque em Ajustes. Comprovante na hora, nenhuma cobrança nova e acesso até o fim do período pago. Cobrança que chegar depois é estornada sozinha."],
+  ["E se eu quiser cancelar?", "Um toque em Configurações. Comprovante na hora, nenhuma cobrança nova e acesso até o fim do período pago. Cobrança que chegar depois é estornada sozinha."],
   ["Vocês acessam o meu WhatsApp?", WHATSAPP_PROMISE],
   ["Paguei e não liberou. E agora?", "O acesso continua enquanto o pagamento confirma. Se algo travar, peça uma pessoa: o chamado tem protocolo e prazo."],
   ["Consigo trazer o que eu já tenho em outro app?", "Ainda não há importação automática. Mande a lista de contas fixas e lembretes pela conversa, que ele cadastra."],

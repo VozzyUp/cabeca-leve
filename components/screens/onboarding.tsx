@@ -99,7 +99,7 @@ export function Onboarding({ initial }: { initial: Settings }) {
               </li>
             ))}
           </ul>
-          <p className="text-xs text-muted">Avisos, tema e sua conta ficam no canto de cima. Para mudar estas escolhas depois, use Ajustes.</p>
+          <p className="text-xs text-muted">Avisos, tema e sua conta ficam no canto de cima. Para mudar estas escolhas depois, use Configurações.</p>
           <Button size="lg" icon={<Check className="size-5" />} loading={saving}
             onClick={() => { close(); if (path !== "/conversa") router.push("/conversa"); }}>Começar a usar</Button>
         </div>

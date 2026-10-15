@@ -162,7 +162,7 @@ export async function exportData() {
   }, null, 2);
 }
 
-// Memória do assistente (Ajustes > Jeito do assistente): esquecer um fato ou todos
+// Memória do assistente (Configurações > Configurar assistente): esquecer um fato ou todos
 // "A resolver" (Dinheiro): confirma uma conta fixa paga ou entrada recebida
 export async function confirmBillAction(recurrenceId: string, dueOn: string) {
   const store = await getStore();

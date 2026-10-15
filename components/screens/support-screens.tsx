@@ -17,7 +17,7 @@ export async function SupportScreen() {
   const tickets = await store.listSupportTickets();
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader id="S29-suporte" title="Falar com uma pessoa" />
+      <PageHeader id="S29-suporte" title="Suporte humano" />
       <p className="max-w-prose text-body">
         Uma pessoa do time lê e responde em até 1 dia útil, aqui, no WhatsApp vinculado e por e-mail.
         Pela conversa também funciona: escreva &ldquo;quero falar com uma pessoa&rdquo;.

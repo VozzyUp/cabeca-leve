@@ -32,10 +32,10 @@ Os dois temas que mais pesam contra o original, em palavras nossas:
 
 | correção | na página |
 | --- | --- |
-| F3 | **Uma pessoa de verdade.** Peça na conversa ou em Ajustes: o chamado tem protocolo e alguém do time responde em até 1 dia útil. O assistente nunca finge ser o suporte. |
-| F1 | **Cancelou, parou.** Um toque em Ajustes, comprovante com protocolo na hora. Se uma cobrança chegar depois, ela é estornada sozinha. |
+| F3 | **Uma pessoa de verdade.** Peça na conversa ou em Configurações: o chamado tem protocolo e alguém do time responde em até 1 dia útil. O assistente nunca finge ser o suporte. |
+| F1 | **Cancelou, parou.** Um toque em Configurações, comprovante com protocolo na hora. Se uma cobrança chegar depois, ela é estornada sozinha. |
 | F2 | **Pagou, entrou.** Enquanto o pagamento confirma, o acesso continua. Nada de "assinatura inválida". |
-| F6 | **Lembrete que chega.** No celular e no WhatsApp, com Feito e Adiar. Dá para testar o aviso na hora, em Ajustes. |
+| F6 | **Lembrete que chega.** No celular e no WhatsApp, com Feito e Adiar. Dá para testar o aviso na hora, em Configurações. |
 | F5 | **Conta que bate.** Os totais vêm do que você lançou, não de um palpite da IA. Teto por categoria avisa em 80% e 100%. |
 | F7 | **Seu WhatsApp fica intacto.** Você manda mensagem para o assistente; ele não entra na sua conta nem escreve para os seus contatos. |
 
@@ -49,7 +49,7 @@ Se aprovar os níveis Pessoal e Casa de `pricing.md`, esta seção muda junto.
 ## 6. Dúvidas
 
 - **Posso testar antes de pagar?** Sim, 7 dias, sem cartão. No fim, você escolhe se assina. Tudo o que anotou continua guardado.
-- **E se eu quiser cancelar?** Um toque em Ajustes. Comprovante na hora, nenhuma cobrança nova, acesso até o fim do período pago. Cobrança que chegar depois é estornada sozinha.
+- **E se eu quiser cancelar?** Um toque em Configurações. Comprovante na hora, nenhuma cobrança nova, acesso até o fim do período pago. Cobrança que chegar depois é estornada sozinha.
 - **Vocês acessam o meu WhatsApp?** Não. Você conversa com o número do assistente; ele não entra na sua conta.
 - **Paguei e não liberou. E agora?** O acesso continua enquanto o pagamento confirma. Se algo travar, peça uma pessoa: o chamado tem protocolo.
 - **Consigo trazer o que eu já tenho em outro app?** Ainda não há importação automática. Dá para mandar a lista de contas fixas e lembretes pela conversa, que ele cadastra.

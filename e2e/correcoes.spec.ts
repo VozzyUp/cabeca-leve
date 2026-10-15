@@ -80,7 +80,7 @@ test.describe("F6 testar aviso", () => {
 });
 
 test.describe("F7 seu WhatsApp fica intacto", () => {
-  test("F7-H1 a promessa aparece no cadastro, nos Ajustes e nas dúvidas dos planos", async ({ page, user }) => {
+  test("F7-H1 a promessa aparece no cadastro, nas Configurações e nas dúvidas dos planos", async ({ page, user }) => {
     const promise = "Nunca pedimos acesso ao seu WhatsApp, e o assistente nunca escreve para os seus contatos.";
     await page.goto("/entrar?modo=criar");
     await expect(page.getByText(promise)).toBeVisible();

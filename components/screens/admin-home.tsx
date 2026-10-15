@@ -35,7 +35,7 @@ export async function AdminHomeScreen() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader id="admin-inicio" title="Administração" />
-      <p className="max-w-prose text-sm text-body">Só o time vê esta área. Os ajustes de quem usa o app ficam em Ajustes.</p>
+      <p className="max-w-prose text-sm text-body">Só o time vê esta área. Os ajustes de quem usa o app ficam em Configurações.</p>
       <Card className="divide-y divide-border p-0">
         {ADMIN_LINKS.map((l) => {
           const Icon = ICON[l.href];

@@ -58,7 +58,7 @@ export function TopBar({ unread, name, email, theme, canSignOut, isTeam = false 
   );
 }
 
-// Claro ou escuro com um toque (o automático continua em Jeito do assistente)
+// Claro ou escuro com um toque (o automático continua em Configurar assistente)
 function ThemeButton({ theme }: { theme: Settings["theme"] }) {
   const [chosen, setCurrent] = useState<"dark" | "light" | null>(null);
   const [, start] = useTransition();
@@ -80,10 +80,10 @@ function ThemeButton({ theme }: { theme: Settings["theme"] }) {
 }
 
 const MENU: Array<{ href: string; label: string }> = [
-  { href: "/ajustes", label: "Ajustes" },
-  { href: "/ajustes/assistente", label: "Jeito do assistente" },
+  { href: "/ajustes", label: "Configurações" },
+  { href: "/ajustes/assistente", label: "Configurar assistente" },
   { href: "/planos", label: "Assinatura e planos" },
-  { href: "/ajustes/suporte", label: "Falar com uma pessoa" },
+  { href: "/ajustes/suporte", label: "Suporte humano" },
   { href: "/conversa?configurar=1", label: "Refazer a configuração inicial" },
 ];
 

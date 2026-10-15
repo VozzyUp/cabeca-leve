@@ -101,7 +101,7 @@ test.describe("F3 falar com uma pessoa", () => {
   test("F3-H1 abrir chamado pela tela, o time é avisado, responde pelo painel e a pessoa recebe", async ({ page, browser, user }) => {
     test.setTimeout(120_000);
     await login(page, user, "/ajustes");
-    await page.getByRole("link", { name: /Falar com uma pessoa/ }).click();
+    await page.getByRole("link", { name: /Suporte humano/ }).click();
     await page.getByLabel("O que aconteceu?").fill("Paguei pelo Pix e o app ainda diz que estou sem plano.");
     await page.getByRole("button", { name: "Chamar uma pessoa" }).click();
     const status = page.getByRole("status").filter({ hasText: "Chamado aberto" });

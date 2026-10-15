@@ -34,11 +34,11 @@ export async function SettingsScreen() {
     : `Plano ${PLANS[settings.plan].name.toLowerCase()} · ${formatMoney(PLANS[settings.plan].priceCents)} ${PLANS[settings.plan].period}`;
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader id="S29" title="Ajustes" />
+      <PageHeader id="S29" title="Configurações" />
       <Card className="divide-y divide-border p-0">
         <LinkRow href="/planos" icon={CreditCard} title="Assinatura" hint={plan} />
-        <LinkRow href="/ajustes/assistente" icon={Sparkles} title="Jeito do assistente" hint="tom, voz, memória e tema" />
-        <LinkRow href="/ajustes/suporte" icon={LifeBuoy} title="Falar com uma pessoa" hint="resposta de alguém do time em até 1 dia útil" />
+        <LinkRow href="/ajustes/assistente" icon={Sparkles} title="Configurar assistente" hint="tom, voz, memória e tema" />
+        <LinkRow href="/ajustes/suporte" icon={LifeBuoy} title="Suporte humano" hint="resposta de alguém do time em até 1 dia útil" />
         <LinkRow href="/privacidade" icon={ShieldCheck} title="Política de privacidade" hint="o que guardamos e como você controla" />
         <LinkRow href="/termos" icon={FileText} title="Termos de uso" hint="as regras do serviço" />
       </Card>
@@ -67,7 +67,7 @@ export async function AssistantSettingsScreen() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1">
-        <PageHeader id="S30" title="Jeito do assistente" />
+        <PageHeader id="S30" title="Configurar assistente" />
       </div>
       <AssistantForm initial={settings} memories={memories} />
     </div>

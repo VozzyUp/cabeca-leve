@@ -16,7 +16,7 @@ test("ADM-C1 o time acha a conta, dá plano manual até 2099, encerra, estende o
   test.setTimeout(120_000);
   const owner = await adminUser();
   await login(page, owner, "/ajustes");
-  // Ajustes é só de quem usa o app: nada do time ali; o time entra por Administração, no menu da conta
+  // Configurações é só de quem usa o app: nada do time ali; o time entra por Administração, no menu da conta
   for (const name of [/Contas e planos/, /Custo da IA/, /Configuração do sistema/, /Chamados de suporte/]) await expect(page.getByRole("link", { name })).toHaveCount(0);
   await page.getByRole("button", { name: "Sua conta" }).click();
   await expect(page.locator("#menu-conta").getByText("Time", { exact: true })).toBeVisible();
