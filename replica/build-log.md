@@ -291,3 +291,11 @@ Paridade 63,2/100; **40 de 40 obrigatórias completas**.
 - Assinatura paga pela Asaas não é cancelada nem estornada por aqui; o plano manual vale em cima dela (o mais novo manda).
 - Migração `20261015000300_admin_contas` (arquivo 29 para colar): tabela `admin_actions` e a função `admin_accounts()` (só a chave secreta chama).
 - Testes: `lib/domain/accounts.test.ts`, `lib/admin-accounts.int.test.ts` (5) e `e2e/admin-contas.spec.ts` (ADM-C1, ADM-C2).
+
+## 2026-10-15: Administração separada de Ajustes
+
+- **Pedido:** o que é do time estava misturado com o que é de quem usa o app (Ajustes e menu da conta).
+- Nova área **`/admin` (Administração)**, só `ADMIN_EMAILS`: Contas e planos (com um resumo: contas, em teste, pedem atenção), Chamados de suporte (quantos esperam resposta), Custo da IA e Configuração do sistema. A lista dos links fica em `lib/navigation.ts` (`ADMIN_LINKS`).
+- **Ajustes** ficou só com o que é de quem usa (assinatura, jeito do assistente, falar com uma pessoa, privacidade, termos, conta).
+- **Menu da conta:** uma seção "Time" com um único atalho, Administração, só para o time. No computador, o menu lateral ganha o grupo "Time"; no celular, "Tudo" ganha o grupo "Time".
+- O "voltar" das telas do time sobe para Administração. Os testes do time agora entram por Administração (`openAdmin` em `e2e/fixtures.ts`) e conferem que Ajustes não mostra nada do time e que quem não é do time não vê o atalho em lugar nenhum (menu, "Tudo" e `/admin`).

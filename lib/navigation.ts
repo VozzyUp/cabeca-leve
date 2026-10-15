@@ -12,10 +12,11 @@ const TABBED_AREAS = ["dia", "dinheiro", "saude"];
 
 // Para onde sobe cada página quando não há histórico (entrou direto pelo link, por exemplo)
 const PARENTS: Record<string, string> = {
-  "/admin/configuracoes": "/ajustes",
-  "/admin/custos": "/ajustes",
-  "/admin/contas": "/ajustes",
-  "/suporte/painel": "/ajustes",
+  "/admin": "/conversa",
+  "/admin/configuracoes": "/admin",
+  "/admin/custos": "/admin",
+  "/admin/contas": "/admin",
+  "/suporte/painel": "/admin",
 };
 
 export function parentOf(path: string): string {
@@ -36,6 +37,15 @@ export function showBackOnDesktop(path: string) {
   const parts = path.split("/").filter(Boolean);
   return parts.length >= 2 && !TABBED_AREAS.includes(parts[0]);
 }
+
+// Área do time (só ADMIN_EMAILS): fica fora de Ajustes e do menu comum, em Administração
+export const ADMIN_HOME: NavLink = { href: "/admin", label: "Administração", hint: "contas e planos, suporte, custo da IA e chaves do sistema" };
+export const ADMIN_LINKS: NavLink[] = [
+  { href: "/admin/contas", label: "Contas e planos", hint: "quem criou conta, plano, teste e renovação manual" },
+  { href: "/suporte/painel", label: "Chamados de suporte", hint: "responder quem pediu uma pessoa" },
+  { href: "/admin/custos", label: "Custo da IA", hint: "gasto por usuário e por modelo" },
+  { href: "/admin/configuracoes", label: "Configuração do sistema", hint: "chaves dos serviços, modelo e limites" },
+];
 
 export const MORE_GROUPS: NavGroup[] = [
   { title: "Organização", items: [

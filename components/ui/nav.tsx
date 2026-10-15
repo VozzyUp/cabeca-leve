@@ -1,10 +1,11 @@
 "use client";
 import {
-  Bell, BookOpen, CalendarDays, CheckSquare, FileText, FolderKanban, HeartPulse, KeyRound, LayoutGrid, MessageCircle, Repeat, Sprout, Target, Timer, Wallet,
+  Bell, BookOpen, CalendarDays, CheckSquare, FileText, FolderKanban, HeartPulse, KeyRound, LayoutGrid, MessageCircle, Repeat, ShieldCheck, Sprout, Target, Timer, Wallet,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BRAND } from "@/lib/brand";
+import { ADMIN_HOME } from "@/lib/navigation";
 import { cn } from "./cn";
 
 export const navItems = [
@@ -33,12 +34,12 @@ function useIsActive() {
 }
 
 // Computador (lg+): menu lateral com nomes. Avisos, tema e conta ficam na barra de cima.
-export function NavRail() {
+export function NavRail({ isTeam = false }: { isTeam?: boolean }) {
   const isActive = useIsActive();
   return (
     <nav aria-label="Seções" className="sticky top-0 flex h-dvh w-56 shrink-0 flex-col gap-5 overflow-y-auto border-r border-border bg-surface px-3 py-5">
       <Link href="/conversa" className="px-3 text-lg font-bold text-text">{BRAND.name}</Link>
-      {SIDEBAR.map((g, i) => (
+      {[...SIDEBAR, ...(isTeam ? [{ title: "Time", items: [{ href: ADMIN_HOME.href, label: ADMIN_HOME.label, icon: ShieldCheck }] }] : [])].map((g, i) => (
         <div key={g.title ?? i} className="flex flex-col gap-0.5">
           {g.title && <p className="px-3 pb-1 text-label text-muted">{g.title}</p>}
           {g.items.map(({ href, label, icon: Icon }) => (

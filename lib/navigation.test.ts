@@ -7,7 +7,10 @@ describe("navegação", () => {
     expect(parentOf("/habitos/abc")).toBe("/habitos");
     expect(parentOf("/dinheiro/extrato")).toBe("/dinheiro");
     expect(parentOf("/notas")).toBe("/mais");
-    expect(parentOf("/admin/custos")).toBe("/ajustes");
+    // o time tem a própria área: as telas dele sobem para Administração, que sobe para a conversa
+    for (const path of ["/admin/custos", "/admin/contas", "/admin/configuracoes", "/suporte/painel"]) expect(parentOf(path)).toBe("/admin");
+    expect(parentOf("/admin/contas/6fe3669b-559b-4f42-8aea-33e34357042d")).toBe("/admin/contas");
+    expect(parentOf("/admin")).toBe("/conversa");
   });
   it("celular: sem voltar nas abas da barra inferior", () => {
     expect(showBackOnMobile("/conversa")).toBe(false);

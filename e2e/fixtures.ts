@@ -37,6 +37,13 @@ export async function login(page: Page, user: TestUser, path = "/conversa") {
   await page.waitForLoadState("networkidle");  // só mexe depois da hidratação
 }
 
+// Time: abre Administração pelo menu da conta (funciona no celular e no computador)
+export async function openAdmin(page: Page) {
+  await page.getByRole("button", { name: "Sua conta" }).click();
+  await page.locator("#menu-conta").getByRole("link", { name: "Administração" }).click();
+  await page.getByRole("heading", { name: "Administração" }).waitFor();
+}
+
 export async function mockCalls(): Promise<Array<{ method: string; url: string; body: Record<string, unknown> }>> {
   return (await fetch(`${MOCK}/__calls`)).json();
 }

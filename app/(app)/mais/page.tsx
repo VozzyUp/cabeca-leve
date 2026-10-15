@@ -1,13 +1,18 @@
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
-import { MORE_GROUPS } from "@/lib/navigation";
+import { ADMIN_HOME, MORE_GROUPS } from "@/lib/navigation";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { currentUser } from "@/lib/supabase/server";
+import { isSupportAdmin } from "@/lib/support";
 
 // Celular: tudo que não cabe na barra inferior, em grupos
-export default function MorePage() {
+export default async function MorePage() {
+  const isTeam = isSupabaseConfigured() && isSupportAdmin((await currentUser())?.email);
+  const groups = isTeam ? [...MORE_GROUPS, { title: "Time", items: [ADMIN_HOME] }] : MORE_GROUPS;
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-[28px] font-bold leading-[34px]">Tudo</h1>
-      {MORE_GROUPS.map((g) => (
+      {groups.map((g) => (
         <section key={g.title} aria-labelledby={`g-${g.title}`} className="flex flex-col gap-2">
           <h2 id={`g-${g.title}`} className="text-label text-muted">{g.title}</h2>
           <ul className="flex flex-col divide-y divide-border rounded-lg border border-border bg-surface">

@@ -1,4 +1,4 @@
-import { Bell, ChevronRight, Coins, CreditCard, Inbox, FileText, KeyRound, LifeBuoy, ShieldCheck, Sparkles, Users } from "lucide-react";
+import { Bell, ChevronRight, CreditCard, FileText, LifeBuoy, ShieldCheck, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { cancelPlan } from "@/app/actions";
 import { Card } from "@/components/ui/card";
@@ -8,8 +8,6 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { serverContext } from "@/lib/server";
 import { formatMoney, formatShortDate } from "@/lib/time";
 import { AssistantForm, SettingsForm } from "./settings-forms";
-import { isSupportAdmin } from "@/lib/support";
-import { currentUser } from "@/lib/supabase/server";
 
 function LinkRow({ href, icon: Icon, title, hint }: { href: string; icon: typeof Bell; title: string; hint: string }) {
   return (
@@ -25,7 +23,6 @@ function LinkRow({ href, icon: Icon, title, hint }: { href: string; icon: typeof
 export async function SettingsScreen() {
   const { store, today } = await serverContext();
   const settings = await store.getSettings();
-  const admin = isSupabaseConfigured() && isSupportAdmin((await currentUser())?.email);
   const end = settings.billing?.periodEnd ? formatShortDate(settings.billing.periodEnd.slice(0, 10)) : null;
   const plan = settings.billing?.confirming ? "Pagamento em confirmação: tudo liberado enquanto a Asaas confirma"
     : settings.billing?.pastDue ? "Pagamento atrasado: atualize o cartão para não perder o acesso"
@@ -44,10 +41,6 @@ export async function SettingsScreen() {
         <LinkRow href="/ajustes/suporte" icon={LifeBuoy} title="Falar com uma pessoa" hint="resposta de alguém do time em até 1 dia útil" />
         <LinkRow href="/privacidade" icon={ShieldCheck} title="Política de privacidade" hint="o que guardamos e como você controla" />
         <LinkRow href="/termos" icon={FileText} title="Termos de uso" hint="as regras do serviço" />
-        {admin && <LinkRow href="/admin/configuracoes" icon={KeyRound} title="Configuração do sistema" hint="chaves dos serviços (só para o time)" />}
-        {admin && <LinkRow href="/admin/contas" icon={Users} title="Contas e planos" hint="quem criou conta, plano, teste e renovação manual (só para o time)" />}
-        {admin && <LinkRow href="/admin/custos" icon={Coins} title="Custo da IA" hint="gasto por usuário e por modelo (só para o time)" />}
-        {admin && <LinkRow href="/suporte/painel" icon={Inbox} title="Chamados de suporte" hint="responder quem pediu uma pessoa (só para o time)" />}
       </Card>
       {settings.billing?.canceledAt && (
         <p role="note" className="rounded-lg border border-border bg-surface px-4 py-3 text-sm text-body">

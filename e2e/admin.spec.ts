@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { a11y, admin, expect, login, markOnboarded, mockCalls, PASSWORD, test, type TestUser } from "./fixtures";
+import { a11y, admin, expect, login, markOnboarded, mockCalls, openAdmin, PASSWORD, test, type TestUser } from "./fixtures";
 
 // Tela de configuração do sistema (/admin/configuracoes): as chaves dos serviços no banco,
 // criptografadas, valendo na hora. Usa campos que os outros testes não leem (rodam em paralelo).
@@ -21,6 +21,7 @@ test("ADM-H1 o dono salva chaves pela tela; segredo não volta inteiro; vale na 
   const owner = await adminUser();
   await admin.from("app_settings").delete().in("key", ["EMAIL_FROM", "ASAAS_API_KEY", "META_WEBHOOK_VERIFY_TOKEN"]);
   await login(page, owner, "/ajustes");
+  await openAdmin(page);
   await page.getByRole("link", { name: /Configuração do sistema/ }).click();
   await expect(page.getByRole("heading", { name: "Configuração do sistema" })).toBeVisible();
 
@@ -103,6 +104,7 @@ test("ADM-H3 o dono vê o custo da IA por usuário e por modelo, em dólar e em 
   ]);
   expect(error).toBeNull();
   await login(page, owner, "/ajustes");
+  await openAdmin(page);
   await page.getByRole("link", { name: /Custo da IA/ }).click();
   await expect(page.getByRole("heading", { name: "Custo da IA" })).toBeVisible();
   await page.getByRole("link", { name: "Hoje" }).click();
@@ -123,6 +125,10 @@ test("ADM-H3 o dono vê o custo da IA por usuário e por modelo, em dólar e em 
 test("ADM-N1 quem não é admin não vê a tela nem o atalho, e não consegue salvar", async ({ page, user }) => {
   await login(page, user, "/ajustes");
   await expect(page.getByRole("link", { name: /Configuração do sistema/ })).toHaveCount(0);
+  await page.getByRole("button", { name: "Sua conta" }).click();
+  await expect(page.locator("#menu-conta").getByRole("link", { name: "Administração" })).toHaveCount(0);
+  await page.goto("/admin");
+  await expect(page.getByRole("heading", { name: "Administração" })).toHaveCount(0);
   await page.goto("/admin/configuracoes");
   await expect(page.getByRole("heading", { name: "Configuração do sistema" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: /Custo da IA/ })).toHaveCount(0);

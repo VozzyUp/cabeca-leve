@@ -1,5 +1,5 @@
 "use client";
-import { Bell, ChevronLeft, LogOut, Moon, Sun } from "lucide-react";
+import { Bell, ChevronLeft, LogOut, Moon, ShieldCheck, Sun } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
@@ -7,7 +7,7 @@ import { updateSettings } from "@/app/actions";
 import { signOut } from "@/app/auth-actions";
 import { BRAND } from "@/lib/brand";
 import type { Settings } from "@/lib/data/types";
-import { parentOf, showBackOnDesktop, showBackOnMobile } from "@/lib/navigation";
+import { ADMIN_HOME, parentOf, showBackOnDesktop, showBackOnMobile } from "@/lib/navigation";
 import { cn } from "./cn";
 
 // Se a pessoa já passou por outra tela nesta visita: com histórico, "voltar" volta de verdade;
@@ -18,8 +18,8 @@ const visit = globalThis as typeof globalThis & { __lastPath?: string; __hasPrev
 const iconButton = "relative flex size-10 items-center justify-center rounded-full text-body hover:bg-surface-2 hover:text-text";
 
 // Barra de cima das telas logadas: voltar à esquerda; avisos, tema e conta à direita
-export function TopBar({ unread, name, email, theme, canSignOut }: {
-  unread: number; name: string; email: string; theme: Settings["theme"]; canSignOut: boolean;
+export function TopBar({ unread, name, email, theme, canSignOut, isTeam = false }: {
+  unread: number; name: string; email: string; theme: Settings["theme"]; canSignOut: boolean; isTeam?: boolean;
 }) {
   const path = usePathname() ?? "/";
   const router = useRouter();
@@ -52,7 +52,7 @@ export function TopBar({ unread, name, email, theme, canSignOut }: {
           )}
         </Link>
         <ThemeButton theme={theme} />
-        <AccountMenu name={name} email={email} canSignOut={canSignOut} />
+        <AccountMenu name={name} email={email} canSignOut={canSignOut} isTeam={isTeam} />
       </div>
     </header>
   );
@@ -88,7 +88,7 @@ const MENU: Array<{ href: string; label: string }> = [
 ];
 
 // Menu da conta: abre e fecha no botão, fecha com Esc, com clique fora ou ao escolher
-function AccountMenu({ name, email, canSignOut }: { name: string; email: string; canSignOut: boolean }) {
+function AccountMenu({ name, email, canSignOut, isTeam }: { name: string; email: string; canSignOut: boolean; isTeam: boolean }) {
   const [open, setOpen] = useState(false);
   const [leaving, startLeaving] = useTransition();
   const ref = useRef<HTMLDivElement>(null);
@@ -120,6 +120,14 @@ function AccountMenu({ name, email, canSignOut }: { name: string; email: string;
               <li key={m.href}><Link href={m.href} onClick={() => setOpen(false)} className="block rounded-md px-3 py-2 text-sm text-body hover:bg-surface-2 hover:text-text">{m.label}</Link></li>
             ))}
           </ul>
+          {isTeam && (
+            <div className="border-t border-border py-1">
+              <p className="px-3 pb-1 pt-2 text-label text-muted">Time</p>
+              <Link href={ADMIN_HOME.href} onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-body hover:bg-surface-2 hover:text-text">
+                <ShieldCheck aria-hidden className="size-4" />{ADMIN_HOME.label}
+              </Link>
+            </div>
+          )}
           {canSignOut && (
             <button type="button" disabled={leaving}
               onClick={() => startLeaving(async () => { await signOut(false); router.push("/entrar"); router.refresh(); })}

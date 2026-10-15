@@ -9,6 +9,7 @@ import { TopBar } from "@/components/ui/top-bar";
 import { serverContext } from "@/lib/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { currentUser } from "@/lib/supabase/server";
+import { isSupportAdmin } from "@/lib/support";
 
 // Layout das telas logadas: menu lateral no computador, barra inferior no celular e,
 // nos dois, a barra de cima com voltar, avisos, tema e a conta (com Sair)
@@ -18,13 +19,14 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   const unread = notices.filter((n) => !n.readAt).length;
   const configured = isSupabaseConfigured();
   const user = configured ? await currentUser() : null;
+  const isTeam = isSupportAdmin(user?.email);
   return (
     <div className="flex flex-1">
       <ThemeSync theme={settings.theme} />
       {user && <RealtimeSync userId={user.id} />}
-      <div className="hidden lg:block"><NavRail /></div>
+      <div className="hidden lg:block"><NavRail isTeam={isTeam} /></div>
       <main className="mx-auto flex w-full max-w-[1120px] flex-1 flex-col px-4 pb-28 lg:px-8 lg:pb-10">
-        <TopBar unread={unread} name={settings.name} email={settings.email} theme={settings.theme} canSignOut={configured} />
+        <TopBar unread={unread} name={settings.name} email={settings.email} theme={settings.theme} canSignOut={configured} isTeam={isTeam} />
         {children}
       </main>
       <div className="fixed inset-x-4 bottom-4 z-10 lg:hidden"><BottomNav /></div>

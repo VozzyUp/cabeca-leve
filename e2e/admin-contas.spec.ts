@@ -1,4 +1,4 @@
-import { a11y, admin, createUser, expect, login, markOnboarded, noHorizontalScroll, PASSWORD, test, type TestUser } from "./fixtures";
+import { a11y, admin, createUser, expect, login, markOnboarded, noHorizontalScroll, openAdmin, PASSWORD, test, type TestUser } from "./fixtures";
 
 // Contas e planos (/admin/contas): o time vê todas as contas, dá plano manual, estende o teste e exclui.
 const ADMIN = "config-e2e@exemplo.com.br";  // está em ADMIN_EMAILS (playwright.config.ts)
@@ -16,6 +16,15 @@ test("ADM-C1 o time acha a conta, dá plano manual até 2099, encerra, estende o
   test.setTimeout(120_000);
   const owner = await adminUser();
   await login(page, owner, "/ajustes");
+  // Ajustes é só de quem usa o app: nada do time ali; o time entra por Administração, no menu da conta
+  for (const name of [/Contas e planos/, /Custo da IA/, /Configuração do sistema/, /Chamados de suporte/]) await expect(page.getByRole("link", { name })).toHaveCount(0);
+  await page.getByRole("button", { name: "Sua conta" }).click();
+  await expect(page.locator("#menu-conta").getByText("Time", { exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await openAdmin(page);
+  expect(await a11y(page)).toEqual([]);
+  await expect(page.getByRole("link", { name: /Contas e planos/ })).toContainText(/\d+ contas?/);
+  for (const name of [/Chamados de suporte/, /Custo da IA/, /Configuração do sistema/]) await expect(page.getByRole("link", { name })).toBeVisible();
   await page.getByRole("link", { name: /Contas e planos/ }).click();
   await expect(page.getByRole("heading", { name: "Contas e planos" })).toBeVisible();
   expect(await a11y(page)).toEqual([]);
@@ -94,6 +103,12 @@ test("ADM-C2 quem não é do time não vê o atalho nem as telas de contas, e na
   try {
     await login(page, user, "/ajustes");
     await expect(page.getByRole("link", { name: /Contas e planos/ })).toHaveCount(0);
+    await page.getByRole("button", { name: "Sua conta" }).click();
+    await expect(page.locator("#menu-conta").getByRole("link", { name: "Administração" })).toHaveCount(0);
+    await page.goto("/mais");
+    await expect(page.getByRole("link", { name: "Administração" })).toHaveCount(0);
+    await page.goto("/admin");
+    await expect(page.getByRole("heading", { name: "Administração" })).toHaveCount(0);
     await page.goto("/admin/contas");
     await expect(page.getByRole("heading", { name: "Contas e planos" })).toHaveCount(0);
     await expect(page.getByText(other.email)).toHaveCount(0);
