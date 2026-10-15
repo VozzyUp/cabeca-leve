@@ -65,6 +65,8 @@ export const CONFIG_GROUPS: ConfigGroup[] = [
     { key: "LIMIT_WHATSAPP_TRIAL", label: "Números de WhatsApp no teste grátis", secret: false, hint: "padrão 1" },
     { key: "LIMIT_WHATSAPP_MONTHLY", label: "Números de WhatsApp no plano mensal", secret: false, hint: "padrão 2" },
     { key: "LIMIT_WHATSAPP_YEARLY", label: "Números de WhatsApp no plano anual", secret: false, hint: "padrão 3" },
+    { key: "LIMIT_STORAGE_MB_TRIAL", label: "Espaço para documentos no teste grátis (MB)", secret: false, hint: "padrão 100" },
+    { key: "LIMIT_STORAGE_MB_PAID", label: "Espaço para documentos nos planos pagos (MB)", secret: false, hint: "padrão 2048 (2 GB)" },
   ] },
   { title: "Suporte", fields: [
     { key: "SUPPORT_EMAIL", label: "E-mail que recebe os chamados", secret: false },

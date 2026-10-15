@@ -77,7 +77,7 @@ export const agentEnabled = () => !!process.env.ANTHROPIC_API_KEY;
 // O cliente guarda a chave e o workspace com que nasceu: se mudarem na tela de admin, o próximo uso já pega os novos.
 // Chave que não é de um workspace específico precisa do ID dele no cabeçalho anthropic-workspace-id.
 let client: { id: string; api: Anthropic } | null = null;
-const anthropic = () => {
+export const anthropic = () => {
   const key = process.env.ANTHROPIC_API_KEY ?? "";
   const workspace = process.env.ANTHROPIC_WORKSPACE_ID?.trim() ?? "";
   const id = `${key}|${workspace}`;

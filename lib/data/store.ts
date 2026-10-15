@@ -1,7 +1,7 @@
 import type {
   Account, ActionRecord, Automation, BodyMeasurement, CalendarEvent, Category, ChatMessage, CreditCard, FocusSession, Goal,
   Habit, HabitLog, InstallmentPurchase, Meal, MealLog, Note, Notice, Project, Recurrence, Reminder, Settings, Task,
-  Budget, Memory, SupportTicket, Transaction, Workout, WorkoutLog,
+  Budget, Doc, DocFolder, DocStatus, Memory, SupportTicket, Transaction, Workout, WorkoutLog,
 } from "./types";
 
 export type Sealed = { iv: string; ciphertext: string };
@@ -32,6 +32,17 @@ export type RemovableKind = "workout" | "meal" | "project" | "goal" | "automatio
 // Conta fixa ou entrada que se repete todo mês. fromThisMonth: o vencimento deste mês ainda vale mesmo que o dia já tenha passado
 export type RecurrenceInput = { kind: Recurrence["kind"]; description: string; amountCents: number; dayOfMonth: number; categoryId: string | null; paymentMethod: Recurrence["paymentMethod"]; fromThisMonth: boolean };
 export const MAX_MEMORIES = 100;
+
+// Documentos: dados no banco, arquivo original no Storage privado
+export type DocumentInput = {
+  folderId: string | null; title: string; issuer: string | null; beneficiary: string | null; category: string | null;
+  docDate: string | null; amountCents: number | null; status: DocStatus | null; dueOn: string | null; notes: string | null;
+  fileName: string; mimeType: string; source: Doc["source"];
+};
+export type DocumentPatch = Partial<Pick<Doc, "folderId" | "title" | "issuer" | "beneficiary" | "category" | "docDate" | "amountCents" | "status" | "dueOn" | "submittedOn" | "reimbursedOn" | "alertStage" | "notes">>;
+export type DocumentFile = { bytes: Buffer; mimeType: string; fileName: string };
+export const MAX_DOCUMENT_BYTES = 25 * 1024 * 1024;
+export const FOLDER_EXISTS = "Já existe uma pasta com esse nome.";
 export type MemoryResult = { ok: true; memory: Memory } | { ok: false; reason: "duplicate" | "full" };
 
 // Mensagem a gravar. `content` são os blocos exatos da API (reenviados byte a byte ao modelo);
@@ -131,6 +142,18 @@ export interface DataStore {
   listMemories(): Promise<Memory[]>;
   addMemory(fact: string): Promise<MemoryResult>;
   clearMemories(): Promise<number>;
+
+  // documentos (notas fiscais, recibos, pedidos médicos): pastas, status de reembolso e o arquivo original
+  listDocFolders(): Promise<DocFolder[]>;
+  createDocFolder(input: { name: string; deadlineDays: number | null }): Promise<DocFolder>;  // nome repetido: erro "Já existe uma pasta com esse nome."
+  updateDocFolder(id: string, patch: { name?: string; deadlineDays?: number | null }): Promise<DocFolder | null>;
+  deleteDocFolder(id: string): Promise<boolean>;  // os documentos ficam sem pasta
+  listDocuments(): Promise<Doc[]>;
+  addDocument(input: DocumentInput, bytes: Buffer): Promise<Doc>;
+  updateDocument(id: string, patch: DocumentPatch): Promise<Doc | null>;
+  deleteDocument(id: string): Promise<boolean>;  // apaga o arquivo também
+  readDocumentFile(id: string): Promise<DocumentFile | null>;
+  documentBytesUsed(): Promise<number>;
 
   // cofre de senhas: só texto já cifrado no aparelho (lib/vault-crypto.ts); o servidor nunca vê a senha mestra
   getVault(): Promise<VaultMeta | null>;

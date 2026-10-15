@@ -125,8 +125,9 @@ describe.skipIf(!run)("SupabaseStore", () => {
   it("contas fixas: cadastra, só conta vencimento de agora em diante, confirma uma vez só (mesmo com dois toques juntos) e desfaz", async () => {
     const { confirmBill, createRecurring } = await import("@/lib/assistant/tools");
     const { toResolve } = await import("@/lib/domain/resolve");
+    const { localDate } = await import("@/lib/time");
     const now = new Date();
-    const today = now.toISOString().slice(0, 10);
+    const today = localDate(now, a.timezone());  // o dia no fuso da conta, não o do relógio UTC (à noite no Brasil já é amanhã em UTC)
     const day = Number(today.slice(8, 10));
     const past = day > 2 ? day - 1 : 1;  // um dia que já passou neste mês (ou o dia 1)
     const rent = await createRecurring(a, { kind: "bill", description: "Aluguel", amountCents: 180_000, dayOfMonth: past, categoryId: null, paymentMethod: "pix", fromThisMonth: false });
@@ -359,5 +360,74 @@ describe.skipIf(!run)("SupabaseStore", () => {
     await a.deleteVault();
     expect(await a.getVault()).toBeNull();
     expect((await admin.from("vault_items").select("id").in("id", [one.id, two.id])).data).toEqual([]);
+  });
+
+  it("documentos: pastas, arquivo no Storage privado, isolamento entre contas, espaço usado e exclusão levam o arquivo junto", async () => {
+    const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==", "base64");
+    // a conta "b" já foi apagada por outro teste: esta usa uma conta própria
+    const { data: other } = await admin.auth.admin.createUser({ email: `o-${stamp}@teste.local`, password, email_confirm: true });
+    const b = await createSupabaseStore(admin, other.user!.id, null);
+    const input = { folderId: null, title: "Consulta Dra. Roberta", issuer: "Dra. Roberta", beneficiary: "Ana", category: "Consulta", docDate: "2026-10-01", amountCents: 35000,
+      status: "pending" as const, dueOn: "2026-10-31", notes: null, fileName: "nota.png", mimeType: "image/png", source: "web" as const };
+
+    // pastas: nome repetido (sem ligar para caixa) é recusado, mas outra conta pode ter o mesmo nome
+    const folder = await a.createDocFolder({ name: "Convênio", deadlineDays: 30 });
+    await expect(a.createDocFolder({ name: " convênio ", deadlineDays: null })).rejects.toThrow(/Já existe/);
+    expect((await b.createDocFolder({ name: "Convênio", deadlineDays: null })).id).not.toBe(folder.id);
+    expect((await a.updateDocFolder(folder.id, { deadlineDays: 45 }))!.deadlineDays).toBe(45);
+
+    // o arquivo volta byte a byte; o banco guarda o caminho, nunca os bytes
+    const doc = await a.addDocument({ ...input, folderId: folder.id }, png);
+    expect(doc).toMatchObject({ title: "Consulta Dra. Roberta", status: "pending", amountCents: 35000, sizeBytes: png.length, folderId: folder.id, alertStage: 0 });
+    const file = await a.readDocumentFile(doc.id);
+    expect(file!.bytes.equals(png)).toBe(true);
+    expect(file).toMatchObject({ mimeType: "image/png", fileName: "nota.png" });
+    expect(await a.documentBytesUsed()).toBe(png.length);
+
+    // a outra conta não vê, não lê o arquivo, não edita nem apaga
+    expect(await b.listDocuments()).toEqual([]);
+    expect(await b.readDocumentFile(doc.id)).toBeNull();
+    expect(await b.updateDocument(doc.id, { title: "invadido" })).toBeNull();
+    expect(await b.deleteDocument(doc.id)).toBe(false);
+    expect(await b.documentBytesUsed()).toBe(0);
+    // nem pasta de outra conta pode receber o documento (chave composta)
+    const bFolder = (await b.listDocFolders())[0];
+    await expect(a.addDocument({ ...input, folderId: bFolder.id }, png)).rejects.toThrow();
+    expect(await a.listDocuments()).toHaveLength(1);  // e a falha não deixou arquivo órfão nem linha
+    const { data: leftovers } = await admin.storage.from("documents").list(users[0]);
+    expect(leftovers).toHaveLength(1);
+
+    // o navegador (chave pública) não lê as tabelas nem o bucket
+    const anon = createClient<Database>(URL, PUBLISHABLE, { auth: { persistSession: false } });
+    expect((await anon.from("documents").select("id")).data ?? []).toEqual([]);
+    const { data: path } = await admin.from("documents").select("file_path").eq("id", doc.id).single();
+    expect((await anon.storage.from("documents").download(path!.file_path)).error).toBeTruthy();
+    expect((await anon.storage.from("documents").createSignedUrl(path!.file_path, 60)).error).toBeTruthy();
+
+    // editar: status e datas
+    const sent = await a.updateDocument(doc.id, { status: "submitted", submittedOn: "2026-10-15", alertStage: 1 });
+    expect(sent).toMatchObject({ status: "submitted", submittedOn: "2026-10-15", alertStage: 1 });
+    expect((await a.updateDocument(doc.id, { status: null, dueOn: null }))!.status).toBeNull();  // só guardado
+
+    // apagar a pasta não apaga o documento
+    expect(await a.deleteDocFolder(folder.id)).toBe(true);
+    expect((await a.listDocuments())[0].folderId).toBeNull();
+
+    // apagar o documento leva o arquivo
+    expect(await a.deleteDocument(doc.id)).toBe(true);
+    expect((await admin.storage.from("documents").list(users[0])).data).toHaveLength(0);
+    expect(await a.documentBytesUsed()).toBe(0);
+    expect(await a.readDocumentFile(doc.id)).toBeNull();
+
+    // excluir a conta leva os arquivos, que ficam fora da cascata do banco
+    const { data: tmp } = await admin.auth.admin.createUser({ email: `c-${stamp}@teste.local`, password, email_confirm: true });
+    const c = await createSupabaseStore(admin, tmp.user!.id, null);
+    await c.addDocument(input, png);
+    await c.addDocument({ ...input, title: "Segunda" }, png);
+    expect((await admin.storage.from("documents").list(tmp.user!.id)).data).toHaveLength(2);
+    await c.deleteAllData();
+    expect((await admin.storage.from("documents").list(tmp.user!.id)).data).toHaveLength(0);
+    expect((await admin.from("documents").select("id").eq("user_id", tmp.user!.id)).data).toEqual([]);
+    await b.deleteAllData();
   });
 });

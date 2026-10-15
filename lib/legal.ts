@@ -33,12 +33,13 @@ export function privacySections(o = operator()): Section[] {
         "O que você pede ao assistente: mensagens, tarefas, lembretes, gastos, contas, hábitos, metas, notas, treino, alimentação e medidas que você registra.",
         "Fotos que você envia na conversa e a transcrição de áudios que você manda (o áudio em si não fica guardado).",
         "Fatos que você pede para o assistente lembrar (a “memória”), que você vê e apaga em Ajustes.",
+        "Documentos que você guarda (notas fiscais, recibos, pedidos médicos, receitas): o arquivo original, em área privada que só a sua conta acessa, e os dados que a IA lê dele (nome, quem emitiu, para quem, data e valor). Um pedido médico ou receita revela dado de saúde.",
         "Cofre de senhas: os itens são cifrados no seu aparelho com a sua senha mestra antes de chegar ao servidor. Guardamos só o conteúdo cifrado. Nem o time nem o assistente conseguem ler, e sem a senha mestra não há como recuperar.",
         "Pesquisas agendadas: o assunto que você pede para pesquisar vai para a busca na internet feita pela Anthropic.",
         "Pagamento: a Asaas processa o cartão ou o Pix. Nós guardamos só o plano, o status e as datas, nunca o número do cartão.",
         "Dados técnicos de uso: horário das mensagens, volume de uso da IA (para limite e custo) e o registro do aparelho que recebe notificações.",
       ] },
-      "Você pode registrar dados sensíveis (por exemplo, medidas, treino e alimentação) por vontade própria. Eles são tratados só para o serviço funcionar para você.",
+      "Você pode registrar dados sensíveis (por exemplo, medidas, treino, alimentação e documentos médicos) por vontade própria. Eles são tratados só para o serviço funcionar para você, e a IA lê os documentos que você envia apenas para preencher os dados e responder às suas perguntas.",
     ] },
     { title: "Para que usamos e em que base legal", body: [
       { list: [
@@ -54,7 +55,7 @@ export function privacySections(o = operator()): Section[] {
       "Usamos fornecedores (operadores) que tratam os dados só para nos prestar o serviço:",
       { list: [
         "Supabase: banco de dados e login.",
-        "Anthropic: a inteligência artificial que lê sua mensagem (e foto) e escreve a resposta, e faz as buscas na internet das pesquisas agendadas.",
+        "Anthropic: a inteligência artificial que lê sua mensagem (e foto ou documento) e escreve a resposta, e faz as buscas na internet das pesquisas agendadas.",
         "Groq: transcrição dos áudios em texto.",
         "WhatsApp: a mensagem passa pelo provedor de conexão do WhatsApp que usamos (UAZAPI ou a API oficial da Meta).",
         "Asaas: cobrança e pagamento.",
@@ -73,6 +74,7 @@ export function privacySections(o = operator()): Section[] {
       { list: [
         "Seus registros ficam enquanto a conta existir.",
         "Fotos enviadas na conversa são apagadas automaticamente depois de 2 dias. O texto da conversa permanece.",
+        "Documentos que você guarda em Documentos (notas fiscais, recibos, pedidos médicos) ficam até você apagá-los ou excluir a conta. Ao apagar, o arquivo é removido.",
         "Ao excluir a conta em Ajustes, apagamos seus dados. Alguns registros de cobrança podem ser mantidos pelo prazo que a lei exigir.",
       ] },
     ] },

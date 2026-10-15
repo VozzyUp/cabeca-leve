@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { addDays, DEFAULT_TZ, localDate, zonedToUtc } from "@/lib/time";
 import { sameFact } from "@/lib/domain/memory";
-import { MAX_MEMORIES, type DataStore, type VaultMeta, type VaultRecord } from "./store";
+import { FOLDER_EXISTS, MAX_MEMORIES, type DataStore, type VaultMeta, type VaultRecord } from "./store";
 import { nextDate, nextFireAt, reopenFireAt } from "@/lib/domain/recurrence";
 import { seedFinance, seedHealth, seedOrganization, seedSettings } from "./seed-extra";
 
@@ -12,7 +12,7 @@ import type {
   Account, ActionRecord, Automation, BodyMeasurement, CalendarEvent, Category, ChatMessage, CreditCard, FocusSession, Goal,
   Habit, HabitLog, InstallmentPurchase, Meal, MealLog, Note, Notice, Project, Recurrence, Reminder, Settings, Task,
   Transaction, Workout, WorkoutLog,
-  Budget, Memory,
+  Budget, Doc, DocFolder, Memory,
 } from "./types";
 
 // Banco provisório com dados de exemplo, só até o /replica-backend ligar o Supabase.
@@ -51,10 +51,13 @@ type State = {
   memories?: Memory[];
   vault?: VaultMeta | null;      // cofre de senhas (só cifrado)
   vaultItems?: VaultRecord[];
+  docFolders?: DocFolder[];
+  documents?: Doc[];
   settings: Settings;
 };
 
 const id = () => crypto.randomUUID();
+const demoFiles = new Map<string, import("./store").DocumentFile>();
 
 // tira da vista as fichas e planos que um novo substituiu (continuam guardados, para o desfazer)
 function hidden(s: State) {
@@ -485,6 +488,63 @@ export const fakeStore: DataStore = {
     mutate((s) => s.automations.push(a));
     return a;
   },
+  // documentos: na demonstração os arquivos ficam na memória do servidor (somem ao reiniciar)
+  async listDocFolders() { return [...(load().docFolders ?? [])].sort((a, b) => a.name.localeCompare(b.name, "pt-BR")); },
+  async createDocFolder(input) {
+    return mutate((s) => {
+      s.docFolders ??= [];
+      if (s.docFolders.some((f) => f.name.trim().toLowerCase() === input.name.trim().toLowerCase())) throw new Error(FOLDER_EXISTS);
+      const folder: DocFolder = { id: id(), name: input.name.trim(), deadlineDays: input.deadlineDays, createdAt: new Date().toISOString() };
+      s.docFolders.push(folder);
+      return folder;
+    });
+  },
+  async updateDocFolder(folderId, patch) {
+    return mutate((s) => {
+      const f = (s.docFolders ?? []).find((x) => x.id === folderId);
+      if (!f) return null;
+      if (patch.name !== undefined) {
+        if ((s.docFolders ?? []).some((x) => x.id !== folderId && x.name.trim().toLowerCase() === patch.name!.trim().toLowerCase())) throw new Error(FOLDER_EXISTS);
+        f.name = patch.name.trim();
+      }
+      if (patch.deadlineDays !== undefined) f.deadlineDays = patch.deadlineDays;
+      return { ...f };
+    });
+  },
+  async deleteDocFolder(folderId) {
+    return mutate((s) => {
+      const before = (s.docFolders ?? []).length;
+      s.docFolders = (s.docFolders ?? []).filter((f) => f.id !== folderId);
+      for (const d of s.documents ?? []) if (d.folderId === folderId) d.folderId = null;
+      return s.docFolders.length < before;
+    });
+  },
+  async listDocuments() { return [...(load().documents ?? [])].sort((a, b) => b.createdAt.localeCompare(a.createdAt)); },
+  async addDocument(input, bytes) {
+    const doc: Doc = {
+      id: id(), folderId: input.folderId, title: input.title, issuer: input.issuer, beneficiary: input.beneficiary, category: input.category,
+      docDate: input.docDate, amountCents: input.amountCents, status: input.status, dueOn: input.dueOn, submittedOn: null, reimbursedOn: null,
+      alertStage: 0, notes: input.notes, fileName: input.fileName, mimeType: input.mimeType, sizeBytes: bytes.length, source: input.source,
+      createdAt: new Date().toISOString(),
+    };
+    demoFiles.set(doc.id, { bytes, mimeType: input.mimeType, fileName: input.fileName });
+    mutate((s) => { (s.documents ??= []).push(doc); });
+    return doc;
+  },
+  async updateDocument(docId, patch) {
+    return mutate((s) => {
+      const d = (s.documents ?? []).find((x) => x.id === docId);
+      if (!d) return null;
+      Object.assign(d, patch);
+      return { ...d };
+    });
+  },
+  async deleteDocument(docId) {
+    demoFiles.delete(docId);
+    return mutate((s) => { const before = (s.documents ?? []).length; s.documents = (s.documents ?? []).filter((d) => d.id !== docId); return s.documents.length < before; });
+  },
+  async readDocumentFile(docId) { return demoFiles.get(docId) ?? null; },
+  async documentBytesUsed() { return (load().documents ?? []).reduce((sum, d) => sum + d.sizeBytes, 0); },
   async getVault() { return load().vault ?? null; },
   async setupVault(meta) { mutate((s) => { if (s.vault) throw new Error("cofre já existe"); s.vault = meta; s.vaultItems = []; }); },
   async listVaultItems() { return [...(load().vaultItems ?? [])]; },

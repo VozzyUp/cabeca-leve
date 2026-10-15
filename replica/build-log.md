@@ -244,3 +244,16 @@ Paridade 63,2/100; **40 de 40 obrigatórias completas**.
 - O painel recusa salvar o que não for chave VAPID de verdade (pública: 65 bytes começando em 0x04; privada: 32 bytes) e mostra um aviso no topo quando as chaves salvas são inválidas, mandando usar o botão Gerar.
 - Chave inválida não vai para o navegador: o app diz "notificações ainda não estão ligadas" em vez de quebrar.
 - O aparelho espera o service worker ficar ativo antes de se inscrever (no iPhone, inscrever antes falha) e o botão mostra o erro, se houver, em vez de desligar calado.
+
+## 2026-10-15: documentos, etapa 1 (notas fiscais, recibos e pedidos médicos)
+
+- **Pedido:** guardar notas de viagem e do convênio para pedir reembolso, com status e prazo, achar "as notas da Dra. Roberta" e baixar o arquivo original depois.
+- Tela **Documentos** (`/documentos`): pastas com prazo padrão (dias depois da data da nota), resumo por status (Pendente, Enviado, Reembolsado, com soma), filtros por pasta e situação, busca sem ligar para acento, seleção de várias notas para mudar o status de uma vez, envio de foto e PDF, edição, espaço usado.
+- **Status:** sem status = "só guardado" (pedido médico, receita), fora da conta de reembolso. O prazo só corre enquanto a nota está pendente.
+- **Arquivo original** em bucket privado do Storage (`documents`, sem política de acesso: só o servidor, pela chave secreta). O único caminho até ele é `GET /api/documents/<id>/file` (`?download=1` baixa), que confere o dono. Foto vira JPEG de até 2400 px, legível e sem metadados; PDF fica como veio.
+- A IA lê a foto ou o PDF e preenche nome, quem emitiu, data, valor e categoria (`lib/documents-ai.ts`, até 10 páginas do PDF). Se falhar ou não houver chave, o documento é guardado só com o nome do arquivo.
+- **Espaço por plano:** 100 MB no teste e 2 GB nos pagos (Admin > Configurações > Limites: `LIMIT_STORAGE_MB_TRIAL` e `LIMIT_STORAGE_MB_PAID`).
+- Excluir a conta apaga os arquivos do Storage (ficam fora da cascata do banco). "Baixar meus dados" inclui os dados dos documentos. Política de privacidade atualizada (documento fica até apagar; pedido médico é dado de saúde).
+- Corrigido junto: o limite de corpo do proxy subiu para 26 MB (PDF de até 25 MB); o teste das contas fixas usava a data UTC, e entre 21h e 24h no Brasil falhava.
+- Migração `20261015000100_documentos` (arquivo 27 para colar). Testes: `lib/domain/documents.test.ts`, `lib/documents.test.ts`, integração do store e `e2e/documentos.spec.ts` (DOC-H1, DOC-E1, DOC-X1).
+- **Falta (etapas 2 e 3):** guardar e achar pelo WhatsApp e reenviar o arquivo lá; avisos de prazo (7 e 2 dias); exportar a pasta em PDF único e planilha.

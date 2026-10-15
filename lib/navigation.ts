@@ -44,6 +44,7 @@ export const MORE_GROUPS: NavGroup[] = [
     { href: "/projetos", label: "Projetos", hint: "entregas maiores, com etapas" },
     { href: "/notas", label: "Notas", hint: "ideias, cadernos e diário" },
     { href: "/cofre", label: "Cofre de senhas", hint: "logins e senhas cifrados com a sua senha mestra" },
+    { href: "/documentos", label: "Documentos", hint: "notas fiscais, recibos e pedidos, com status de reembolso e prazo" },
     { href: "/agenda", label: "Agenda", hint: "Google Agenda e Outlook" },
     { href: "/foco", label: "Modo foco", hint: "trabalhar com tempo marcado" },
     { href: "/automacoes", label: "Revisões e pesquisas", hint: "resumos e pesquisas na internet no dia e hora que você escolhe" },

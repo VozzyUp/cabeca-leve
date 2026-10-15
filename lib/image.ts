@@ -32,3 +32,24 @@ export async function normalizeImage(input: ArrayBuffer | Buffer): Promise<ChatI
     throw new ImageError("Não consegui abrir essa foto. Tente mandar de novo.");
   }
 }
+
+// Foto de documento (nota fiscal, recibo, pedido) para GUARDAR: ao contrário da foto do chat, precisa continuar legível
+// quando for anexada a um pedido de reembolso. Lado maior de até 2400 px, JPEG, girada pelo EXIF e sem metadados.
+export const STORED_IMAGE_SIDE = 2400;
+
+export async function normalizeStoredImage(input: ArrayBuffer | Buffer): Promise<{ mediaType: "image/jpeg"; bytes: Buffer }> {
+  const buf = Buffer.isBuffer(input) ? input : Buffer.from(input);
+  if (!buf.length) throw new ImageError("A foto veio vazia.");
+  if (buf.length > MAX_IMAGE_BYTES * 2) throw new ImageError("Foto grande demais (até 25 MB).");
+  try {
+    const image = sharp(buf, { limitInputPixels: 100_000_000, failOn: "error" });
+    const meta = await image.metadata();
+    if (!meta.format || !FORMATS.has(meta.format)) throw new ImageError("Esse formato de imagem não é aceito. Mande JPEG, PNG ou WebP.");
+    const bytes = await image.rotate().resize({ width: STORED_IMAGE_SIDE, height: STORED_IMAGE_SIDE, fit: "inside", withoutEnlargement: true })
+      .flatten({ background: "#ffffff" }).jpeg({ quality: 85, mozjpeg: true }).toBuffer();
+    return { mediaType: "image/jpeg", bytes };
+  } catch (error) {
+    if (error instanceof ImageError) throw error;
+    throw new ImageError("Não consegui abrir essa foto. Tente mandar de novo.");
+  }
+}

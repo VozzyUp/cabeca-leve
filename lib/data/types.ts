@@ -245,3 +245,30 @@ export type SupportTicket = {
   answeredAt: string | null;
   createdAt: string;
 };
+
+// ---- Documentos (notas fiscais, recibos, pedidos médicos) ----
+
+// null = só guardado (pedido médico, exame): fora da conta de reembolso
+export type DocStatus = "pending" | "submitted" | "reimbursed";
+export type DocFolder = { id: string; name: string; deadlineDays: number | null; createdAt: string };
+export type Doc = {
+  id: string;
+  folderId: string | null;
+  title: string;
+  issuer: string | null;       // quem emitiu: profissional ou estabelecimento ("Dra. Roberta")
+  beneficiary: string | null;  // para quem foi ("eu", "Ana")
+  category: string | null;
+  docDate: string | null;
+  amountCents: number | null;
+  status: DocStatus | null;
+  dueOn: string | null;        // prazo para pedir o reembolso
+  submittedOn: string | null;
+  reimbursedOn: string | null;
+  alertStage: 0 | 1 | 2;       // 0 nenhum aviso, 1 avisou 7 dias antes, 2 avisou 2 dias antes
+  notes: string | null;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  source: "web" | "whatsapp";
+  createdAt: string;
+};

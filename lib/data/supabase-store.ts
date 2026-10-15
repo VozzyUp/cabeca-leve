@@ -8,11 +8,11 @@ import { newProtocol, notifyOwner, supportDueAt } from "@/lib/support";
 import { daysInMonth, shiftMonth } from "@/lib/domain/money";
 import { addDays, localDate, zonedToUtc } from "@/lib/time";
 import { sameFact } from "@/lib/domain/memory";
-import { MAX_MEMORIES, type DataStore } from "./store";
+import { FOLDER_EXISTS, MAX_MEMORIES, type DataStore, type DocumentFile } from "./store";
 import type {
   ActionCardData, ActionRecord, Automation, BodyMeasurement, CalendarEvent, ChatMessage, Note, Reminder, Settings, Task, Transaction,
   SupportTicket,
-  Budget,
+  Budget, Doc, DocFolder,
 } from "./types";
 
 // DataStore sobre o Supabase. Usa o cliente de serviço e filtra TODA consulta por user_id:
@@ -34,6 +34,21 @@ const ENTITY_TABLE = {
 const TABLE_ENTITY = Object.fromEntries(Object.entries(ENTITY_TABLE).map(([k, v]) => [v, k])) as Record<string, ActionRecord["entity"]>;
 const UI_METHODS = new Set(["pix", "debit", "credit", "cash", "other"]);
 const hm = (t: string | null | undefined) => (t ? t.slice(0, 5) : null);
+
+const DOC_BUCKET = "documents";
+const DOC_EXT: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "application/pdf": "pdf" };
+const DOC_COLUMNS = "id, folder_id, title, issuer, beneficiary, category, doc_date, amount_cents, status, due_on, submitted_on, reimbursed_on, alert_stage, notes, file_name, mime_type, size_bytes, source, created_at";
+const mapFolder = (r: { id: string; name: string; deadline_days: number | null; created_at: string }): DocFolder => ({ id: r.id, name: r.name, deadlineDays: r.deadline_days, createdAt: r.created_at });
+const mapDoc = (r: {
+  id: string; folder_id: string | null; title: string; issuer: string | null; beneficiary: string | null; category: string | null; doc_date: string | null;
+  amount_cents: number | null; status: string | null; due_on: string | null; submitted_on: string | null; reimbursed_on: string | null; alert_stage: number;
+  notes: string | null; file_name: string; mime_type: string; size_bytes: number; source: string; created_at: string;
+}): Doc => ({
+  id: r.id, folderId: r.folder_id, title: r.title, issuer: r.issuer, beneficiary: r.beneficiary, category: r.category, docDate: r.doc_date,
+  amountCents: r.amount_cents === null ? null : Number(r.amount_cents), status: r.status as Doc["status"], dueOn: r.due_on, submittedOn: r.submitted_on,
+  reimbursedOn: r.reimbursed_on, alertStage: r.alert_stage as Doc["alertStage"], notes: r.notes, fileName: r.file_name, mimeType: r.mime_type,
+  sizeBytes: r.size_bytes, source: r.source as Doc["source"], createdAt: r.created_at,
+});
 
 export async function createSupabaseStore(db: Admin, userId: string, email: string | null): Promise<DataStore> {
   const profile = must(await db.from("profiles").select("timezone").eq("user_id", userId).single());
@@ -774,6 +789,80 @@ export async function createSupabaseStore(db: Admin, userId: string, email: stri
       if (Object.keys(row).length) must(await db.from("profiles").update(row).eq("user_id", userId));
       return store.getSettings();
     },
+    // documentos: o arquivo fica no bucket privado em <user_id>/<id>.<ext>; só esta camada (chave de serviço) o alcança
+    async listDocFolders() {
+      return must(await db.from("document_folders").select("id, name, deadline_days, created_at").eq("user_id", userId).order("name")).map(mapFolder);
+    },
+    async createDocFolder(input) {
+      const r = await db.from("document_folders").insert({ user_id: userId, name: input.name.trim(), deadline_days: input.deadlineDays })
+        .select("id, name, deadline_days, created_at").single();
+      if (r.error?.code === "23505") throw new Error(FOLDER_EXISTS);
+      return mapFolder(must(r));
+    },
+    async updateDocFolder(id, patch) {
+      const row: { name?: string; deadline_days?: number | null } = {};
+      if (patch.name !== undefined) row.name = patch.name.trim();
+      if (patch.deadlineDays !== undefined) row.deadline_days = patch.deadlineDays;
+      const r = await db.from("document_folders").update(row).eq("id", id).eq("user_id", userId).select("id, name, deadline_days, created_at").maybeSingle();
+      if (r.error?.code === "23505") throw new Error(FOLDER_EXISTS);
+      const data = must(r);
+      return data ? mapFolder(data) : null;
+    },
+    async deleteDocFolder(id) {
+      return must(await db.from("document_folders").delete().eq("id", id).eq("user_id", userId).select("id")).length > 0;
+    },
+    async listDocuments() {
+      return must(await db.from("documents").select(DOC_COLUMNS).eq("user_id", userId).order("created_at", { ascending: false })).map(mapDoc);
+    },
+    async addDocument(input, bytes) {
+      const id = crypto.randomUUID();
+      const path = `${userId}/${id}.${DOC_EXT[input.mimeType] ?? "bin"}`;
+      const up = await db.storage.from(DOC_BUCKET).upload(path, bytes, { contentType: input.mimeType, upsert: false });
+      if (up.error) throw new Error(`arquivo não guardado: ${up.error.message}`);
+      const r = await db.from("documents").insert({
+        id, user_id: userId, folder_id: input.folderId, title: input.title, issuer: input.issuer, beneficiary: input.beneficiary, category: input.category,
+        doc_date: input.docDate, amount_cents: input.amountCents, status: input.status, due_on: input.dueOn, notes: input.notes,
+        file_path: path, file_name: input.fileName, mime_type: input.mimeType, size_bytes: bytes.length, source: input.source,
+      }).select(DOC_COLUMNS).single();
+      if (r.error) {
+        await db.storage.from(DOC_BUCKET).remove([path]);  // não deixa arquivo órfão
+        throw new Error(r.error.message);
+      }
+      return mapDoc(r.data);
+    },
+    async updateDocument(id, patch) {
+      const row: TablesUpdate<"documents"> = { updated_at: new Date().toISOString() };
+      if (patch.folderId !== undefined) row.folder_id = patch.folderId;
+      if (patch.title !== undefined) row.title = patch.title;
+      if (patch.issuer !== undefined) row.issuer = patch.issuer;
+      if (patch.beneficiary !== undefined) row.beneficiary = patch.beneficiary;
+      if (patch.category !== undefined) row.category = patch.category;
+      if (patch.docDate !== undefined) row.doc_date = patch.docDate;
+      if (patch.amountCents !== undefined) row.amount_cents = patch.amountCents;
+      if (patch.status !== undefined) row.status = patch.status;
+      if (patch.dueOn !== undefined) row.due_on = patch.dueOn;
+      if (patch.submittedOn !== undefined) row.submitted_on = patch.submittedOn;
+      if (patch.reimbursedOn !== undefined) row.reimbursed_on = patch.reimbursedOn;
+      if (patch.alertStage !== undefined) row.alert_stage = patch.alertStage;
+      if (patch.notes !== undefined) row.notes = patch.notes;
+      const data = must(await db.from("documents").update(row).eq("id", id).eq("user_id", userId).select(DOC_COLUMNS).maybeSingle());
+      return data ? mapDoc(data) : null;
+    },
+    async deleteDocument(id) {
+      const rows = must(await db.from("documents").delete().eq("id", id).eq("user_id", userId).select("file_path"));
+      if (rows[0]) await db.storage.from(DOC_BUCKET).remove([rows[0].file_path]);
+      return rows.length > 0;
+    },
+    async readDocumentFile(id) {
+      const row = must(await db.from("documents").select("file_path, file_name, mime_type").eq("id", id).eq("user_id", userId).maybeSingle());
+      if (!row) return null;
+      const dl = await db.storage.from(DOC_BUCKET).download(row.file_path);
+      if (dl.error || !dl.data) return null;
+      return { bytes: Buffer.from(await dl.data.arrayBuffer()), mimeType: row.mime_type, fileName: row.file_name } satisfies DocumentFile;
+    },
+    async documentBytesUsed() {
+      return must(await db.from("documents").select("size_bytes").eq("user_id", userId)).reduce((sum, r) => sum + r.size_bytes, 0);
+    },
     async getVault() {
       const v = must(await db.from("vaults").select("salt, iterations, verifier_iv, verifier").eq("user_id", userId).maybeSingle());
       return v ? { salt: v.salt, iterations: v.iterations, verifier: { iv: v.verifier_iv, ciphertext: v.verifier } } : null;
@@ -807,6 +896,9 @@ export async function createSupabaseStore(db: Admin, userId: string, email: stri
       must(await db.from("vaults").delete().eq("user_id", userId));  // os itens vão junto (cascade)
     },
     async deleteAllData() {
+      // os arquivos dos documentos ficam no Storage, fora da cascata: saem primeiro
+      const files = must(await db.from("documents").select("file_path").eq("user_id", userId)).map((r) => r.file_path);
+      for (let i = 0; i < files.length; i += 100) await db.storage.from(DOC_BUCKET).remove(files.slice(i, i + 100));
       // apagar o usuário do Auth apaga tudo dele em cascata (FKs on delete cascade)
       const { error } = await db.auth.admin.deleteUser(userId);
       if (error) throw new Error(error.message);

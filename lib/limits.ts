@@ -47,3 +47,18 @@ export function whatsappLimit(plan: Settings["plan"], env: Record<string, string
   const fallback = plan === "monthly" ? DEFAULT_WHATSAPP.monthly : plan === "yearly" ? DEFAULT_WHATSAPP.yearly : DEFAULT_WHATSAPP.trial;
   return Math.min(20, Math.floor(positive(env[key]) ?? fallback));
 }
+
+// Espaço para guardar documentos (notas, recibos, pedidos). Por plano, configurável no admin em megabytes.
+export const DEFAULT_STORAGE_MB = { trial: 100, paid: 2048 } as const;
+
+export function storageLimitBytes(plan: Settings["plan"], env: Record<string, string | undefined> = process.env): number {
+  const paid = plan === "monthly" || plan === "yearly";
+  const mb = positive(env[paid ? "LIMIT_STORAGE_MB_PAID" : "LIMIT_STORAGE_MB_TRIAL"]) ?? (paid ? DEFAULT_STORAGE_MB.paid : DEFAULT_STORAGE_MB.trial);
+  return Math.floor(mb * 1024 * 1024);
+}
+
+export function formatBytes(bytes: number): string {
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(bytes < 10 * 1024 * 1024 ? 1 : 0).replace(".", ",")} MB`;
+  return `${(bytes / 1024 / 1024 / 1024).toFixed(1).replace(".", ",")} GB`;
+}

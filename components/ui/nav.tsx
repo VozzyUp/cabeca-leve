@@ -1,6 +1,6 @@
 "use client";
 import {
-  Bell, BookOpen, CalendarDays, CheckSquare, FolderKanban, HeartPulse, KeyRound, LayoutGrid, MessageCircle, Repeat, Sprout, Target, Timer, Wallet,
+  Bell, BookOpen, CalendarDays, CheckSquare, FileText, FolderKanban, HeartPulse, KeyRound, LayoutGrid, MessageCircle, Repeat, Sprout, Target, Timer, Wallet,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -22,7 +22,7 @@ export const navItems = [
 // Menu lateral do computador, em grupos e com o nome de cada seção à vista
 const SIDEBAR: Array<{ title?: string; items: Array<{ href: string; label: string; icon: typeof Bell }> }> = [
   { items: [navItems[0], navItems[1], navItems[2], navItems[3]] },
-  { title: "Organização", items: [navItems[6], navItems[5], navItems[7], { href: "/foco", label: "Modo foco", icon: Timer }, { href: "/automacoes", label: "Revisões", icon: Repeat }, { href: "/cofre", label: "Senhas", icon: KeyRound }] },
+  { title: "Organização", items: [navItems[6], navItems[5], navItems[7], { href: "/foco", label: "Modo foco", icon: Timer }, { href: "/automacoes", label: "Revisões", icon: Repeat }, { href: "/cofre", label: "Senhas", icon: KeyRound }, { href: "/documentos", label: "Documentos", icon: FileText }] },
   { title: "Saúde e rotina", items: [navItems[4], { href: "/saude", label: "Saúde", icon: HeartPulse }, navItems[8]] },
 ];
 

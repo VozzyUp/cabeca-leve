@@ -409,6 +409,40 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"document_folders": {
+                  Row: {
+                    "created_at": string,"deadline_days": number | null,"id": string,"name": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"deadline_days"?: number | null,"id"?: string,"name": string,"user_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"deadline_days"?: number | null,"id"?: string,"name"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"documents": {
+                  Row: {
+                    "alert_stage": number,"amount_cents": number | null,"beneficiary": string | null,"category": string | null,"created_at": string,"doc_date": string | null,"due_on": string | null,"file_name": string,"file_path": string,"folder_id": string | null,"id": string,"issuer": string | null,"mime_type": string,"notes": string | null,"reimbursed_on": string | null,"size_bytes": number,"source": string,"status": string | null,"submitted_on": string | null,"title": string,"updated_at": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "alert_stage"?: number,"amount_cents"?: number | null,"beneficiary"?: string | null,"category"?: string | null,"created_at"?: string,"doc_date"?: string | null,"due_on"?: string | null,"file_name": string,"file_path": string,"folder_id"?: string | null,"id"?: string,"issuer"?: string | null,"mime_type": string,"notes"?: string | null,"reimbursed_on"?: string | null,"size_bytes": number,"source"?: string,"status"?: string | null,"submitted_on"?: string | null,"title": string,"updated_at"?: string,"user_id": string
+                  }
+                  Update: {
+                    "alert_stage"?: number,"amount_cents"?: number | null,"beneficiary"?: string | null,"category"?: string | null,"created_at"?: string,"doc_date"?: string | null,"due_on"?: string | null,"file_name"?: string,"file_path"?: string,"folder_id"?: string | null,"id"?: string,"issuer"?: string | null,"mime_type"?: string,"notes"?: string | null,"reimbursed_on"?: string | null,"size_bytes"?: number,"source"?: string,"status"?: string | null,"submitted_on"?: string | null,"title"?: string,"updated_at"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "documents_folder_id_user_id_fkey"
+      columns: ["folder_id","user_id"]
+isOneToOne: false
+      referencedRelation: "document_folders"
+      referencedColumns: ["id","user_id"]
+    }
+                  ]
                 },"embeddings": {
                   Row: {
                     "chunk_index": number,"content": string,"created_at": string,"embedding": string,"id": string,"model": string,"source_id": string,"source_type": string,"updated_at": string,"user_id": string

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { billingEnabled, cancelSubscription, createCheckout } from "@/lib/billing/asaas";
 import { z } from "zod";
 import { getStore } from "@/lib/data";
+import { FOLDER_EXISTS } from "@/lib/data/store";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { currentUser, getAdmin } from "@/lib/supabase/server";
 import { LinkLimitError, startLink } from "@/lib/whatsapp/link";
@@ -13,8 +14,10 @@ import { sendTestNotice } from "@/lib/deliveries";
 import { confirmBill } from "@/lib/assistant/tools";
 import { CONFIG_FIELDS, CONFIG_KEYS, loadAppConfig, saveAppConfig } from "@/lib/app-config";
 import { pingAgent } from "@/lib/assistant/agent";
+import { changeDocument, changeFolderDeadline } from "@/lib/documents";
+import { storageLimitBytes } from "@/lib/limits";
 import { isVapidPrivateKey, isVapidPublicKey, siteUrl } from "@/lib/public-env";
-import type { Settings } from "@/lib/data/types";
+import type { DocFolder, Settings } from "@/lib/data/types";
 
 // Ações de servidor das telas do M3 e M4. Cada uma valida a entrada, grava pelo DataStore
 // e revalida a tela. No /replica-backend, todas passam a checar a sessão do usuário.
@@ -148,10 +151,13 @@ export async function exportData() {
   // cofre: só cifrado (abre com a senha mestra, lib/vault-crypto.ts)
   const vaultMeta = await s.getVault();
   const vault = vaultMeta ? { ...vaultMeta, items: await s.listVaultItems(), aviso: "cifrado com a senha mestra (PBKDF2-SHA256 + AES-GCM)" } : null;
+  // documentos: os dados de cada um; os arquivos originais se baixam um a um na tela Documentos
+  const [documentFolders, documents] = await Promise.all([s.listDocFolders(), s.listDocuments()]);
   return JSON.stringify({
     exportedAt: new Date().toISOString(), settings, tasks, reminders, habits, habitLogs, transactions, categories, accounts, cards,
     recurrences, installments, projects, goals, notes, automations, notices, focusSessions, workouts, workoutLogs, meals, mealLogs,
-    measurements, messages, memories, vault,
+    measurements, messages, memories, vault, documentFolders, documents,
+    avisoDocumentos: documents.length ? "os arquivos originais (fotos e PDFs) são baixados na tela Documentos" : undefined,
   }, null, 2);
 }
 
@@ -400,4 +406,87 @@ export async function changeVaultPassword(meta: z.infer<typeof vaultMetaSchema>,
 export async function destroyVault(confirmation: string) {
   if (confirmation.trim().toUpperCase() !== "APAGAR") throw new Error("Confirmação errada");
   await (await getStore()).deleteVault();
+}
+
+// ---- Documentos (notas fiscais, recibos, pedidos médicos) ----
+
+export async function loadDocuments() {
+  const store = await getStore();
+  const [folders, documents, usedBytes, settings] = await Promise.all([store.listDocFolders(), store.listDocuments(), store.documentBytesUsed(), store.getSettings()]);
+  return { folders, documents, usedBytes, limitBytes: storageLimitBytes(settings.plan), timezone: store.timezone() };
+}
+
+const folderName = z.string().trim().min(1, "Dê um nome para a pasta.").max(80, "Nome grande demais (até 80 letras).");
+const deadlineDays = z.number().int().min(1).max(730).nullable();
+
+// Erro esperado (nome repetido) volta como resultado: uma ação que lança tem a mensagem escondida em produção
+export type FolderResult = { ok: true; folder: DocFolder | null } | { ok: false; error: string };
+
+export async function createDocFolder(input: { name: string; deadlineDays: number | null }): Promise<FolderResult> {
+  const parsed = z.object({ name: folderName, deadlineDays }).safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
+  try {
+    const folder = await (await getStore()).createDocFolder(parsed.data);
+    revalidatePath("/documentos");
+    return { ok: true, folder };
+  } catch (error) {
+    if (error instanceof Error && error.message === FOLDER_EXISTS) return { ok: false, error: FOLDER_EXISTS };
+    throw error;
+  }
+}
+
+export async function updateDocFolder(id: string, input: { name?: string; deadlineDays?: number | null }): Promise<FolderResult> {
+  const parsed = z.object({ name: folderName.optional(), deadlineDays: deadlineDays.optional() }).safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
+  const store = await getStore();
+  const folderId = uuid.parse(id);
+  try {
+    if (parsed.data.name !== undefined) await store.updateDocFolder(folderId, { name: parsed.data.name });
+    if (parsed.data.deadlineDays !== undefined) await changeFolderDeadline(store, folderId, parsed.data.deadlineDays);
+  } catch (error) {
+    if (error instanceof Error && error.message === FOLDER_EXISTS) return { ok: false, error: FOLDER_EXISTS };
+    throw error;
+  }
+  revalidatePath("/documentos");
+  return { ok: true, folder: null };
+}
+
+export async function deleteDocFolder(id: string) {
+  await (await getStore()).deleteDocFolder(uuid.parse(id));
+  revalidatePath("/documentos");
+}
+
+const docPatch = z.object({
+  folderId: uuid.nullable().optional(),
+  title: z.string().trim().min(1, "O documento precisa de um nome.").max(120).optional(),
+  issuer: z.string().trim().max(120).nullable().optional().transform((v) => v || null),
+  beneficiary: z.string().trim().max(80).nullable().optional().transform((v) => v || null),
+  category: z.string().trim().max(60).nullable().optional().transform((v) => v || null),
+  docDate: day.nullable().optional(),
+  amountCents: z.number().int().min(0).max(100_000_000_00).nullable().optional(),
+  status: z.enum(["pending", "submitted", "reimbursed"]).nullable().optional(),
+  dueOn: day.nullable().optional(),
+  notes: z.string().trim().max(2000).nullable().optional().transform((v) => v || null),
+});
+
+export async function updateDocument(id: string, patch: z.input<typeof docPatch>) {
+  const parsed = docPatch.parse(patch);
+  // campos ausentes não entram (o transform acima viraria null)
+  const given = Object.fromEntries(Object.entries(parsed).filter(([k]) => k in patch));
+  const doc = await changeDocument(await getStore(), uuid.parse(id), given);
+  revalidatePath("/documentos");
+  return doc;
+}
+
+export async function setDocumentsStatus(ids: string[], status: "pending" | "submitted" | "reimbursed" | null) {
+  const list = z.array(uuid).min(1).max(200).parse(ids);
+  const value = z.enum(["pending", "submitted", "reimbursed"]).nullable().parse(status);
+  const store = await getStore();
+  for (const id of list) await changeDocument(store, id, { status: value });
+  revalidatePath("/documentos");
+}
+
+export async function deleteDocument(id: string) {
+  await (await getStore()).deleteDocument(uuid.parse(id));
+  revalidatePath("/documentos");
 }
