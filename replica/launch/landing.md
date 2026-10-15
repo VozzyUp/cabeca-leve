@@ -43,7 +43,11 @@ Os dois temas que mais pesam contra o original, em palavras nossas:
 | F5 | **Conta que bate.** Os totais vêm do que você lançou, não de um palpite da IA. Teto por categoria avisa em 80% e 100%. |
 | F7 | **Seu WhatsApp fica intacto.** Você manda mensagem para o assistente; ele não entra na sua conta nem escreve para os seus contatos. |
 
-Depois, numa linha menor, o que é preço de entrada: treino e alimentação, metas e hábitos, pesquisa diária na internet, cofre de senhas, conta para o casal ou a família.
+Os recursos que só pareciam "o resto" agora têm seção própria logo depois do topo (ver abaixo).
+
+## 4b. Tudo o que cabe na sua cabeça (logo após o topo)
+
+Seção `tudo`, h2 **"Tudo o que cabe na sua cabeça, num lugar só"**, com a frase "É só falar no WhatsApp, por texto, áudio ou foto" e 10 cartões, cada um com ícone, título, o que faz e (quando há conversa) a frase que a pessoa manda: Tarefas e lembretes, Dinheiro, Treino e alimentação, Hábitos e metas, Documentos e reembolso, Pesquisa diária, Projetos/notas/foco, Seu dia num lugar, Cofre de senhas (só no app, sem frase) e Casal e família. O topo também ganha uma linha de temas (Tarefas, Lembretes, Dinheiro, Treino e dieta, Hábitos e metas, Documentos e reembolso, Pesquisa diária, Cofre de senhas) e um botão de começar logo abaixo dos cartões. Só recurso que existe: sem sincronizar com Google/Outlook e sem promessa de tratamento.
 
 ## 5. Preço
 

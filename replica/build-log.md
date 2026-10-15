@@ -310,3 +310,9 @@ Paridade 63,2/100; **40 de 40 obrigatórias completas**.
 - **Paleta mantida** (laranja; 23 pares, 0 falhas AA).
 - **Não mudou, de propósito:** o endereço (cabeca.vozzyup.com.br), a imagem `ghcr.io/vozzyup/cabeca-leve`, os serviços `cabecaleve_*` do Portainer e a frase `cabeca-leve-cofre-v1` do cofre (trocar essa invalidaria todos os cofres criados).
 - **Sweep** (`sweep.py --avoid "Cabeça Leve"`): só sobram esses identificadores internos.
+
+## 2026-10-15: a landing mostra tudo o que o app faz
+
+- Antes só aparecia tarefa, lembrete e conta; treino, saúde, hábitos, documentos e pesquisa ficavam numa linha de chips no meio da página. Agora o topo cita todos os temas (subtítulo + linha de temas) e logo depois vem a seção "Tudo o que cabe na sua cabeça, num lugar só", com 10 cartões e a frase de exemplo de cada um, e um botão de começar.
+- Saiu a lista "E o resto que você espera": virou os cartões. `BRAND.description` (descrição para buscadores) também cita treino, documentos e pesquisas.
+- Teste `PUB-H1` confere o título da seção e os 10 cartões.

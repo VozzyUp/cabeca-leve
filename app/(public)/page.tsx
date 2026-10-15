@@ -1,5 +1,5 @@
 import {
-  BellRing, Check, CircleSlash, Dumbbell, FileText, Globe, HeartHandshake, KeyRound, LifeBuoy, MessageCircle, ReceiptText, ShieldCheck, Sparkles, Timer, Users, WalletCards, type LucideIcon,
+  BellRing, Check, CircleSlash, Dumbbell, FileText, Globe, KeyRound, LifeBuoy, ListChecks, MessageCircle, NotebookPen, ReceiptText, ShieldCheck, Sparkles, Sun, Target, Timer, Users, WalletCards, type LucideIcon,
 } from "lucide-react";
 import type { Metadata } from "next";
 import Image from "next/image";
@@ -56,15 +56,22 @@ const FIXES: { icon: LucideIcon; title: string; text: string }[] = [
   { icon: ShieldCheck, title: "Seu WhatsApp fica intacto", text: "Você manda mensagem para o assistente. Ele não entra na sua conta nem escreve para os seus contatos." },
 ];
 
-const ALSO: { icon: LucideIcon; text: string }[] = [
-  { icon: WalletCards, text: "contas fixas, parcelas e cartões" },
-  { icon: Dumbbell, text: "treino, alimentação e metas" },
-  { icon: Globe, text: "pesquisa diária na internet" },
-  { icon: FileText, text: "notas e pedidos médicos para reembolso" },
-  { icon: KeyRound, text: "cofre de senhas" },
-  { icon: Users, text: "conta para o casal ou a família" },
-  { icon: HeartHandshake, text: "o tom que combina com você" },
+// Tudo o que o app faz hoje, com a frase que a pessoa de fato manda. Só recurso que existe: nada de sincronizar
+// com Google/Outlook, nada de diagnóstico ou tratamento.
+const FEATURES: { icon: LucideIcon; title: string; text: string; example?: string }[] = [
+  { icon: ListChecks, title: "Tarefas e lembretes", text: "Prazo, prioridade e repetição. O aviso chega no celular e no WhatsApp com Feito e Adiar.", example: "Me lembra de pagar a luz amanhã às 9h" },
+  { icon: WalletCards, title: "Dinheiro", text: "Gastos por texto, áudio ou foto da nota. Contas fixas, parcelas, cartões e teto por categoria com aviso em 80% e 100%.", example: "Gastei 48 no mercado" },
+  { icon: Dumbbell, title: "Treino e alimentação", text: "Fichas de treino, plano alimentar, peso e medidas. Crie pelo chat ou mande a foto da ficha.", example: "Monta meu treino A e B de segunda a sexta" },
+  { icon: Target, title: "Hábitos e metas", text: "Hábitos com sequência de dias e lembrete no horário. Metas com progresso que você acompanha.", example: "Quero ler 20 minutos todo dia às 21h" },
+  { icon: FileText, title: "Documentos e reembolso", text: "Notas, recibos e pedidos médicos em pastas, marcados como pendente, enviado ou reembolsado. Avisa o prazo e devolve o arquivo no WhatsApp, ou um PDF único para anexar.", example: "Guarda essa nota na pasta Viagem SP" },
+  { icon: Globe, title: "Pesquisa diária", text: "Todo dia, o assistente pesquisa na internet o que você pediu e manda o resumo com as fontes.", example: "Me traz todo dia os projetos mais populares do GitHub" },
+  { icon: NotebookPen, title: "Projetos, notas e foco", text: "Projetos com etapas, notas, diário e modo foco para fazer uma coisa de cada vez.", example: "Anota que o prazo do projeto é dia 30" },
+  { icon: Sun, title: "Seu dia num lugar", text: "Agenda, tarefas, hábitos e contas de hoje juntos, e um resumo que chega de manhã.", example: "O que eu tenho hoje?" },
+  { icon: KeyRound, title: "Cofre de senhas", text: "Senhas e códigos cifrados no aparelho, só no app: nem o time nem o assistente conseguem ler o que está lá." },
+  { icon: Users, title: "Casal e família", text: "Vários WhatsApps na mesma conta. Cada gasto mostra quem lançou.", example: "Gastei 120 na farmácia" },
 ];
+
+const TOPICS = ["Tarefas", "Lembretes", "Dinheiro", "Treino e dieta", "Hábitos e metas", "Documentos e reembolso", "Pesquisa diária", "Cofre de senhas"];
 
 const FAQ: [string, string][] = [
   ["É um app para TDAH?", `Foi pensado para quem se perde no meio do dia, tenha ou não TDAH: manda do jeito que vier, recebe lembrete com Feito e Adiar e respostas curtas. Não é tratamento, não faz diagnóstico e não substitui o acompanhamento de um profissional. Quem tem TDAH não precisa dizer isso a ninguém para usar.`],
@@ -89,14 +96,37 @@ export default async function Page() {
             Peraí, o que eu ia fazer mesmo?
           </h1>
           <p className="max-w-xl text-lg text-body">
-            O assistente no WhatsApp que guarda o que passa pela sua cabeça: tarefas, lembretes e contas, numa conversa. Para quem se perde no meio do dia, com ou sem TDAH. E uma pessoa de verdade quando você precisar.
+            O assistente no WhatsApp que cuida da sua vida inteira numa conversa: tarefas, lembretes, dinheiro, treino, saúde, hábitos, documentos e pesquisas. Para organizar a cabeça, com ou sem TDAH. E uma pessoa de verdade quando você precisar.
           </p>
+          <ul aria-label="O que o assistente cuida" className="flex max-w-xl flex-wrap gap-2">
+            {TOPICS.map((t) => (
+              <li key={t} className="rounded-full border border-border bg-surface px-3 py-1 text-sm text-body">{t}</li>
+            ))}
+          </ul>
           <p className="max-w-xl text-sm text-muted">{TRIAL_DAYS} dias grátis sem cartão, cancelamento em um toque com comprovante.</p>
           <Link href="/entrar?modo=criar" className={cn(cta, primary)}>Começar {TRIAL_DAYS} dias grátis</Link>
           <p className="text-sm text-muted">{WHATSAPP_PROMISE}</p>
         </div>
         <Image src={conversa} alt="O app de verdade: na conversa, um lembrete e uma tarefa criados a partir de frases comuns, cada um com o botão Desfazer"
           priority sizes="(min-width: 1024px) 380px, 90vw" className="mx-auto w-full max-w-[380px] rounded-2xl border border-border shadow-pop" />
+      </section>
+
+      <section aria-labelledby="tudo" className="flex flex-col gap-6">
+        <div className="flex flex-col gap-2">
+          <h2 id="tudo" className="text-2xl font-bold text-text sm:text-3xl">Tudo o que cabe na sua cabeça, num lugar só</h2>
+          <p className="max-w-2xl text-body">É só falar no WhatsApp, por texto, áudio ou foto. O {BRAND.name} organiza e mostra tudo também no app.</p>
+        </div>
+        <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {FEATURES.map(({ icon: Icon, title, text, example }) => (
+            <li key={title} className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-5">
+              <Icon aria-hidden className="size-6 text-accent" />
+              <h3 className="font-semibold text-text">{title}</h3>
+              <p className="text-sm text-body">{text}</p>
+              {example && <p className="mt-auto rounded-md rounded-bl-none bg-surface-2 px-3 py-2 text-sm text-text">“{example}”</p>}
+            </li>
+          ))}
+        </ul>
+        <div><Link href="/entrar?modo=criar" className={cn(cta, primary)}>Começar {TRIAL_DAYS} dias grátis</Link></div>
       </section>
 
       <section aria-labelledby="cabecas" className="flex flex-col gap-6">
@@ -150,16 +180,6 @@ export default async function Page() {
             </li>
           ))}
         </ul>
-        <div className="flex flex-col gap-2">
-          <p className="text-sm font-medium text-text">E o resto que você espera de um assistente:</p>
-          <ul className="flex flex-wrap gap-2">
-            {ALSO.map(({ icon: Icon, text }) => (
-              <li key={text} className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1 text-sm text-body">
-                <Icon aria-hidden className="size-4 text-muted" />{text}
-              </li>
-            ))}
-          </ul>
-        </div>
       </section>
 
       <section aria-labelledby="preco" className="flex flex-col gap-6">
@@ -197,7 +217,7 @@ export default async function Page() {
 
       <section aria-labelledby="final" className="flex flex-col items-center gap-4 rounded-lg border border-border bg-surface p-8 text-center">
         <h2 id="final" className="text-2xl font-bold text-text">Anote antes que escape</h2>
-        <p className="text-body">Comece pelo que está pesando agora: uma conta, um lembrete, uma tarefa.</p>
+        <p className="text-body">Comece pelo que está pesando agora: uma conta, um lembrete, um treino, uma nota para guardar.</p>
         <Link href="/entrar?modo=criar" className={cn(cta, primary)}>Começar {TRIAL_DAYS} dias grátis</Link>
         <Link href="/entrar" className={cn(cta, secondary, "h-10 text-sm")}>Já tenho conta</Link>
       </section>

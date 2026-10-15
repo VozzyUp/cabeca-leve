@@ -9,6 +9,11 @@ test.describe("Início e páginas legais", () => {
     for (const fix of ["Uma pessoa de verdade", "Cancelou, parou", "Pagou, entrou", "Lembrete que chega", "Conta que bate", "Seu WhatsApp fica intacto"]) {
       await expect(page.getByRole("heading", { name: fix, exact: true })).toBeVisible();
     }
+    // a página mostra tudo o que o assistente faz, não só tarefas e dinheiro
+    await expect(page.getByRole("heading", { level: 2, name: "Tudo o que cabe na sua cabeça, num lugar só" })).toBeVisible();
+    for (const f of ["Tarefas e lembretes", "Dinheiro", "Treino e alimentação", "Hábitos e metas", "Documentos e reembolso", "Pesquisa diária", "Projetos, notas e foco", "Seu dia num lugar", "Cofre de senhas", "Casal e família"]) {
+      await expect(page.getByRole("heading", { level: 3, name: f, exact: true })).toBeVisible();
+    }
     await expect(page.getByText(/depoimento|avaliações|estrelas|usuários satisfeitos/i)).toHaveCount(0);
     await expect(page.getByRole("link", { name: /Começar 7 dias grátis/ }).first()).toHaveAttribute("href", "/entrar?modo=criar");
     await expect(page.getByText(/R\$\s*39,90/).first()).toBeVisible();

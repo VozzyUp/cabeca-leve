@@ -2,6 +2,6 @@
 // supabase/templates/ e nos assuntos de supabase/config.toml, depois rodar o sweep.
 export const BRAND = {
   name: "Peraí",
-  description: "Peraí, o que eu ia fazer mesmo? Tarefas, lembretes, dinheiro e hábitos numa conversa, no app e no WhatsApp. Para organizar a cabeça, com ou sem TDAH.",
+  description: "Peraí, o que eu ia fazer mesmo? Tarefas, lembretes, dinheiro, treino, hábitos, documentos e pesquisas numa conversa, no app e no WhatsApp. Para organizar a cabeça, com ou sem TDAH.",
   color: "#fb923c",
 } as const;
