@@ -14,7 +14,7 @@ A imagem não tem nenhuma chave dentro. No stack ficam só **7 valores de base**
 | `.github/workflows/imagem.yml` | migrações, imagem e aviso ao Portainer a cada push |
 | `Dockerfile` | imagem do app (~350 MB, sem root, com checagem de saúde em `/api/health`) |
 | `supabase/migrations/` | as 15 migrações do banco |
-| `supabase/colar-no-sql-editor/` | as mesmas migrações em 28 arquivos pequenos, para colar no SQL Editor (plano C) |
+| `supabase/colar-no-sql-editor/` | as mesmas migrações em 29 arquivos pequenos, para colar no SQL Editor (plano C) |
 
 ## 1. Supabase (uma vez)
 
@@ -43,7 +43,7 @@ npx supabase db push
 
 ### Caminho C: colando no SQL Editor
 
-Abra `supabase/colar-no-sql-editor/` e rode os **28 arquivos em ordem** (01, 02, 03…). Em cada um: SQL Editor > New query > cole o arquivo inteiro > Run. Cada um deve terminar com "Success. No rows returned"; o 20 mostra uma tabela de conferência (`tabelas_publicas = 57`, `tabelas_no_realtime = 23`, `migracoes_no_historico = 9` e o resto `true`) e o 21 mostra `tabela_ai_usage = true`, `funcao = true`, `migracoes_no_historico = 10` o 22 mostra `funcao = true`, `indice = true`, `migracoes_no_historico = 11` o 23 mostra `coluna = true`, `migracoes_no_historico = 12` o 24 mostra `aceita_sem_filtro = true`, `migracoes_no_historico = 13` o 25 mostra `varios_numeros = true`, `quem_lancou = true`, `migracoes_no_historico = 14` o 26 mostra `pesquisa_web = true`, `cofre = true`, `migracoes_no_historico = 15` o 27 mostra `pastas = true`, `documentos = true`, `bucket_privado = true`, `migracoes_no_historico = 16` e o 28 fecha com `estacionamento = true`, `limpeza_de_pdf = true`, `migracoes_no_historico = 17`.
+Abra `supabase/colar-no-sql-editor/` e rode os **29 arquivos em ordem** (01, 02, 03…). Em cada um: SQL Editor > New query > cole o arquivo inteiro > Run. Cada um deve terminar com "Success. No rows returned"; o 20 mostra uma tabela de conferência (`tabelas_publicas = 57`, `tabelas_no_realtime = 23`, `migracoes_no_historico = 9` e o resto `true`) e o 21 mostra `tabela_ai_usage = true`, `funcao = true`, `migracoes_no_historico = 10` o 22 mostra `funcao = true`, `indice = true`, `migracoes_no_historico = 11` o 23 mostra `coluna = true`, `migracoes_no_historico = 12` o 24 mostra `aceita_sem_filtro = true`, `migracoes_no_historico = 13` o 25 mostra `varios_numeros = true`, `quem_lancou = true`, `migracoes_no_historico = 14` o 26 mostra `pesquisa_web = true`, `cofre = true`, `migracoes_no_historico = 15` o 27 mostra `pastas = true`, `documentos = true`, `bucket_privado = true`, `migracoes_no_historico = 16` o 28 mostra `estacionamento = true`, `limpeza_de_pdf = true`, `migracoes_no_historico = 17` e o 29 fecha com `registro = true`, `funcao = true`, `migracoes_no_historico = 18`.
 - **Já rodou os arquivos de 1 a 20 antes?** Rode só o **21** (custo da IA), o **22** (limpeza das fotos antigas) o **23** (configuração inicial de quem se cadastra) o **24** (tom Sem filtro) o **25** (vários WhatsApps por conta) e o **26** (pesquisa diária e cofre de senhas), nessa ordem. Com o segredo `SUPABASE_DB_URL` no GitHub (caminho A), as migrações novas entram sozinhas a cada push.
 
 - Rode cada arquivo **uma vez**. Se um falhar, ele não deixa nada pela metade: corrija e rode só ele de novo.

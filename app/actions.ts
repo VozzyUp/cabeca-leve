@@ -15,6 +15,7 @@ import { confirmBill } from "@/lib/assistant/tools";
 import { CONFIG_FIELDS, CONFIG_KEYS, loadAppConfig, saveAppConfig } from "@/lib/app-config";
 import { pingAgent } from "@/lib/assistant/agent";
 import { changeDocument, changeFolderDeadline } from "@/lib/documents";
+import { deleteAccountAsAdmin, endManualPlan, setManualPlan, setTrialEnd, type AdminResult } from "@/lib/admin-accounts";
 import { storageLimitBytes } from "@/lib/limits";
 import { isVapidPrivateKey, isVapidPublicKey, siteUrl } from "@/lib/public-env";
 import type { DocFolder, Settings } from "@/lib/data/types";
@@ -489,4 +490,38 @@ export async function setDocumentsStatus(ids: string[], status: "pending" | "sub
 export async function deleteDocument(id: string) {
   await (await getStore()).deleteDocument(uuid.parse(id));
   revalidatePath("/documentos");
+}
+
+// ---- Contas e planos (/admin/contas): só ADMIN_EMAILS. Erros esperados voltam como resultado (a mensagem de uma ação que lança some em produção) ----
+
+export async function adminSetPlan(userId: string, plan: "monthly" | "yearly", until: string): Promise<AdminResult> {
+  const by = await requireAdmin();
+  const parsed = z.object({ userId: uuid, plan: z.enum(["monthly", "yearly"]), until: day }).safeParse({ userId, plan, until });
+  if (!parsed.success) return { ok: false, error: "Escolha o plano e uma data válida." };
+  const r = await setManualPlan(by, parsed.data.userId, parsed.data.plan, parsed.data.until);
+  revalidatePath("/admin/contas", "layout");
+  return r;
+}
+
+export async function adminEndPlan(userId: string): Promise<AdminResult> {
+  const by = await requireAdmin();
+  const r = await endManualPlan(by, uuid.parse(userId));
+  revalidatePath("/admin/contas", "layout");
+  return r;
+}
+
+export async function adminSetTrial(userId: string, until: string): Promise<AdminResult> {
+  const by = await requireAdmin();
+  const parsed = z.object({ userId: uuid, until: day }).safeParse({ userId, until });
+  if (!parsed.success) return { ok: false, error: "Escolha uma data válida." };
+  const r = await setTrialEnd(by, parsed.data.userId, parsed.data.until);
+  revalidatePath("/admin/contas", "layout");
+  return r;
+}
+
+export async function adminDeleteAccount(userId: string, confirmEmail: string): Promise<AdminResult> {
+  const by = await requireAdmin();
+  const r = await deleteAccountAsAdmin(by, uuid.parse(userId), z.string().max(320).parse(confirmEmail));
+  revalidatePath("/admin/contas", "layout");
+  return r;
 }

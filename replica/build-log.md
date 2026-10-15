@@ -278,3 +278,16 @@ Paridade 63,2/100; **40 de 40 obrigatórias completas**.
 - **Pelo WhatsApp:** `send_documents` com `merged` junta tudo num PDF único e manda como um arquivo só ("junta as notas pendentes da viagem num PDF"); sem `merged`, cada arquivo vai separado (até 10).
 - Landing: "notas e pedidos médicos para reembolso" entre as outras funções.
 - Testes: `document-export.test.ts`, `deliveries.int.test.ts` (aviso), `agent.int.test.ts` (merged), `e2e/documentos.spec.ts` (DOC-P1). Suíte completa: 162 unitários, 58 de integração, 94 e2e.
+
+## 2026-10-15: contas e planos no admin
+
+- **Pedido:** uma tela para o time ver as contas criadas, os planos e os testes, e gerenciar (renovar plano à mão, mudar plano).
+- **`/admin/contas`** (só `ADMIN_EMAILS`; atalho em Ajustes > Contas e planos): resumo (contas, com plano, em teste, quem usou em 30 dias), busca por nome ou e-mail e filtros (Atenção, Com plano, Em teste, Sem plano, Manuais). "Atenção" junta quem precisa de olhar: teste acabando ou acabado na última semana, pagamento atrasado, cancelado e renovação paga chegando.
+- **`/admin/contas/[id]`:** situação, uso (mensagens, WhatsApp, documentos e espaço, último acesso) e ações:
+  - **Plano manual** (mensal ou anual, até o dia escolhido, até 31/12/2099): dá, troca, renova (+30 dias, +1 ano, até 2099) e encerra. Fica numa linha `manual-<id>` da tabela de assinaturas, sem cobrança e sem a Asaas; vale como plano pago (limites, WhatsApps, espaço). Reconhece também o plano manual dado à mão antes (prefixo `manual-`).
+  - **Teste grátis:** muda o último dia (+7, +30; ontem encerra).
+  - **Excluir a conta** (apaga tudo e os arquivos): pede o e-mail digitado, não exclui contas do time e avisa para cancelar antes a assinatura paga na Asaas.
+  - **Registro** de tudo (`admin_actions`, inclusive a exclusão, com o e-mail guardado).
+- Assinatura paga pela Asaas não é cancelada nem estornada por aqui; o plano manual vale em cima dela (o mais novo manda).
+- Migração `20261015000300_admin_contas` (arquivo 29 para colar): tabela `admin_actions` e a função `admin_accounts()` (só a chave secreta chama).
+- Testes: `lib/domain/accounts.test.ts`, `lib/admin-accounts.int.test.ts` (5) e `e2e/admin-contas.spec.ts` (ADM-C1, ADM-C2).

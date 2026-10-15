@@ -57,6 +57,20 @@ isOneToOne: false
       referencedColumns: ["id","user_id"]
     }
                   ]
+                },"admin_actions": {
+                  Row: {
+                    "action": string,"admin_email": string,"created_at": string,"detail": NonNullable<Json>,"id": number,"target_email": string | null,"target_user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "action": string,"admin_email": string,"created_at"?: string,"detail"?: NonNullable<Json>,"id"?: never,"target_email"?: string | null,"target_user_id": string
+                  }
+                  Update: {
+                    "action"?: string,"admin_email"?: string,"created_at"?: string,"detail"?: NonNullable<Json>,"id"?: never,"target_email"?: string | null,"target_user_id"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"ai_usage": {
                   Row: {
                     "cache_read_tokens": number,"cache_write_tokens": number,"calls": number,"created_at": string,"id": number,"input_tokens": number,"model": string,"output_tokens": number,"turn_id": string,"user_id": string,"web_searches": number
@@ -1325,6 +1339,11 @@ isOneToOne: false
           Functions: {
             "acquire_turn":
 { Args: { "p_conversation": string,"p_seconds": number,"p_user": string }; Returns: boolean
+                           },
+"admin_accounts":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "created_at": string,"documents": number,"email": string,"last_message_at": string,"last_sign_in_at": string,"messages_30d": number,"name": string,"storage_bytes": number,"sub_cancels": boolean,"sub_end": string,"sub_plan": string,"sub_ref": string,"sub_status": string,"trial_ends_on": string,"user_id": string,"whatsapps": number
+            }[]
                            },
 "admin_ai_usage":
 { Args: { "p_from": string,"p_to": string }; Returns: {

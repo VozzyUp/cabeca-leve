@@ -14,6 +14,7 @@ const TABBED_AREAS = ["dia", "dinheiro", "saude"];
 const PARENTS: Record<string, string> = {
   "/admin/configuracoes": "/ajustes",
   "/admin/custos": "/ajustes",
+  "/admin/contas": "/ajustes",
   "/suporte/painel": "/ajustes",
 };
 
