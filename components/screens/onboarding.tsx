@@ -20,10 +20,16 @@ export function Onboarding({ initial }: { initial: Settings }) {
   const params = useSearchParams();
   const router = useRouter();
   const path = usePathname();
-  const asked = params.get("configurar") === "1";
-  const [dismissed, setDismissed] = useState(false);
-  const open = !dismissed && (asked || initial.onboarded === false);
+  // O menu pede a janela com ?configurar=<número que muda a cada toque>. Cada pedido novo abre do início, mesmo que
+  // o anterior tenha sido fechado há um instante (a limpeza do endereço pode ainda estar a caminho).
+  const ask = params.get("configurar");
+  const [open, setOpen] = useState(initial.onboarded === false);
   const [step, setStep] = useState(0);
+  const [lastAsk, setLastAsk] = useState(ask);
+  if (ask !== lastAsk) {
+    setLastAsk(ask);
+    if (ask) { setOpen(true); setStep(0); }
+  }
   const [name, setName] = useState(initial.name === "você" ? "" : initial.name);
   const [tone, setTone] = useState(initial.tone);
   const [channels, setChannels] = useState(initial.channels);
@@ -43,9 +49,9 @@ export function Onboarding({ initial }: { initial: Settings }) {
     });
   }
   function close() {
-    setDismissed(true);
+    setOpen(false);
     setStep(0);
-    if (asked) router.replace(path);
+    if (ask) router.replace(path);
     if (initial.onboarded === false) start(async () => { await updateSettings({ onboarded: true }).catch(() => {}); });
   }
 

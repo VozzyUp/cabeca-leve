@@ -96,6 +96,38 @@ test.describe("Navegação e configuração inicial", () => {
     await expect(dialog.getByRole("heading", { name: "Como você quer ser avisado" })).toBeVisible();
   });
 
+  test("ONB-H3 refazer pelo menu abre sempre: de novo depois de fechar, vindo de outra tela e no meio do caminho @celular", async ({ page, user }) => {
+    test.setTimeout(90_000);
+    await login(page, user);
+    const dialog = page.getByRole("dialog");
+    const refazer = async () => {
+      await page.getByRole("button", { name: "Sua conta" }).click();
+      await page.getByRole("link", { name: "Refazer a configuração inicial" }).click();
+    };
+    // 1) pela conversa, fecha no X; 2) pede de novo e abre outra vez, sem recarregar
+    await refazer();
+    await expect(dialog.getByRole("heading", { name: /Boas-vindas/ })).toBeVisible();
+    await dialog.getByRole("button", { name: "Fechar" }).click();
+    await expect(dialog).toBeHidden();
+    await expect(page).not.toHaveURL(/configurar/);
+    await refazer();
+    await expect(dialog.getByRole("heading", { name: /Boas-vindas/ })).toBeVisible();
+    // 3) avança até o passo do WhatsApp, fecha, e o próximo pedido volta ao primeiro passo
+    await dialog.getByRole("button", { name: "Continuar" }).click();
+    await expect(dialog.getByRole("heading", { name: "Fale comigo pelo WhatsApp" })).toBeVisible();
+    await dialog.getByRole("button", { name: "Fechar" }).click();
+    await expect(dialog).toBeHidden();
+    await refazer();
+    await expect(dialog.getByRole("heading", { name: /Boas-vindas/ })).toBeVisible();
+    await dialog.getByRole("button", { name: "Fechar" }).click();
+    // 4) de outra tela (Configurações) o menu leva à conversa e abre
+    await page.goto("/ajustes");
+    await page.waitForLoadState("networkidle");
+    await refazer();
+    await expect(page).toHaveURL(/\/conversa/);
+    await expect(dialog.getByRole("heading", { name: /Boas-vindas/ })).toBeVisible();
+  });
+
   test("ONB-E1 fechar no primeiro passo conta como feito", async ({ page, user }) => {
     await admin.from("profiles").update({ onboarded_at: null }).eq("user_id", user.id);
     await login(page, user);

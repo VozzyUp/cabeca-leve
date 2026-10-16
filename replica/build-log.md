@@ -383,3 +383,9 @@ Paridade 63,2/100; **40 de 40 obrigatórias completas**.
 - Corrigi uma corrida na espera do código: a tela comparava a quantidade de números confirmados com a de quando abriu, e se o código chegasse antes da primeira conferência (lento no primeiro uso), nunca percebia. Agora ela pergunta se **este número** já está confirmado (`isWhatsAppVerified`, aceita com e sem o 9 depois do DDD). Vale também para Configurações.
 - O mesmo passo serve para "Refazer a configuração inicial" no menu da conta.
 - Teste novo `ONB-H2`: sem Continuar ao digitar o número nem com o código na tela; o código chega pelo webhook e a janela libera o Continuar sozinha.
+
+## 2026-10-16: "Refazer a configuração inicial" abre sempre
+
+- Falha achada com teste: depois de fechar a janela, o pedido seguinte do menu às vezes não abria nada. A janela guardava "já fechei" e só reabria quando o `?configurar=1` do endereço sumia e voltava; mas a limpeza do endereço (`router.replace`) ainda estava a caminho quando o menu empurrava o pedido novo, então o endereço nunca "desligava" e o pedido era ignorado (mais fácil de acontecer no celular, onde a navegação é mais lenta).
+- Agora cada toque no menu manda um número novo (`?configurar=<agora>`) e a janela abre do primeiro passo sempre que esse número muda, esteja ou não limpo o endereço anterior. O estado "aberta" é explícito (`open`), não mais derivado do endereço. Dá para refazer pela conversa, vindo de outra tela (o menu leva à conversa e abre), de novo depois de fechar e depois de parar no meio do caminho.
+- Teste `ONB-H3` (computador e celular).

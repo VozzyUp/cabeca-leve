@@ -121,7 +121,14 @@ function AccountMenu({ name, email, canSignOut, isTeam, locked }: { name: string
           </div>
           <ul className="flex flex-col py-1">
             {MENU.filter((m) => !locked || LOCKED_MENU.includes(m.href)).map((m) => (
-              <li key={m.href}><Link href={m.href} onClick={() => setOpen(false)} className="block rounded-md px-3 py-2 text-sm text-body hover:bg-surface-2 hover:text-text">{m.label}</Link></li>
+              <li key={m.href}>
+                <Link href={m.href} className="block rounded-md px-3 py-2 text-sm text-body hover:bg-surface-2 hover:text-text"
+                  onClick={(e) => {
+                    setOpen(false);
+                    // a configuração inicial leva um número novo a cada toque: reabre sempre, mesmo logo depois de fechar
+                    if (m.href.startsWith("/conversa?configurar=")) { e.preventDefault(); router.push(`/conversa?configurar=${Date.now()}`); }
+                  }}>{m.label}</Link>
+              </li>
             ))}
           </ul>
           {isTeam && (
