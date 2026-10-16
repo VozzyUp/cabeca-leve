@@ -4,7 +4,7 @@ import { storeForUser } from "@/lib/data";
 import type { ActionCardData } from "@/lib/data/types";
 import { getAdmin } from "@/lib/supabase/server";
 import { transcribe, transcriptionEnabled } from "@/lib/transcribe";
-import { findLinkByNumber, tryVerify } from "./link";
+import { findLinkByNumber, pendingCodeOwner, tryVerify } from "./link";
 import { phoneVariants, toE164 } from "./phone";
 import { cardButtons, firstTime, handleButton } from "./buttons";
 import { sendReply, whatsapp, type Inbound } from "./provider";
@@ -35,13 +35,26 @@ export async function processInbound(msg: Inbound) {
   const wa = whatsapp();
   if (!wa) return;
   const found = await findLinkByNumber(msg.from);
+  // Um número só fica em uma conta. Se ele já é de uma e outra conta está esperando este código vindo dele, a mensagem NÃO
+  // vai para o assistente da primeira: avisa o que houve (só para quem tem o celular, que provou isso mandando o código).
+  if (found && msg.text) {
+    const waiting = await pendingCodeOwner(msg.from, msg.text);
+    if (waiting && waiting !== found.userId) {
+      await recordStatus("whatsapp_inbound", "Código de uma conta, mas o número já está vinculado a outra conta (um número só pode ter uma conta)", false, `final ${msg.from.slice(-4)}`);
+      await wa.sendText(msg.from, "Este número já está ligado a outra conta do Peraí, e cada número só pode ficar em uma conta. Para vincular aqui, entre na outra conta e remova o número em Configurações; ou use outro número nesta.");
+      return;
+    }
+  }
   const userId = found?.userId ?? null;
   if (!userId) {
-    const linked = msg.text ? await tryVerify(msg.from, msg.text) : null;
-    await recordStatus("whatsapp_inbound", linked ? "Código confirmado: número vinculado" : msg.text && /\b\d{6}\b/.test(msg.text) ? "Código recebido, mas não confere (errado, vencido ou número diferente do digitado)" : "Mensagem de um número que não está vinculado a nenhuma conta", !!linked, `final ${msg.from.slice(-4)}`);
+    const result = msg.text ? await tryVerify(msg.from, msg.text) : { status: "nomatch" as const };
+    const linked = result.status === "linked";
     const sentCode = !!msg.text && /\b\d{6}\b/.test(msg.text);
+    await recordStatus("whatsapp_inbound", linked ? "Código confirmado: número vinculado" : result.status === "taken" ? "Código certo, mas o número já está vinculado a outra conta" : sentCode ? "Código recebido, mas não confere (errado, vencido ou número diferente do digitado)" : "Mensagem de um número que não está vinculado a nenhuma conta", linked, `final ${msg.from.slice(-4)}`);
     await wa.sendText(msg.from, linked
       ? "Pronto! Este WhatsApp está ligado à sua conta. Agora é só mandar por aqui o que quiser tirar da cabeça: gastos, lembretes, tarefas, por texto ou áudio."
+      : result.status === "taken"
+        ? "Este número já está ligado a outra conta do Peraí, e cada número só pode ficar em uma conta. Para vincular aqui, entre na outra conta e remova o número em Configurações; ou use outro número nesta."
       : sentCode
         ? `Recebi o código, mas ele não confere com este número (final ${msg.from.slice(-4)}). Este número ainda não está ligado a uma conta do Peraí. No app, confira se o número digitado é exatamente este e use o código mais recente: cada vez que você toca em Vincular, o código anterior deixa de valer.`
         : `Oi! Este número ainda não está ligado a uma conta do Peraí. Para usar aqui, entre em ${site()}/ajustes e toque em Vincular WhatsApp.`);

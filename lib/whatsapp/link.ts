@@ -59,19 +59,31 @@ export async function findLinkByNumber(digits: string): Promise<{ userId: string
 export const findUserByNumber = async (digits: string) => (await findLinkByNumber(digits))?.userId ?? null;
 
 // Mensagem de um número ainda não confirmado: se trouxer o código certo, confirma
-export async function tryVerify(digits: string, text: string): Promise<string | null> {
+export type VerifyResult = { status: "linked"; userId: string } | { status: "taken" } | { status: "nomatch" };
+
+export async function tryVerify(digits: string, text: string): Promise<VerifyResult> {
   const code = text.match(/\b(\d{6})\b/)?.[1];
-  if (!code) return null;
+  if (!code) return { status: "nomatch" };
   const db = getAdmin();
   const { data } = await db.from("channel_links").select("id, user_id, verification_code_hash, verification_expires_at")
     .eq("channel", "whatsapp").in("external_id", variants(digits)).is("verified_at", null);
   const match = (data ?? []).find((l) => l.verification_code_hash === hash(code) && l.verification_expires_at && l.verification_expires_at > new Date().toISOString());
-  if (!match) return null;
+  if (!match) return { status: "nomatch" };
   const { error } = await db.from("channel_links").update({
     verified_at: new Date().toISOString(), verification_code_hash: null, verification_expires_at: null, external_id: toE164(digits),
   }).eq("id", match.id);
-  // índice único: o número já confirmado em outra conta não pode ser tomado
-  return error ? null : match.user_id;
+  // índice único: um número só fica confirmado em UMA conta; quem chegou depois não toma o lugar de quem já tem
+  if (error) return error.code === "23505" ? { status: "taken" } : { status: "nomatch" };
+  return { status: "linked", userId: match.user_id };
+}
+
+// Conta que está esperando exatamente este código vindo deste número (para avisar quando o número já é de outra conta)
+export async function pendingCodeOwner(digits: string, text: string): Promise<string | null> {
+  const code = text.match(/^\s*(?:meu c[óo]digo:?\s*)?(\d{6})\s*$/i)?.[1];
+  if (!code) return null;
+  const { data } = await getAdmin().from("channel_links").select("user_id, verification_code_hash, verification_expires_at")
+    .eq("channel", "whatsapp").in("external_id", variants(digits)).is("verified_at", null);
+  return (data ?? []).find((l) => l.verification_code_hash === hash(code) && l.verification_expires_at && l.verification_expires_at > new Date().toISOString())?.user_id ?? null;
 }
 
 // Números da conta que recebem avisos (lembretes, resumo, respostas do suporte), com a janela de 24 h de cada um

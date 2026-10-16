@@ -387,4 +387,36 @@ describe.skipIf(!run)("WhatsApp (UAZAPI)", () => {
       expect(await pending()).toEqual([[n3, true]]);
     } finally { await admin.auth.admin.deleteUser(id).catch(() => {}); }
   });
+
+  it("um número só fica em uma conta: a segunda conta não toma o lugar, e a mensagem dela não cai no assistente da primeira", async () => {
+    const { startLink } = await import("./link");
+    const { processInbound } = await import("./inbound");
+    const phone = `55119${String(Date.now()).slice(-8)}`;
+    const mk = async (tag: string) => (await admin.auth.admin.createUser({ email: `${tag}-${Date.now()}@teste.local`, password: "x".repeat(12), email_confirm: true })).data.user!.id;
+    const a = await mk("dona"), b = await mk("outra");
+    try {
+      // a conta A confirma o número
+      const first = await startLink(a, `+${phone}`);
+      await processInbound(inbound("U1", `Meu código: ${first.code}`, phone));
+      expect(sent.at(-1)).toMatchObject({ number: phone, text: expect.stringMatching(/Pronto!/) });
+      // a conta B pede o mesmo número (pedir não avisa de nada: não dá para descobrir quais números têm conta) e manda o código dela
+      const second = await startLink(b, `+${phone}`);
+      expect(second).toMatchObject({ alreadyLinked: false, code: expect.stringMatching(/^\d{6}$/) });
+      const messagesOfA = async () => ((await admin.from("messages").select("id").eq("user_id", a)).data ?? []).length;
+      const before = await messagesOfA();
+      await processInbound(inbound("U2", `Meu código: ${second.code}`, phone));
+      expect(sent.at(-1)).toMatchObject({ number: phone, text: expect.stringMatching(/já está ligado a outra conta/) });
+      // nada entrou na conversa da A, o número continua da A e a B segue sem confirmar
+      expect(await messagesOfA()).toBe(before);
+      const links = (await admin.from("channel_links").select("user_id, verified_at").in("user_id", [a, b])).data ?? [];
+      expect(links.find((l) => l.user_id === a)?.verified_at).toBeTruthy();
+      expect(links.find((l) => l.user_id === b)?.verified_at).toBeNull();
+      // mensagem comum desse número continua indo para a conta A
+      await processInbound(inbound("U3", "gastei 5 no café", phone));
+      expect(await messagesOfA()).toBeGreaterThan(before);
+      // e, no banco, o índice único impede dois confirmados mesmo que alguém tente por fora
+      const dup = await admin.from("channel_links").update({ verified_at: new Date().toISOString(), verification_code_hash: null, verification_expires_at: null }).eq("user_id", b);
+      expect(dup.error?.code).toBe("23505");
+    } finally { await admin.auth.admin.deleteUser(a).catch(() => {}); await admin.auth.admin.deleteUser(b).catch(() => {}); }
+  });
 });
