@@ -15,7 +15,7 @@ import { sendTestNotice } from "@/lib/deliveries";
 import { confirmBill } from "@/lib/assistant/tools";
 import { CONFIG_FIELDS, CONFIG_KEYS, loadAppConfig, saveAppConfig } from "@/lib/app-config";
 import { pingAgent } from "@/lib/assistant/agent";
-import { readStatus } from "@/lib/diagnostics";
+import { readStatus, recordStatus } from "@/lib/diagnostics";
 import { checkWhatsApp as runWhatsAppCheck } from "@/lib/whatsapp/diagnose";
 import { changeDocument, changeFolderDeadline } from "@/lib/documents";
 import { deletePlan, savePlan, saveTrial } from "@/lib/admin-plans";
@@ -257,15 +257,19 @@ export async function startCheckout(plan: string) {
   const p = z.string().regex(/^[a-z][a-z0-9_-]{1,31}$/).parse(plan);
   const user = await currentUser();
   if (!user) redirect(`/entrar?modo=criar&plano=${p}`);
-  if (!billingEnabled()) throw new Error("Cobrança não configurada");
-  const settings = await (await getStore({ allowLocked: true })).getSettings();
   let url: string;
   try {
+    if (!billingEnabled()) throw new Error("ASAAS_API_KEY não está configurada");
+    const settings = await (await getStore({ allowLocked: true })).getSettings();
     url = await createCheckout(user.id, p, settings.trialEndsOn);
   } catch (error) {
     if (error instanceof PlanUnavailableError) redirect("/planos?indisponivel=1");  // o plano saiu da venda enquanto a página estava aberta
-    throw error;
+    // Falha da Asaas ou de configuração: a pessoa vê uma mensagem em vez de uma tela quebrada, e o time vê o motivo em Administração
+    console.error("checkout não criado", p, (error as Error).message);
+    await recordStatus("asaas_checkout", `Não consegui abrir o pagamento do plano ${p}`, false, (error as Error).message);
+    redirect("/ajustes/plano?erro=pagamento");
   }
+  await recordStatus("asaas_checkout", `Pagamento do plano ${p} aberto`, true);
   redirect(url);
 }
 

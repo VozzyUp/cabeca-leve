@@ -140,7 +140,7 @@ export function WhatsAppDiagnostic() {
   const u = data?.check.uazapi;
   const hooks = u?.webhooks ?? [];
   const good = hooks.some((h) => h.pointsHere && h.secretOk);
-  const signals = data ? ([["Último aviso que chegou do WhatsApp", data.signals.whatsapp_webhook], ["Fila (processamento)", data.signals.whatsapp_job], ["Último número que mandou mensagem", data.signals.whatsapp_inbound]] as const) : [];
+  const signals = data ? ([["Último aviso que chegou do WhatsApp", data.signals.whatsapp_webhook], ["Fila (processamento)", data.signals.whatsapp_job], ["Último número que mandou mensagem", data.signals.whatsapp_inbound], ["Última tentativa de abrir o pagamento (Asaas)", data.signals.asaas_checkout]] as const) : [];
   return (
     <Card className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -156,7 +156,7 @@ export function WhatsAppDiagnostic() {
           <ul className="flex flex-col gap-1.5">
             {signals.map(([label, s]) => (
               <Line key={label} ok={s ? s.ok : false}>
-                <strong>{label}:</strong> {s ? `${s.result} (${ago(s.at)})${s.detail ? ` · ${s.detail}` : ""}` : "nada ainda. Nenhuma mensagem chegou ao sistema desde que o diagnóstico existe."}
+                <strong>{label}:</strong> {s ? `${s.result} (${ago(s.at)})${s.detail ? ` · ${s.detail}` : ""}` : "nada ainda desde que o diagnóstico existe."}
               </Line>
             ))}
           </ul>

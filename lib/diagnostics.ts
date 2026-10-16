@@ -3,7 +3,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 // Último sinal de cada serviço (system_status), para o time ver em Administração o que aconteceu quando algo "não responde".
 // Gravar nunca derruba quem chama: é só registro.
-export type StatusKey = "whatsapp_webhook" | "whatsapp_job" | "whatsapp_inbound";
+export type StatusKey = "whatsapp_webhook" | "whatsapp_job" | "whatsapp_inbound" | "asaas_checkout";
 export type Signal = { result: string; ok: boolean; detail?: string; at: string };
 
 export async function recordStatus(key: StatusKey, result: string, ok: boolean, detail?: string) {

@@ -184,6 +184,27 @@ test.describe("Meu plano", () => {
     expect(sent.at(-1)!.body).toMatchObject({ chargeTypes: ["DETACHED"], items: [{ value: 359 }] });
   });
 
+  test("PLN-U5 a Asaas recusa o checkout: a pessoa vê o aviso (não uma tela quebrada) e o time vê o motivo", async ({ page, user }) => {
+    test.setTimeout(90_000);
+    const name = `Falha e2e ${Date.now()}`;
+    try {
+      await admin.from("plans").insert({ id: `falha-e2e-${Date.now()}`, name, kind: "paid", price_cents: 666, months: 1, recurring: true, whatsapp_limit: 2, messages_per_day: 200, storage_mb: 2048, sort: 900 });
+      await login(page, user, "/ajustes/plano");
+      await page.getByRole("button", { name: new RegExp(`Assinar no cartão \\(plano ${name.toLowerCase()}\\)`) }).click();
+      await expect(page).toHaveURL(/\/ajustes\/plano\?erro=pagamento/);
+      await expect(page.getByRole("alert").filter({ hasText: "Não deu para abrir a página de pagamento" })).toBeVisible();
+      await expect(page.getByText("Não deu para carregar esta tela")).toHaveCount(0);
+      expect(await a11y(page)).toEqual([]);
+      await expect(async () => {
+        const { data } = await admin.from("system_status").select("value").eq("key", "asaas_checkout").single();
+        expect(data?.value).toMatchObject({ ok: false });
+        expect(JSON.stringify(data?.value)).toContain("Checkout recusado no teste");
+      }).toPass({ timeout: 10_000 });
+    } finally {
+      await admin.from("plans").delete().like("name", "Falha e2e %");
+    }
+  });
+
   test("PLN-U2 teste vencido: avisa que acabou e oferece os planos", async ({ page, user }) => {
     await admin.from("profiles").update({ trial_ends_on: "2026-01-01" }).eq("user_id", user.id);
     await login(page, user, "/ajustes/plano");

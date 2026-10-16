@@ -421,3 +421,9 @@ Paridade 63,2/100; **40 de 40 obrigatórias completas**.
 - Tela de entrar: "Reenviar o e-mail de confirmação" quando o link é inválido ou o e-mail não foi confirmado (`resendConfirmation`, mesma resposta exista a conta ou não).
 - Produção: colar de novo os três modelos de `supabase/templates/` no painel (ver `replica/launch/email-templates.md`).
 - Testes: F15-H1 (confirmar pelo botão), F15-H1b (outro navegador, GET não gasta, segundo uso → inválido com reenvio), F15-H3 (esqueci a senha), F15-N0.
+
+## "Assinar no cartão" dava erro 500
+
+- A ação `startCheckout` deixava a falha da Asaas (ou a falta de `ASAAS_API_KEY`) subir como erro: a tela mostrava "Não deu para carregar esta tela".
+- Agora a falha é registrada (`system_status` chave `asaas_checkout`, com o texto da resposta da Asaas, e no log do servidor) e a pessoa volta a `/ajustes/plano?erro=pagamento` com um aviso e o link para o suporte. Em Administração > Configuração do sistema > Diagnóstico aparece "Última tentativa de abrir o pagamento (Asaas)" com o motivo.
+- Teste: PLN-U5 (o mock recusa o checkout de R$ 6,66).

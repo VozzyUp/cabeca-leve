@@ -23,6 +23,8 @@ http.createServer((req, res) => {
     let body = null;
     try { body = data ? JSON.parse(data) : null; } catch { body = data; }
     calls.push({ method: req.method, url: req.url, headers: req.headers, body });
+    // preço de R$ 6,66 faz a Asaas recusar o checkout (teste da falha ao abrir o pagamento)
+    if (req.url === "/v3/checkouts" && body?.items?.[0]?.value === 6.66) { res.statusCode = 400; return res.end(JSON.stringify({ errors: [{ code: "invalid_object", description: "Checkout recusado no teste" }] })); }
     if (req.url === "/v3/checkouts") return res.end(JSON.stringify({ id: `chk_e2e_${Date.now()}_${++n}` }));
     if (req.url.startsWith("/v3/subscriptions/")) return res.end(JSON.stringify({ deleted: true, id: req.url.split("/").pop() }));
     if (req.url === "/send/text" || req.url === "/send/menu" || req.url === "/send/media") return res.end(JSON.stringify({ messageid: `out_${++n}` }));

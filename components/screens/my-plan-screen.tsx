@@ -50,7 +50,7 @@ function Limits({ plan }: { plan: Plan }) {
 }
 
 // Meu plano: o que a pessoa tem, até quando vale, quanto já usou e como mudar
-export async function MyPlanScreen() {
+export async function MyPlanScreen({ paymentError = false }: { paymentError?: boolean } = {}) {
   const { store, today, now } = await serverContext({ allowLocked: true });
   const dayStart = periodRange("hoje", now, store.timezone()).from.toISOString();
   const [settings, plans, messagesToday, storageUsed] = await Promise.all([
@@ -79,6 +79,14 @@ export async function MyPlanScreen() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader id="S42" title="Meu plano" />
+
+      {paymentError && (
+        <div role="alert" className="flex flex-col gap-2 rounded-lg border border-danger bg-surface p-4">
+          <h2 className="text-base font-semibold text-text">Não deu para abrir a página de pagamento</h2>
+          <p className="text-sm text-body">Nada foi cobrado. Tente de novo em instantes; se continuar, fale com a gente que o time resolve.</p>
+          <div><Link href="/ajustes/suporte" className="inline-flex h-9 items-center rounded-md border border-border px-3 text-sm font-medium text-text hover:bg-surface-2">Falar com uma pessoa</Link></div>
+        </div>
+      )}
 
       {settings.plan === "none" && (
         <div role="alert" className="flex flex-col gap-3 rounded-lg border border-warning bg-surface p-5">
