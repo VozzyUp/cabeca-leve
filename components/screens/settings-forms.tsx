@@ -67,6 +67,13 @@ const toE164 = (s: string) => {
 
 type LinkResult = Awaited<ReturnType<typeof startWhatsAppLink>>;
 
+// "+5511960463218" -> "+55 11 96046-3218"
+const showPhone = (e164: string) => {
+  const d = e164.replace(/\D/g, "");
+  const m = d.match(/^55(\d{2})(\d{4,5})(\d{4})$/);
+  return m ? `+55 ${m[1]} ${m[2]}-${m[3]}` : e164;
+};
+
 // Código para confirmar o número, com o link que abre o WhatsApp já com a mensagem
 function LinkCode({ result }: { result: LinkResult }) {
   const router = useRouter();
@@ -93,7 +100,7 @@ function LinkCode({ result }: { result: LinkResult }) {
   if (linked) return <p role="status" className="rounded-md bg-surface-2 p-3 text-sm font-medium text-success">✓ WhatsApp vinculado! Pode mandar o que quiser por lá.</p>;
   return (
     <div role="status" className="flex flex-col gap-2 rounded-md bg-surface-2 p-3 text-sm text-body">
-      <p>Para confirmar que o número é seu, mande este código desse WhatsApp para o assistente (vale por 30 minutos):</p>
+      <p>Para confirmar que o número é seu, mande este código para o assistente <strong className="text-text">do WhatsApp {showPhone(result.number)}</strong> (vale por 30 minutos; se esse número estiver errado, corrija acima e toque em Vincular de novo):</p>
       <p className="font-mono text-2xl font-semibold tracking-widest text-text">{result.code}</p>
       {result.link && (
         <a href={result.link} target="_blank" rel="noopener noreferrer"

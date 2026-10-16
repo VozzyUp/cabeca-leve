@@ -13,27 +13,30 @@ async function adminUser(): Promise<TestUser> {
 }
 
 test("DIA-1 o painel mostra o aviso recusado do webhook e a instância conectada com o webhook certo", async ({ page, request }) => {
-  test.setTimeout(90_000);
-  // um aviso com o segredo errado: o sistema recusa e registra o motivo
-  const refused = await request.post("/api/webhooks/whatsapp?secret=errado", { data: { token: "token-e2e", EventType: "messages" } });
-  expect(refused.status()).toBe(401);
-  await expect.poll(async () => (await admin.from("system_status").select("value").eq("key", "whatsapp_webhook").single()).data?.value).toMatchObject({ ok: false, result: expect.stringMatching(/Recusado/) });
-
+  test.setTimeout(120_000);
+  const last = page.getByRole("listitem").filter({ hasText: /Último aviso que chegou do WhatsApp:/ });
   await login(page, await adminUser());
   await openAdmin(page);
   await page.getByRole("link", { name: /Configuração do sistema/ }).click();
   await expect(page.getByText("Diagnóstico do WhatsApp")).toBeVisible();
-  await page.getByRole("button", { name: "Conferir agora" }).click();
-  await expect(page.getByRole("listitem").filter({ hasText: /Último aviso que chegou do WhatsApp:/ })).toContainText("Recusado");
+
+  // o painel mostra o ÚLTIMO sinal de todo o sistema; outros testes mandam avisos ao mesmo tempo, então repete até ver o seu
+  await expect(async () => {
+    // um aviso com o segredo errado: o sistema recusa e registra o motivo
+    expect((await request.post("/api/webhooks/whatsapp?secret=errado", { data: { token: "token-e2e", EventType: "messages" } })).status()).toBe(401);
+    await page.getByRole("button", { name: "Conferir agora" }).click();
+    await expect(last).toContainText("Recusado", { timeout: 4000 });
+  }).toPass({ timeout: 60_000 });
   await expect(page.getByRole("listitem").filter({ hasText: /Instância da UAZAPI: conectada/ })).toBeVisible();
   await expect(page.getByRole("listitem").filter({ hasText: /confere com este app/ })).toBeVisible();
   await expect(page.getByRole("listitem").filter({ hasText: /Número do assistente/ })).toContainText("5511900000000");
 
   // um aviso certo, mas que não é mensagem de pessoa: chega e é ignorado, e o painel diz isso
-  const ok = await request.post("/api/webhooks/whatsapp?secret=segredo-e2e", { data: { token: "token-e2e", EventType: "presence" } });
-  expect(ok.status()).toBe(200);
-  await page.getByRole("button", { name: "Conferir agora" }).click();
-  await expect(page.getByRole("listitem").filter({ hasText: /Último aviso que chegou do WhatsApp:/ })).toContainText("não era uma mensagem de pessoa");
+  await expect(async () => {
+    expect((await request.post("/api/webhooks/whatsapp?secret=segredo-e2e", { data: { token: "token-e2e", EventType: "presence" } })).status()).toBe(200);
+    await page.getByRole("button", { name: "Conferir agora" }).click();
+    await expect(last).toContainText("não era uma mensagem de pessoa", { timeout: 4000 });
+  }).toPass({ timeout: 60_000 });
 });
 
 test("DIA-2 quem não é do time não tem acesso ao diagnóstico", async ({ page, user }) => {

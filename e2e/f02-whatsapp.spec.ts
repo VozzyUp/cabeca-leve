@@ -70,8 +70,10 @@ test.describe("F02 e F16 WhatsApp", () => {
     await page.getByLabel("WhatsApp").fill(number.slice(2));
     await page.getByRole("button", { name: "Vincular" }).click();
     await expect(page.getByRole("status").filter({ hasText: "mande este código" })).toBeVisible();
+    // a tela diz de qual número o código tem que sair, para dar para ver um erro de digitação
+    await expect(page.getByRole("status").filter({ hasText: "mande este código" })).toContainText(`${number.slice(2, 4)} ${number.slice(4, 9)}-${number.slice(9)}`);
     await hook(inbound(`X-${number}`, number, "Meu código: 000000"));
-    await waitSent(number, /ainda não está ligado/);
+    await waitSent(number, /Recebi o código, mas ele não confere com este número \(final \d{4}\).*ainda não está ligado/);
     await page.reload();
     await expect(page.getByText(/aguardando o código/)).toBeVisible();
   });

@@ -39,9 +39,12 @@ export async function processInbound(msg: Inbound) {
   if (!userId) {
     const linked = msg.text ? await tryVerify(msg.from, msg.text) : null;
     await recordStatus("whatsapp_inbound", linked ? "Código confirmado: número vinculado" : msg.text && /\b\d{6}\b/.test(msg.text) ? "Código recebido, mas não confere (errado, vencido ou número diferente do digitado)" : "Mensagem de um número que não está vinculado a nenhuma conta", !!linked, `final ${msg.from.slice(-4)}`);
+    const sentCode = !!msg.text && /\b\d{6}\b/.test(msg.text);
     await wa.sendText(msg.from, linked
       ? "Pronto! Este WhatsApp está ligado à sua conta. Agora é só mandar por aqui o que quiser tirar da cabeça: gastos, lembretes, tarefas, por texto ou áudio."
-      : `Oi! Este número ainda não está ligado a uma conta do Peraí. Para usar aqui, entre em ${site()}/ajustes e toque em Vincular WhatsApp.`);
+      : sentCode
+        ? `Recebi o código, mas ele não confere com este número (final ${msg.from.slice(-4)}). Este número ainda não está ligado a uma conta do Peraí. No app, confira se o número digitado é exatamente este e use o código mais recente: cada vez que você toca em Vincular, o código anterior deixa de valer.`
+        : `Oi! Este número ainda não está ligado a uma conta do Peraí. Para usar aqui, entre em ${site()}/ajustes e toque em Vincular WhatsApp.`);
     return;
   }
   await getAdmin().from("channel_links").update({ last_inbound_at: msg.at.toISOString() })

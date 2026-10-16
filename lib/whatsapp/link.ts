@@ -29,7 +29,7 @@ export async function startLink(userId: string, number: string, opts: { label?: 
   if (existing?.verified_at) {
     // já confirmado: só atualiza o nome, sem código novo
     if (opts.label !== undefined) await db.from("channel_links").update({ label: opts.label }).eq("id", existing.id);
-    return { code: null, expiresAt: null, link: null, alreadyLinked: true as const };
+    return { code: null, expiresAt: null, link: null, number: e164, alreadyLinked: true as const };
   }
   if (!existing && opts.limit !== undefined && (mine ?? []).length >= opts.limit) throw new LinkLimitError(opts.limit);
   const { error } = await db.from("channel_links").upsert({
@@ -40,7 +40,7 @@ export async function startLink(userId: string, number: string, opts: { label?: 
   if (error) throw new Error(error.message);
   const bot = digitsOnly(process.env.WHATSAPP_BOT_NUMBER ?? "");
   const text = encodeURIComponent(`Meu código: ${code}`);
-  return { code, expiresAt: expires, link: bot ? `https://wa.me/${bot}?text=${text}` : null, alreadyLinked: false as const };
+  return { code, expiresAt: expires, link: bot ? `https://wa.me/${bot}?text=${text}` : null, number: existing?.external_id ?? e164, alreadyLinked: false as const };
 }
 
 // Conta dona de um número já confirmado, e o nome de quem usa esse número
