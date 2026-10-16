@@ -78,11 +78,9 @@ test.describe("F2 pagamento em confirmação", () => {
   test("F15-N5 abrir a página de obrigado sem ter pago não libera nada", async ({ page, user }) => {
     await admin.from("profiles").update({ trial_ends_on: "2026-01-01" }).eq("user_id", user.id);
     await login(page, user, "/planos/obrigado");
-    await page.goto("/conversa", { waitUntil: "networkidle" });
-    const box = page.getByLabel("Mensagem para o assistente");
-    await box.fill("gastei 10 no café");
-    await box.press("Enter");
-    await expect(page.getByText(/Seu teste grátis terminou/)).toBeVisible();
+    await page.goto("/conversa");
+    await expect(page).toHaveURL(/\/ajustes\/plano\?expirou=1/);
+    await expect(page.getByRole("alert").filter({ hasText: "Seu teste grátis terminou" })).toBeVisible();
   });
 });
 
@@ -140,13 +138,13 @@ test.describe("F3 falar com uma pessoa", () => {
     await expect(page.getByText(/não encontrada|404|could not be found/i).first()).toBeVisible();
   });
 
-  test("F3-E1 pela conversa, mesmo com o teste vencido, pedir uma pessoa abre chamado", async ({ page, user }) => {
+  test("F3-E1 mesmo com o teste vencido (app bloqueado), pedir uma pessoa abre chamado", async ({ page, user }) => {
     await admin.from("profiles").update({ trial_ends_on: "2026-01-01" }).eq("user_id", user.id);
     await login(page, user);
-    const box = page.getByLabel("Mensagem para o assistente");
-    await box.fill("quero falar com uma pessoa, fui cobrado duas vezes");
-    await box.press("Enter");
-    await expect(page.getByText(/Chamei uma pessoa do time\. Protocolo CL-[A-Z2-9]{6}/)).toBeVisible();
+    await page.getByRole("link", { name: "Falar com uma pessoa" }).click();
+    await page.getByLabel("O que aconteceu?").fill("Fui cobrado duas vezes e o app ficou bloqueado.");
+    await page.getByRole("button", { name: "Chamar uma pessoa" }).click();
+    await expect(page.getByRole("status").filter({ hasText: /Chamado aberto/ })).toContainText(/CL-[A-Z2-9]{6}/);
     const { data } = await admin.from("support_tickets").select("channel, status").eq("user_id", user.id);
     expect(data).toEqual([{ channel: "web", status: "open" }]);
   });

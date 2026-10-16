@@ -126,13 +126,12 @@ test.describe("F15 e F17 assinatura", () => {
     expect((await asaas({ id: "x", event: "CHECKOUT_PAID" }, "errado")).status).toBe(401);
   });
 
-  test("F15-E2 teste grátis acabou e sem plano: o assistente explica e manda para os planos", async ({ page, user }) => {
+  test("F15-E2 teste grátis acabou e sem plano: o app bloqueia, explica e manda para os planos", async ({ page, user }) => {
     await admin.from("profiles").update({ trial_ends_on: "2026-01-01" }).eq("user_id", user.id);
     await login(page, user);
-    const box = page.getByLabel("Mensagem para o assistente");
-    await box.fill("gastei 10 no café");
-    await box.press("Enter");
-    await expect(page.getByText(/Seu teste grátis terminou/)).toBeVisible();
+    await expect(page).toHaveURL(/\/ajustes\/plano\?expirou=1/);
+    await expect(page.getByRole("alert").filter({ hasText: "Seu teste grátis terminou" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 2, name: "Escolha um plano" })).toBeVisible();
     const { data } = await admin.from("transactions").select("id").eq("user_id", user.id);
     expect(data).toEqual([]);
   });

@@ -13,7 +13,7 @@ const STATUS = { open: "aguardando resposta", answered: "respondido", closed: "e
 
 // Falar com uma pessoa (F3): abrir chamado e ver as respostas
 export async function SupportScreen() {
-  const { store, tz } = await serverContext();
+  const { store, tz } = await serverContext({ allowLocked: true });
   const tickets = await store.listSupportTickets();
   return (
     <div className="flex flex-col gap-6">

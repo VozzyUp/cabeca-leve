@@ -4,6 +4,7 @@ import { cancelPlan, startCheckout } from "@/app/actions";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/components/ui/cn";
 import { PageHeader } from "@/components/ui/load-error";
+import { BRAND } from "@/lib/brand";
 import { periodRange } from "@/lib/ai-costs";
 import { daysBetween } from "@/lib/domain/accounts";
 import { formatBytes, limitsFor } from "@/lib/limits";
@@ -50,7 +51,7 @@ function Limits({ plan }: { plan: Plan }) {
 
 // Meu plano: o que a pessoa tem, até quando vale, quanto já usou e como mudar
 export async function MyPlanScreen() {
-  const { store, today, now } = await serverContext();
+  const { store, today, now } = await serverContext({ allowLocked: true });
   const dayStart = periodRange("hoje", now, store.timezone()).from.toISOString();
   const [settings, plans, messagesToday, storageUsed] = await Promise.all([
     store.getSettings(), loadPlans(), store.countUserMessagesSince(dayStart), store.documentBytesUsed(),
@@ -79,61 +80,73 @@ export async function MyPlanScreen() {
     <div className="flex flex-col gap-6">
       <PageHeader id="S42" title="Meu plano" />
 
-      <Card className="flex flex-col gap-4 p-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="flex flex-col gap-1">
-            <h2 className="text-2xl font-bold text-text">{paid || billing?.confirming ? `Plano ${plan.name.toLowerCase()}` : settings.plan === "trial" ? "Teste grátis" : "Você não tem um plano ativo"}</h2>
-            {paid && <p className="text-sm text-body"><span className="font-mono text-text">{formatMoney(plan.priceCents)}</span> {planPeriod(plan)}</p>}
-          </div>
-          <span className={cn("rounded-full px-3 py-1 text-xs font-semibold", TONE[status.tone])}>{status.label}</span>
+      {settings.plan === "none" && (
+        <div role="alert" className="flex flex-col gap-3 rounded-lg border border-warning bg-surface p-5">
+          <h2 className="text-lg font-semibold text-text">Seu teste grátis terminou</h2>
+          <p className="text-sm text-body">Para voltar a usar o {BRAND.name}, escolha um plano abaixo. Tudo o que você anotou continua guardado e volta assim que o plano começar.</p>
+          <p className="text-sm text-body">Enquanto isso, só ficam abertas a conta, a cobrança e o suporte.</p>
+          <div><Link href="/ajustes/suporte" className="inline-flex h-9 items-center rounded-md border border-border px-3 text-sm font-medium text-text hover:bg-surface-2">Falar com uma pessoa</Link></div>
         </div>
+      )}
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          {paid && end && (
-            <div className="flex items-start gap-3">
-              <CalendarClock aria-hidden className="mt-0.5 size-5 text-accent" />
-              <div>
-                <p className="text-xs text-muted">{billing?.renews ? "Próxima renovação" : "Vale até"}</p>
-                <p className="text-sm font-medium text-text">{longDay(end)}</p>
-                {endLeft !== null && daysText(endLeft) && <p className="text-xs text-muted">{daysText(endLeft)}</p>}
+      {settings.plan !== "none" && (
+        <>
+          <Card className="flex flex-col gap-4 p-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="flex flex-col gap-1">
+                <h2 className="text-2xl font-bold text-text">{paid || billing?.confirming ? `Plano ${plan.name.toLowerCase()}` : settings.plan === "trial" ? "Teste grátis" : "Você não tem um plano ativo"}</h2>
+                {paid && <p className="text-sm text-body"><span className="font-mono text-text">{formatMoney(plan.priceCents)}</span> {planPeriod(plan)}</p>}
               </div>
+              <span className={cn("rounded-full px-3 py-1 text-xs font-semibold", TONE[status.tone])}>{status.label}</span>
             </div>
-          )}
-          {settings.plan === "trial" && settings.trialEndsOn && (
-            <div className="flex items-start gap-3">
-              <CalendarClock aria-hidden className="mt-0.5 size-5 text-accent" />
-              <div>
-                <p className="text-xs text-muted">O teste vai até</p>
-                <p className="text-sm font-medium text-text">{longDay(settings.trialEndsOn)}</p>
-                {trialLeft !== null && <p className="text-xs text-muted">{daysText(trialLeft)}</p>}
-              </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              {paid && end && (
+                <div className="flex items-start gap-3">
+                  <CalendarClock aria-hidden className="mt-0.5 size-5 text-accent" />
+                  <div>
+                    <p className="text-xs text-muted">{billing?.renews ? "Próxima renovação" : "Vale até"}</p>
+                    <p className="text-sm font-medium text-text">{longDay(end)}</p>
+                    {endLeft !== null && daysText(endLeft) && <p className="text-xs text-muted">{daysText(endLeft)}</p>}
+                  </div>
+                </div>
+              )}
+              {settings.plan === "trial" && settings.trialEndsOn && (
+                <div className="flex items-start gap-3">
+                  <CalendarClock aria-hidden className="mt-0.5 size-5 text-accent" />
+                  <div>
+                    <p className="text-xs text-muted">O teste vai até</p>
+                    <p className="text-sm font-medium text-text">{longDay(settings.trialEndsOn)}</p>
+                    {trialLeft !== null && <p className="text-xs text-muted">{daysText(trialLeft)}</p>}
+                  </div>
+                </div>
+              )}
             </div>
-          )}
-        </div>
 
-        {billing?.confirming && <p role="status" className="text-sm text-body">Estamos esperando a confirmação do pagamento. Tudo está liberado enquanto isso e a validade aparece aqui em seguida.</p>}
-        {paid && billing?.pastDue && <p role="status" className="text-sm text-warning">A última cobrança não passou. Atualize o cartão para não perder o acesso.</p>}
-        {paid && !billing?.canceledAt && !billing?.renews && !billing?.pastDue && <p className="text-sm text-body">Este plano é um pagamento único: não renova sozinho e nada mais será cobrado. Para continuar depois, contrate de novo antes de a data acabar.</p>}
-        {settings.plan === "none" && <p className="text-sm text-body">Seu teste terminou. Escolha um plano abaixo: tudo o que você anotou continua guardado.</p>}
-        {billing?.canceledAt && (
-          <p role="note" className="rounded-md border border-border bg-surface-2 px-3 py-2 text-sm text-body">
-            Assinatura cancelada em {longDay(billing.canceledAt)}, protocolo <span className="font-mono text-text">{billing.cancelProtocol}</span>. Nenhuma cobrança nova
-            {end ? `; o acesso continua até ${longDay(end)}` : ""}. Se chegar alguma cobrança, ela é estornada sozinha.
-          </p>
-        )}
-      </Card>
+            {billing?.confirming && <p role="status" className="text-sm text-body">Estamos esperando a confirmação do pagamento. Tudo está liberado enquanto isso e a validade aparece aqui em seguida.</p>}
+            {paid && billing?.pastDue && <p role="status" className="text-sm text-warning">A última cobrança não passou. Atualize o cartão para não perder o acesso.</p>}
+            {paid && !billing?.canceledAt && !billing?.renews && !billing?.pastDue && <p className="text-sm text-body">Este plano é um pagamento único: não renova sozinho e nada mais será cobrado. Para continuar depois, contrate de novo antes de a data acabar.</p>}
+            {billing?.canceledAt && (
+              <p role="note" className="rounded-md border border-border bg-surface-2 px-3 py-2 text-sm text-body">
+                Assinatura cancelada em {longDay(billing.canceledAt)}, protocolo <span className="font-mono text-text">{billing.cancelProtocol}</span>. Nenhuma cobrança nova
+                {end ? `; o acesso continua até ${longDay(end)}` : ""}. Se chegar alguma cobrança, ela é estornada sozinha.
+              </p>
+            )}
+          </Card>
 
-      <section aria-labelledby="uso" className="flex flex-col gap-3">
-        <h2 id="uso" className="text-label text-muted">Seu uso e seus limites</h2>
-        <Card className="p-5">
-          <ul className="flex flex-col gap-4">
-            <Meter icon={MessageCircle} label="Mensagens hoje" used={messagesToday} limit={messageLimit} usedText={String(messagesToday)} limitText={messageLimit.toLocaleString("pt-BR")} />
-            <Meter icon={Smartphone} label="WhatsApps vinculados" used={whatsappUsed} limit={plan.whatsappLimit} usedText={String(whatsappUsed)} limitText={String(plan.whatsappLimit)} />
-            <Meter icon={FileText} label="Espaço para documentos" used={storageUsed} limit={storageLimit} usedText={storageUsed === 0 ? "0 KB" : formatBytes(storageUsed)} limitText={formatBytes(storageLimit)} />
-          </ul>
-          <p className="mt-4 text-xs text-muted">As mensagens recomeçam todo dia à meia-noite. Quer mais espaço? É só mudar de plano, logo abaixo.</p>
-        </Card>
-      </section>
+          <section aria-labelledby="uso" className="flex flex-col gap-3">
+            <h2 id="uso" className="text-label text-muted">Seu uso e seus limites</h2>
+            <Card className="p-5">
+              <ul className="flex flex-col gap-4">
+                <Meter icon={MessageCircle} label="Mensagens hoje" used={messagesToday} limit={messageLimit} usedText={String(messagesToday)} limitText={messageLimit.toLocaleString("pt-BR")} />
+                <Meter icon={Smartphone} label="WhatsApps vinculados" used={whatsappUsed} limit={plan.whatsappLimit} usedText={String(whatsappUsed)} limitText={String(plan.whatsappLimit)} />
+                <Meter icon={FileText} label="Espaço para documentos" used={storageUsed} limit={storageLimit} usedText={storageUsed === 0 ? "0 KB" : formatBytes(storageUsed)} limitText={formatBytes(storageLimit)} />
+              </ul>
+              <p className="mt-4 text-xs text-muted">As mensagens recomeçam todo dia à meia-noite. Quer mais espaço? É só mudar de plano, logo abaixo.</p>
+            </Card>
+          </section>
+        </>
+      )}
 
       {selling.length > 0 && (
         <section aria-labelledby="mudar" className="flex flex-col gap-3">

@@ -122,7 +122,7 @@ const settingsPatch = z.object({
 
 export async function updateSettings(patch: Partial<Settings>) {
   const parsed = settingsPatch.parse(patch);
-  const s = await (await getStore()).updateSettings(parsed);
+  const s = await (await getStore({ allowLocked: true })).updateSettings(parsed);
   revalidatePath("/", "layout");
   return s;
 }
@@ -143,7 +143,7 @@ export async function setHabitDay(habitId: string, onDay: string, done: boolean)
 
 // Portabilidade (LGPD): tudo do usuário num JSON
 export async function exportData() {
-  const s = await getStore();
+  const s = await getStore({ allowLocked: true });
   const [settings, tasks, reminders, habits, habitLogs, transactions, categories, accounts, cards, recurrences, installments,
     projects, goals, notes, automations, notices, focusSessions, workouts, workoutLogs, meals, mealLogs, measurements, messages, memories] = await Promise.all([
     s.getSettings(), s.listTasks(), s.listReminders(), s.listHabits(), s.listHabitLogs(), s.listTransactions(), s.listCategories(),
@@ -187,7 +187,7 @@ export async function clearMemories() {
 
 export async function deleteAccount(confirmation: string) {
   if (confirmation.trim().toUpperCase() !== "EXCLUIR") throw new Error("Confirmação errada");
-  await (await getStore()).deleteAllData();
+  await (await getStore({ allowLocked: true })).deleteAllData();
   revalidatePath("/", "layout");
   return { ok: true as const };
 }
@@ -200,7 +200,7 @@ export async function linkWhatsApp(number: string, label?: string | null) {
   const n = z.string().regex(/^\+\d{12,13}$/).parse(number);
   const name = waLabel.parse(label ?? null);
   if (!isSupabaseConfigured()) {
-    const store = await getStore();
+    const store = await getStore({ allowLocked: true });
     const { channels } = await store.getSettings();
     await store.updateSettings({ channels: { ...channels, whatsapp: n } });
     revalidatePath("/ajustes");
@@ -208,7 +208,7 @@ export async function linkWhatsApp(number: string, label?: string | null) {
   }
   const user = await currentUser();
   if (!user) throw new Error("Sessão expirada");
-  const { planInfo } = await (await getStore()).getSettings();
+  const { planInfo } = await (await getStore({ allowLocked: true })).getSettings();
   try {
     const result = await startLink(user.id, n, { label: name, limit: whatsappLimit(planInfo) });
     revalidatePath("/", "layout");
@@ -246,7 +246,7 @@ export async function startCheckout(plan: string) {
   const user = await currentUser();
   if (!user) redirect(`/entrar?modo=criar&plano=${p}`);
   if (!billingEnabled()) throw new Error("Cobrança não configurada");
-  const settings = await (await getStore()).getSettings();
+  const settings = await (await getStore({ allowLocked: true })).getSettings();
   let url: string;
   try {
     url = await createCheckout(user.id, p, settings.trialEndsOn);
@@ -293,7 +293,7 @@ export async function archiveCategory(id: string) {
 // F3: falar com uma pessoa. Abre o chamado (protocolo e prazo) e avisa o time.
 export async function openSupport(message: string) {
   const text = z.string().trim().min(5, "Conte um pouco mais").max(4000).parse(message);
-  const ticket = await (await getStore()).openSupportTicket(text, "web");
+  const ticket = await (await getStore({ allowLocked: true })).openSupportTicket(text, "web");
   revalidatePath("/ajustes/suporte");
   return ticket;
 }

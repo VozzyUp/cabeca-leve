@@ -20,7 +20,7 @@ function LinkRow({ href, icon: Icon, title, hint }: { href: string; icon: typeof
 
 // ---- S29 ----
 export async function SettingsScreen() {
-  const { store, today } = await serverContext();
+  const { store, today } = await serverContext({ allowLocked: true });
   const settings = await store.getSettings();
   const end = settings.billing?.periodEnd ? formatShortDate(settings.billing.periodEnd.slice(0, 10)) : null;
   const plan = settings.billing?.confirming ? "Pagamento em confirmação: tudo liberado enquanto a Asaas confirma"

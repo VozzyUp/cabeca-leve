@@ -187,9 +187,8 @@ test.describe("Meu plano", () => {
   test("PLN-U2 teste vencido: avisa que acabou e oferece os planos", async ({ page, user }) => {
     await admin.from("profiles").update({ trial_ends_on: "2026-01-01" }).eq("user_id", user.id);
     await login(page, user, "/ajustes/plano");
-    await expect(page.getByRole("heading", { level: 2, name: "Você não tem um plano ativo" })).toBeVisible();
-    await expect(page.getByText("Sem assinatura", { exact: true })).toBeVisible();
-    await expect(page.getByText(/Seu teste terminou/)).toBeVisible();
+    await expect(page.getByRole("progressbar")).toHaveCount(0);  // sem plano não há o que medir
+    await expect(page.getByRole("alert").filter({ hasText: "Seu teste grátis terminou" })).toBeVisible();
     await expect(page.getByRole("heading", { level: 2, name: "Escolha um plano" })).toBeVisible();
   });
 
@@ -218,6 +217,7 @@ test.describe("Meu plano", () => {
     const url = await captureCheckout(page);
     await page.getByRole("button", { name: /Fazer upgrade \(plano anual\)/ }).click();
     await expect.poll(url).toMatch(/checkoutSession/);
+    await page.waitForURL(/asaas\.com/);  // a navegação para a página de pagamento termina antes de seguir
     await page.unroute(/asaas\.com/);
     expect((await mockCalls()).filter((c) => c.url === "/v3/checkouts" && c.body.externalReference === user.id).at(-1)!.body).toMatchObject({ chargeTypes: ["DETACHED"], items: [{ value: 359 }] });
 

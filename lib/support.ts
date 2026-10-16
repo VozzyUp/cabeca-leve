@@ -28,8 +28,7 @@ export function supportDueAt(now = new Date()) {
 export const formatDue = (iso: string, tz = "America/Sao_Paulo") =>
   new Intl.DateTimeFormat("pt-BR", { timeZone: tz, weekday: "long", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
 
-export const isSupportAdmin = (email: string | null | undefined) =>
-  !!email && (process.env.ADMIN_EMAILS ?? "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean).includes(email.toLowerCase());
+export { isSupportAdmin } from "@/lib/admin-emails";
 
 // Avisa o dono do app. Falha de envio não derruba o chamado: ele já está gravado e aparece no painel.
 export async function notifyOwner(t: { protocol: string; message: string; channel: string; dueAt: string; userEmail: string | null }) {

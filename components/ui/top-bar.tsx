@@ -18,8 +18,8 @@ const visit = globalThis as typeof globalThis & { __lastPath?: string; __hasPrev
 const iconButton = "relative flex size-10 items-center justify-center rounded-full text-body hover:bg-surface-2 hover:text-text";
 
 // Barra de cima das telas logadas: voltar à esquerda; avisos, tema e conta à direita
-export function TopBar({ unread, name, email, theme, canSignOut, isTeam = false }: {
-  unread: number; name: string; email: string; theme: Settings["theme"]; canSignOut: boolean; isTeam?: boolean;
+export function TopBar({ unread, name, email, theme, canSignOut, isTeam = false, locked = false }: {
+  unread: number; name: string; email: string; theme: Settings["theme"]; canSignOut: boolean; isTeam?: boolean; locked?: boolean;
 }) {
   const path = usePathname() ?? "/";
   const router = useRouter();
@@ -27,7 +27,8 @@ export function TopBar({ unread, name, email, theme, canSignOut, isTeam = false 
     if (visit.__lastPath && visit.__lastPath !== path) visit.__hasPrevious = true;
     visit.__lastPath = path;
   }, [path]);
-  const mobileBack = showBackOnMobile(path), desktopBack = showBackOnDesktop(path);
+  // sem plano só há a conta: na tela do plano não há para onde voltar
+  const mobileBack = showBackOnMobile(path) && !(locked && path === "/ajustes/plano"), desktopBack = showBackOnDesktop(path) && !(locked && path === "/ajustes/plano");
   const back = () => (visit.__hasPrevious ? router.back() : router.push(parentOf(path)));
 
   return (
@@ -40,19 +41,19 @@ export function TopBar({ unread, name, email, theme, canSignOut, isTeam = false 
             <ChevronLeft aria-hidden className="size-5" />Voltar
           </button>
         )}
-        {!mobileBack && <Link href="/conversa" className="px-2 text-base font-bold text-text lg:hidden">{BRAND.name}</Link>}
+        {!mobileBack && <Link href={locked ? "/ajustes/plano" : "/conversa"} className="px-2 text-base font-bold text-text lg:hidden">{BRAND.name}</Link>}
       </div>
       <div className="flex items-center gap-1">
-        <Link href="/avisos" aria-label={unread ? `Avisos (${unread} novo${unread === 1 ? "" : "s"})` : "Avisos"} title="Avisos" className={iconButton}>
+        {!locked && <Link href="/avisos" aria-label={unread ? `Avisos (${unread} novo${unread === 1 ? "" : "s"})` : "Avisos"} title="Avisos" className={iconButton}>
           <Bell aria-hidden className="size-5" />
           {unread > 0 && (
             <span aria-hidden className="absolute right-1 top-1 flex min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold leading-4 text-on-accent">
               {unread > 9 ? "9+" : unread}
             </span>
           )}
-        </Link>
+        </Link>}
         <ThemeButton theme={theme} />
-        <AccountMenu name={name} email={email} canSignOut={canSignOut} isTeam={isTeam} />
+        <AccountMenu name={name} email={email} canSignOut={canSignOut} isTeam={isTeam} locked={locked} />
       </div>
     </header>
   );
@@ -87,8 +88,11 @@ const MENU: Array<{ href: string; label: string }> = [
   { href: "/conversa?configurar=1", label: "Refazer a configuração inicial" },
 ];
 
+// Sem plano, o menu da conta só leva para o que segue aberto
+const LOCKED_MENU = ["/ajustes", "/ajustes/plano", "/ajustes/suporte"];
+
 // Menu da conta: abre e fecha no botão, fecha com Esc, com clique fora ou ao escolher
-function AccountMenu({ name, email, canSignOut, isTeam }: { name: string; email: string; canSignOut: boolean; isTeam: boolean }) {
+function AccountMenu({ name, email, canSignOut, isTeam, locked }: { name: string; email: string; canSignOut: boolean; isTeam: boolean; locked: boolean }) {
   const [open, setOpen] = useState(false);
   const [leaving, startLeaving] = useTransition();
   const ref = useRef<HTMLDivElement>(null);
@@ -116,7 +120,7 @@ function AccountMenu({ name, email, canSignOut, isTeam }: { name: string; email:
             {email && <p className="truncate text-xs text-muted">{email}</p>}
           </div>
           <ul className="flex flex-col py-1">
-            {MENU.map((m) => (
+            {MENU.filter((m) => !locked || LOCKED_MENU.includes(m.href)).map((m) => (
               <li key={m.href}><Link href={m.href} onClick={() => setOpen(false)} className="block rounded-md px-3 py-2 text-sm text-body hover:bg-surface-2 hover:text-text">{m.label}</Link></li>
             ))}
           </ul>

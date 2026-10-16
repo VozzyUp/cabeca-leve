@@ -29,7 +29,7 @@ export async function login(page: Page, user: TestUser, path = "/conversa") {
   await page.getByLabel("E-mail").fill(user.email);
   await page.getByLabel("Senha").fill(PASSWORD);
   await page.getByRole("button", { name: "Entrar", exact: true }).last().click();
-  await page.waitForURL("**/conversa");
+  await page.waitForURL(/\/(conversa|ajustes\/plano)(\?|$)/);  // sem plano, a entrada já cai na tela do plano
   if (path !== "/conversa") {
     await page.waitForLoadState("networkidle");  // a conversa ainda carrega: navegar agora aborta a página
     await page.goto(path);

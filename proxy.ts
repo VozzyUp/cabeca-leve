@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { EXPIRED_HREF, isLocked, lockClient, openWhenLocked } from "@/lib/plan-lock";
 import { siteUrl } from "@/lib/public-env";
 import { supabaseEnv } from "@/lib/supabase/env";
 
@@ -26,7 +27,17 @@ export async function proxy(request: NextRequest) {
   });
   const { data: { user } } = await supabase.auth.getUser();
   const path = request.nextUrl.pathname;
-  if (user || PUBLIC.some((r) => r.test(path))) return response;
+  if (user) {
+    if (PUBLIC.some((r) => r.test(path)) || openWhenLocked(path)) return response;
+    // sem plano (o teste acabou e não há assinatura): nada do app abre, só a conta e a cobrança
+    const db = lockClient();
+    if (db && (await isLocked(db, user.id, user.email))) {
+      if (path.startsWith("/api/")) return NextResponse.json({ error: "Seu teste terminou. Escolha um plano para continuar.", code: "plan_expired" }, { status: 402 });
+      return NextResponse.redirect(new URL(EXPIRED_HREF, siteUrl()));
+    }
+    return response;
+  }
+  if (PUBLIC.some((r) => r.test(path))) return response;
 
   if (path.startsWith("/api/")) return NextResponse.json({ error: "Sessão expirada. Entre de novo." }, { status: 401 });
   // endereço público (SITE_URL): atrás do Traefik o app recebe http e o host interno
