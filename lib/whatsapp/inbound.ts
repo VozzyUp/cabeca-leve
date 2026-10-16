@@ -1,4 +1,5 @@
 import { respond } from "@/lib/assistant";
+import { recordStatus } from "@/lib/diagnostics";
 import { storeForUser } from "@/lib/data";
 import type { ActionCardData } from "@/lib/data/types";
 import { getAdmin } from "@/lib/supabase/server";
@@ -37,6 +38,7 @@ export async function processInbound(msg: Inbound) {
   const userId = found?.userId ?? null;
   if (!userId) {
     const linked = msg.text ? await tryVerify(msg.from, msg.text) : null;
+    await recordStatus("whatsapp_inbound", linked ? "Código confirmado: número vinculado" : msg.text && /\b\d{6}\b/.test(msg.text) ? "Código recebido, mas não confere (errado, vencido ou número diferente do digitado)" : "Mensagem de um número que não está vinculado a nenhuma conta", !!linked, `final ${msg.from.slice(-4)}`);
     await wa.sendText(msg.from, linked
       ? "Pronto! Este WhatsApp está ligado à sua conta. Agora é só mandar por aqui o que quiser tirar da cabeça: gastos, lembretes, tarefas, por texto ou áudio."
       : `Oi! Este número ainda não está ligado a uma conta do Peraí. Para usar aqui, entre em ${site()}/ajustes e toque em Vincular WhatsApp.`);

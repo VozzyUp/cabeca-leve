@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useId, useRef, useState, useTransition } from "react";
-import { generateSystemSecret, revealIntegrationInfo, saveSystemConfig, testAnthropicKey } from "@/app/actions";
+import { checkWhatsApp, generateSystemSecret, revealIntegrationInfo, saveSystemConfig, testAnthropicKey } from "@/app/actions";
 import { Button } from "@/components/ui/button";
 import { Card, SectionLabel } from "@/components/ui/card";
 import type { ConfigGroup, FieldStatus } from "@/lib/app-config";
@@ -112,6 +112,79 @@ export function IntegrationInfo({ version }: { version: string }) {
             </div>
           ))}
         </dl>
+      )}
+    </Card>
+  );
+}
+
+type Diagnosis = Awaited<ReturnType<typeof checkWhatsApp>>;
+
+const ago = (iso: string) => {
+  const min = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60_000));
+  return min < 1 ? "agora há pouco" : min < 60 ? `há ${min} min` : min < 1440 ? `há ${Math.round(min / 60)} h` : `há ${Math.round(min / 1440)} dias`;
+};
+
+function Line({ ok, children }: { ok: boolean | null; children: React.ReactNode }) {
+  return <li className={`flex gap-2 ${ok === false ? "text-danger" : ok === true ? "text-text" : "text-body"}`}><span aria-hidden>{ok === true ? "✓" : ok === false ? "✗" : "•"}</span><span>{children}</span></li>;
+}
+
+// Quando o WhatsApp "não responde": mostra o último sinal que chegou ao sistema e o que a UAZAPI diz (conectada? para onde manda?)
+export function WhatsAppDiagnostic() {
+  const [data, setData] = useState<Diagnosis | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+  const run = () => start(async () => {
+    setError(null);
+    try { setData(await checkWhatsApp()); } catch { setError("Não deu para conferir agora. Tente de novo."); }
+  });
+  const u = data?.check.uazapi;
+  const hooks = u?.webhooks ?? [];
+  const good = hooks.some((h) => h.pointsHere && h.secretOk);
+  const signals = data ? ([["Último aviso que chegou do WhatsApp", data.signals.whatsapp_webhook], ["Fila (processamento)", data.signals.whatsapp_job], ["Último número que mandou mensagem", data.signals.whatsapp_inbound]] as const) : [];
+  return (
+    <Card className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-col gap-0.5">
+          <SectionLabel>Diagnóstico do WhatsApp</SectionLabel>
+          <p className="text-xs text-muted">Se o assistente não responde no WhatsApp ou o código de vínculo não confirma, comece por aqui.</p>
+        </div>
+        <Button variant="secondary" size="sm" loading={pending} onClick={run}>Conferir agora</Button>
+      </div>
+      {error && <p role="alert" className="text-sm text-danger">{error}</p>}
+      {data && (
+        <div className="flex flex-col gap-3 text-sm">
+          <ul className="flex flex-col gap-1.5">
+            {signals.map(([label, s]) => (
+              <Line key={label} ok={s ? s.ok : false}>
+                <strong>{label}:</strong> {s ? `${s.result} (${ago(s.at)})${s.detail ? ` · ${s.detail}` : ""}` : "nada ainda. Nenhuma mensagem chegou ao sistema desde que o diagnóstico existe."}
+              </Line>
+            ))}
+          </ul>
+          <ul className="flex flex-col gap-1.5">
+            <Line ok={null}>Endereço do app que a UAZAPI precisa usar: <span className="break-all font-mono">{data.check.expectedWebhook}</span></Line>
+            {data.check.provider === "uazapi" && u && (
+              <>
+                <Line ok={u.reachable && u.connected === true ? true : false}>
+                  {u.reachable ? `Instância da UAZAPI: ${u.connected ? "conectada" : `DESCONECTADA${u.state ? ` (${u.state})` : ""}. Leia o QR code de novo no painel da UAZAPI`}${u.number ? `, número ${u.number}` : ""}` : u.error}
+                </Line>
+                {u.reachable && u.error && <Line ok={false}>{u.error}</Line>}
+                {u.reachable && hooks.length === 0 && !u.error && <Line ok={false}>A UAZAPI não tem nenhum webhook cadastrado: ela não avisa o app das mensagens. Cadastre o endereço que aparece em Endereços para colar nos serviços.</Line>}
+                {hooks.map((h) => (
+                  <Line key={h.url} ok={h.pointsHere && h.secretOk}>
+                    Webhook cadastrado na UAZAPI: <span className="break-all font-mono">{h.url.replace(/secret=[^&]+/, "secret=…")}</span>
+                    {h.pointsHere ? (h.secretOk ? " — confere com este app" : " — o endereço é este app, mas o segredo não é o do sistema") : " — aponta para OUTRO endereço (domínio antigo?). Troque pelo de cima"}
+                    {h.enabled === false ? " (desligado)" : ""}
+                  </Line>
+                ))}
+                {u.reachable && hooks.length > 0 && !good && !hooks.some((h) => h.pointsHere) && <Line ok={false}>Nenhum webhook aponta para este app. Foi o que mais travou o WhatsApp depois de trocar o domínio.</Line>}
+              </>
+            )}
+            <Line ok={data.check.queue.token && data.check.queue.signingKeys}>
+              Fila (QStash): {data.check.queue.token ? "chave de envio presente" : "sem QSTASH_TOKEN"}; {data.check.queue.signingKeys ? "chaves de assinatura presentes" : "faltam QSTASH_CURRENT_SIGNING_KEY e QSTASH_NEXT_SIGNING_KEY (sem elas a fila recusa toda mensagem)"}. A fila chama {data.check.site}/api/jobs/process-inbound: o endereço do app (SITE_URL no stack) precisa ser o domínio atual.
+            </Line>
+            <Line ok={data.check.botNumber ? null : false}>Número do assistente (o que recebe o código): {data.check.botNumber ?? "não configurado (WHATSAPP_BOT_NUMBER)"}</Line>
+          </ul>
+        </div>
       )}
     </Card>
   );

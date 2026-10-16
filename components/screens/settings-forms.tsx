@@ -1,8 +1,8 @@
 "use client";
 import { Download, Play, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
-import { clearMemories, deleteAccount, deleteMemory, exportData, linkWhatsApp as startWhatsAppLink, testNotice, unlinkWhatsApp, updateSettings, updateWhatsApp } from "@/app/actions";
+import { useEffect, useState, useTransition } from "react";
+import { clearMemories, deleteAccount, deleteMemory, exportData, linkWhatsApp as startWhatsAppLink, testNotice, unlinkWhatsApp, updateSettings, updateWhatsApp, verifiedWhatsAppCount } from "@/app/actions";
 import { signOut } from "@/app/auth-actions";
 import { isIos, pushAvailability, subscribePush, unsubscribePush, type PushAvailability } from "@/lib/push-client";
 import { Button } from "@/components/ui/button";
@@ -69,7 +69,28 @@ type LinkResult = Awaited<ReturnType<typeof startWhatsAppLink>>;
 
 // Código para confirmar o número, com o link que abre o WhatsApp já com a mensagem
 function LinkCode({ result }: { result: LinkResult }) {
+  const router = useRouter();
+  const code = result && !("limitReached" in result) ? result.code : null;
+  const [linked, setLinked] = useState(false);
+  // espera o código chegar pelo WhatsApp: confere a cada 3 s (por até 30 min, a validade do código) e avisa quando vincula
+  useEffect(() => {
+    if (!code) return;
+    let stop = false, baseline: number | null = null;
+    const tick = async () => {
+      try {
+        const n = await verifiedWhatsAppCount();
+        if (stop) return;
+        if (baseline === null) baseline = n;
+        else if (n > baseline) { setLinked(true); router.refresh(); stop = true; clearInterval(timer); }
+      } catch { /* sem conexão: tenta de novo no próximo ciclo */ }
+    };
+    const timer = setInterval(tick, 3000);
+    const giveUp = setTimeout(() => { stop = true; clearInterval(timer); }, 30 * 60_000);
+    tick();
+    return () => { stop = true; clearInterval(timer); clearTimeout(giveUp); };
+  }, [code, router]);
   if (!result || "limitReached" in result || !result.code) return null;
+  if (linked) return <p role="status" className="rounded-md bg-surface-2 p-3 text-sm font-medium text-success">✓ WhatsApp vinculado! Pode mandar o que quiser por lá.</p>;
   return (
     <div role="status" className="flex flex-col gap-2 rounded-md bg-surface-2 p-3 text-sm text-body">
       <p>Para confirmar que o número é seu, mande este código desse WhatsApp para o assistente (vale por 30 minutos):</p>
@@ -78,6 +99,7 @@ function LinkCode({ result }: { result: LinkResult }) {
         <a href={result.link} target="_blank" rel="noopener noreferrer"
           className="inline-flex h-10 w-fit items-center rounded-md bg-accent px-4 text-sm font-semibold text-on-accent">Abrir o WhatsApp com o código</a>
       )}
+      <p className="text-xs text-muted">Esta tela avisa sozinha quando o código chegar. Se passar de um minuto sem avisar, confira se mandou do mesmo número que digitou acima; se continuar, peça uma pessoa em Suporte humano.</p>
     </div>
   );
 }

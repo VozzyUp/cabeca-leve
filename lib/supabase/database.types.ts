@@ -1077,6 +1077,20 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"system_status": {
+                  Row: {
+                    "key": string,"updated_at": string,"value": NonNullable<Json>
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "key": string,"updated_at"?: string,"value"?: NonNullable<Json>
+                  }
+                  Update: {
+                    "key"?: string,"updated_at"?: string,"value"?: NonNullable<Json>
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"tasks": {
                   Row: {
                     "archived_at": string | null,"completed_at": string | null,"created_at": string,"due_at": string | null,"due_on": string | null,"id": string,"milestone_id": string | null,"notes": string | null,"parent_task_id": string | null,"position": number,"priority": string,"project_id": string | null,"recurrence_rule": string | null,"recurrence_source_id": string | null,"status": string,"title": string,"updated_at": string,"user_id": string

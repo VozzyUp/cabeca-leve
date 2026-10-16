@@ -5,7 +5,7 @@ import { isVapidPrivateKey, isVapidPublicKey } from "@/lib/public-env";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { currentUser } from "@/lib/supabase/server";
 import { isSupportAdmin } from "@/lib/support";
-import { AdminConfigForm, IntegrationInfo } from "./admin-config-form";
+import { AdminConfigForm, IntegrationInfo, WhatsAppDiagnostic } from "./admin-config-form";
 
 // Configuração do sistema: as chaves dos serviços, guardadas no banco e criptografadas.
 // Só os e-mails em ADMIN_EMAILS (variável do stack) entram aqui.
@@ -40,6 +40,7 @@ export async function AdminConfigScreen() {
             </p>
           )}
           <IntegrationInfo version={status.filter((s) => s.key.endsWith("_SECRET") || s.key.endsWith("_TOKEN")).map((s) => `${s.key}:${s.preview}`).join("|")} />
+          <WhatsAppDiagnostic />
           {CONFIG_GROUPS.map((g) => {
             // limite antigo (LIMIT_*) só aparece enquanto tiver valor guardado no banco
             const fields = g.fields.filter((f) => !f.legacy || status.find((s) => s.key === f.key)?.source === "banco");

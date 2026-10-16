@@ -28,6 +28,8 @@ http.createServer((req, res) => {
     if (req.url === "/send/text" || req.url === "/send/menu" || req.url === "/send/media") return res.end(JSON.stringify({ messageid: `out_${++n}` }));
     if (req.url === "/message/download") return res.end(JSON.stringify({ fileURL: "http://127.0.0.1:4010/files/nota-hotel.pdf", mimetype: "application/pdf" }));
     if (/^\/v3\/payments\/[^/]+\/refund$/.test(req.url)) return res.end(JSON.stringify({ status: "REFUNDED" }));
+    if (req.url === "/instance/status") return res.end(JSON.stringify({ instance: { status: "connected", owner: "5511900000000" }, status: { connected: true, loggedIn: true } }));
+    if (req.url === "/webhook" && req.method === "GET") return res.end(JSON.stringify([{ id: "h1", enabled: true, url: "http://localhost:3000/api/webhooks/whatsapp?secret=segredo-e2e", events: ["messages"] }]));
     if (req.url === "/emails") return res.end(JSON.stringify({ id: `email_${++n}` }));
     res.end("{}");
   });

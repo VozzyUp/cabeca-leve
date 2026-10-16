@@ -32,6 +32,8 @@ test.describe("F02 e F16 WhatsApp", () => {
 
     expect((await hook(inbound(`L-${number}`, number, `Meu código: ${code}`))).status).toBe(200);
     await waitSent(number, /Pronto!/);
+    // a tela percebe sozinha que o código chegou, sem recarregar
+    await expect(page.getByRole("status").filter({ hasText: "WhatsApp vinculado!" })).toBeVisible({ timeout: 15_000 });
     await page.reload();
     await expect(page.getByText(`+${number} · vinculado`)).toBeVisible();
 

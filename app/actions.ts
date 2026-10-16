@@ -14,6 +14,8 @@ import { sendTestNotice } from "@/lib/deliveries";
 import { confirmBill } from "@/lib/assistant/tools";
 import { CONFIG_FIELDS, CONFIG_KEYS, loadAppConfig, saveAppConfig } from "@/lib/app-config";
 import { pingAgent } from "@/lib/assistant/agent";
+import { readStatus } from "@/lib/diagnostics";
+import { checkWhatsApp as runWhatsAppCheck } from "@/lib/whatsapp/diagnose";
 import { changeDocument, changeFolderDeadline } from "@/lib/documents";
 import { deletePlan, savePlan, saveTrial } from "@/lib/admin-plans";
 import { planInput, trialInput, type PlanInput, type TrialInput } from "@/lib/plans";
@@ -219,6 +221,12 @@ export async function linkWhatsApp(number: string, label?: string | null) {
   }
 }
 
+// Quantos WhatsApps da conta já estão confirmados (a tela espera o código chegar e avisa quando vincula)
+export async function verifiedWhatsAppCount() {
+  const { whatsapp } = await (await getStore({ allowLocked: true })).getSettings();
+  return (whatsapp?.numbers ?? []).filter((n) => n.verified).length;
+}
+
 // Nome de quem usa o número e se ele recebe os avisos (lembretes, resumo, suporte)
 export async function updateWhatsApp(id: string, patch: { label?: string | null; receivesNotices?: boolean }) {
   const user = await currentUser();
@@ -376,6 +384,14 @@ export async function revealIntegrationInfo() {
     metaCallback: `${site}/api/webhooks/whatsapp`,
     metaVerifyToken: e.META_WEBHOOK_VERIFY_TOKEN ?? null,
   };
+}
+
+// Diagnóstico do WhatsApp (só admin): o que a UAZAPI diz e o último sinal do webhook, da fila e do vínculo
+export async function checkWhatsApp() {
+  await requireAdmin();
+  await loadAppConfig(true);
+  const [check, signals] = await Promise.all([runWhatsAppCheck(process.env, siteUrl()), readStatus().catch((): Awaited<ReturnType<typeof readStatus>> => ({}))]);
+  return { check, signals };
 }
 
 // ---- Cofre de senhas: o aparelho cifra e decifra; aqui só passa texto cifrado (base64) ----
