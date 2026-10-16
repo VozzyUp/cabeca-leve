@@ -82,7 +82,7 @@ function ThemeButton({ theme }: { theme: Settings["theme"] }) {
 const MENU: Array<{ href: string; label: string }> = [
   { href: "/ajustes", label: "Configurações" },
   { href: "/ajustes/assistente", label: "Configurar assistente" },
-  { href: "/planos", label: "Assinatura e planos" },
+  { href: "/ajustes/plano", label: "Meu plano" },
   { href: "/ajustes/suporte", label: "Suporte humano" },
   { href: "/conversa?configurar=1", label: "Refazer a configuração inicial" },
 ];

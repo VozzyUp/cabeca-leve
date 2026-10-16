@@ -59,7 +59,7 @@ export async function pdfForReading(bytes: Buffer): Promise<Buffer> {
 
 export async function assertRoom(store: DataStore, size: number) {
   const settings = await store.getSettings();
-  const limit = storageLimitBytes(settings.plan);
+  const limit = storageLimitBytes(settings.planInfo);
   const used = await store.documentBytesUsed();
   if (used + size > limit) {
     throw new DocumentError(`Seu espaço para documentos está cheio (${formatBytes(used)} de ${formatBytes(limit)}). Apague algum documento${settings.plan === "trial" || settings.plan === "none" ? " ou assine um plano para ter mais espaço" : ""}.`, "quota");

@@ -59,14 +59,14 @@ isOneToOne: false
                   ]
                 },"admin_actions": {
                   Row: {
-                    "action": string,"admin_email": string,"created_at": string,"detail": NonNullable<Json>,"id": number,"target_email": string | null,"target_user_id": string
+                    "action": string,"admin_email": string,"created_at": string,"detail": NonNullable<Json>,"id": number,"target_email": string | null,"target_user_id": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "action": string,"admin_email": string,"created_at"?: string,"detail"?: NonNullable<Json>,"id"?: never,"target_email"?: string | null,"target_user_id": string
+                    "action": string,"admin_email": string,"created_at"?: string,"detail"?: NonNullable<Json>,"id"?: never,"target_email"?: string | null,"target_user_id"?: string | null
                   }
                   Update: {
-                    "action"?: string,"admin_email"?: string,"created_at"?: string,"detail"?: NonNullable<Json>,"id"?: never,"target_email"?: string | null,"target_user_id"?: string
+                    "action"?: string,"admin_email"?: string,"created_at"?: string,"detail"?: NonNullable<Json>,"id"?: never,"target_email"?: string | null,"target_user_id"?: string | null
                   }
                   Relationships: [
                     
@@ -373,7 +373,13 @@ isOneToOne: false
                     "created_at"?: string,"id"?: string,"plan"?: string,"returned_at"?: string | null,"status"?: string,"updated_at"?: string,"user_id"?: string
                   }
                   Relationships: [
-                    
+                    {
+      foreignKeyName: "checkout_sessions_plan_fk"
+      columns: ["plan"]
+isOneToOne: false
+      referencedRelation: "plans"
+      referencedColumns: ["id"]
+    }
                   ]
                 },"conversations": {
                   Row: {
@@ -851,6 +857,20 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"plans": {
+                  Row: {
+                    "active": boolean,"created_at": string,"featured": boolean,"id": string,"kind": string,"messages_per_day": number | null,"months": number,"name": string,"price_cents": number,"recurring": boolean,"sort": number,"storage_mb": number | null,"tagline": string | null,"updated_at": string,"whatsapp_limit": number | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "active"?: boolean,"created_at"?: string,"featured"?: boolean,"id": string,"kind"?: string,"messages_per_day"?: number | null,"months"?: number,"name": string,"price_cents"?: number,"recurring"?: boolean,"sort"?: number,"storage_mb"?: number | null,"tagline"?: string | null,"updated_at"?: string,"whatsapp_limit"?: number | null
+                  }
+                  Update: {
+                    "active"?: boolean,"created_at"?: string,"featured"?: boolean,"id"?: string,"kind"?: string,"messages_per_day"?: number | null,"months"?: number,"name"?: string,"price_cents"?: number,"recurring"?: boolean,"sort"?: number,"storage_mb"?: number | null,"tagline"?: string | null,"updated_at"?: string,"whatsapp_limit"?: number | null
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"profiles": {
                   Row: {
                     "answer_length": string,"assistant_tone": string,"assistant_tone_custom": string | null,"assistant_voice": string | null,"briefing_enabled": boolean,"briefing_time": string,"created_at": string,"daily_alert_cap": number,"display_name": string | null,"locale": string,"memory_enabled": boolean,"notify_email": boolean,"notify_push": boolean,"notify_telegram": boolean,"onboarded_at": string | null,"quiet_hours_end": string | null,"quiet_hours_start": string | null,"theme": string,"timezone": string,"trial_ends_on": string,"updated_at": string,"user_id": string
@@ -1035,7 +1055,13 @@ isOneToOne: false
                     "cancel_at_period_end"?: boolean,"cancel_protocol"?: string | null,"canceled_at"?: string | null,"checkout_email"?: string | null,"created_at"?: string,"current_period_end"?: string | null,"id"?: string,"plan"?: string,"provider"?: string,"provider_customer_id"?: string,"provider_subscription_id"?: string,"status"?: string,"updated_at"?: string,"user_id"?: string
                   }
                   Relationships: [
-                    
+                    {
+      foreignKeyName: "subscriptions_plan_fk"
+      columns: ["plan"]
+isOneToOne: false
+      referencedRelation: "plans"
+      referencedColumns: ["id"]
+    }
                   ]
                 },"support_tickets": {
                   Row: {

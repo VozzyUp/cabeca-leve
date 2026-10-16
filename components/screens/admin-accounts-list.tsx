@@ -8,8 +8,8 @@ import { cn } from "@/components/ui/cn";
 import { EmptyState } from "@/components/ui/data";
 import { accountState, brDay, filterAccounts, KIND_LABEL, summarizeAccounts, untilText, type AccountFilter, type AccountRow } from "@/lib/domain/accounts";
 
-export function StateChip({ row, today }: { row: AccountRow; today: string }) {
-  const s = accountState(row, today);
+export function StateChip({ row, today, names }: { row: AccountRow; today: string; names?: Record<string, string> }) {
+  const s = accountState(row, today, names);
   const tone = s.kind === "paid" ? "border-success text-success" : s.kind === "trial" ? "border-border text-text" : s.kind === "expired" ? "border-border text-muted" : "border-warning text-warning";
   return (
     <span className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium", tone)}>
@@ -21,7 +21,7 @@ export function StateChip({ row, today }: { row: AccountRow; today: string }) {
 
 const FILTERS: Array<[AccountFilter, string]> = [["all", "Todas"], ["attention", "Atenção"], ["paid", "Com plano"], ["trial", "Em teste"], ["expired", "Sem plano"], ["manual", "Manuais"]];
 
-export function AccountsList({ rows, today }: { rows: AccountRow[]; today: string }) {
+export function AccountsList({ rows, today, planNames }: { rows: AccountRow[]; today: string; planNames: Record<string, string> }) {
   const [filter, setFilter] = useState<AccountFilter>("all");
   const [query, setQuery] = useState("");
   const summary = useMemo(() => summarizeAccounts(rows, today), [rows, today]);
@@ -54,14 +54,14 @@ export function AccountsList({ rows, today }: { rows: AccountRow[]; today: strin
       ) : (
         <ul className="flex flex-col gap-2" aria-label="Contas">
           {visible.map((r) => {
-            const s = accountState(r, today);
+            const s = accountState(r, today, planNames);
             return (
               <li key={r.userId}>
                 <Link href={`/admin/contas/${r.userId}`} className="flex items-center gap-3 rounded-lg border border-border bg-surface p-3 hover:bg-surface-2">
                   <span className="flex min-w-0 flex-1 flex-col gap-1">
                     <span className="flex flex-wrap items-center gap-2">
                       <span className="truncate text-sm font-medium text-text">{r.name ?? "Sem nome"}</span>
-                      <StateChip row={r} today={today} />
+                      <StateChip row={r} today={today} names={planNames} />
                     </span>
                     <span className="truncate text-xs text-muted">{r.email ?? "sem e-mail"}</span>
                     <span className="flex flex-wrap gap-x-3 text-xs text-muted">

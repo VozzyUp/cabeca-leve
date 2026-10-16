@@ -1,9 +1,8 @@
 import { Bell, ChevronRight, CreditCard, FileText, LifeBuoy, ShieldCheck, Sparkles } from "lucide-react";
 import Link from "next/link";
-import { cancelPlan } from "@/app/actions";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/load-error";
-import { PLANS } from "@/lib/plans";
+import { planPeriod } from "@/lib/plans";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { serverContext } from "@/lib/server";
 import { formatMoney, formatShortDate } from "@/lib/time";
@@ -27,34 +26,21 @@ export async function SettingsScreen() {
   const plan = settings.billing?.confirming ? "Pagamento em confirmação: tudo liberado enquanto a Asaas confirma"
     : settings.billing?.pastDue ? "Pagamento atrasado: atualize o cartão para não perder o acesso"
     : settings.billing && settings.plan !== "trial" && settings.plan !== "none"
-    ? `Plano ${PLANS[settings.plan].name.toLowerCase()} · ${settings.billing.renews ? `renova em ${end}` : `vale até ${end}, sem renovar`}`
+    ? `Plano ${settings.planInfo.name.toLowerCase()} · ${settings.billing.renews ? `renova em ${end}` : `vale até ${end}, sem renovar`}`
     : settings.plan === "trial"
     ? `Teste grátis${settings.trialEndsOn ? ` até ${formatShortDate(settings.trialEndsOn)}${settings.trialEndsOn < today ? " (terminou)" : ""}` : ""}`
     : settings.plan === "none" ? "Sem assinatura"
-    : `Plano ${PLANS[settings.plan].name.toLowerCase()} · ${formatMoney(PLANS[settings.plan].priceCents)} ${PLANS[settings.plan].period}`;
+    : `Plano ${settings.planInfo.name.toLowerCase()} · ${formatMoney(settings.planInfo.priceCents)} ${planPeriod(settings.planInfo)}`;
   return (
     <div className="flex flex-col gap-6">
       <PageHeader id="S29" title="Configurações" />
       <Card className="divide-y divide-border p-0">
-        <LinkRow href="/planos" icon={CreditCard} title="Assinatura" hint={plan} />
+        <LinkRow href="/ajustes/plano" icon={CreditCard} title="Meu plano" hint={plan} />
         <LinkRow href="/ajustes/assistente" icon={Sparkles} title="Configurar assistente" hint="tom, voz, memória e tema" />
         <LinkRow href="/ajustes/suporte" icon={LifeBuoy} title="Suporte humano" hint="resposta de alguém do time em até 1 dia útil" />
         <LinkRow href="/privacidade" icon={ShieldCheck} title="Política de privacidade" hint="o que guardamos e como você controla" />
         <LinkRow href="/termos" icon={FileText} title="Termos de uso" hint="as regras do serviço" />
       </Card>
-      {settings.billing?.canceledAt && (
-        <p role="note" className="rounded-lg border border-border bg-surface px-4 py-3 text-sm text-body">
-          Assinatura cancelada em {formatShortDate(settings.billing.canceledAt.slice(0, 10))}, protocolo{" "}
-          <span className="font-mono text-text">{settings.billing.cancelProtocol}</span>. Nenhuma cobrança nova
-          {end ? `; acesso até ${end}` : ""}. Se chegar alguma cobrança, ela é estornada sozinha.
-        </p>
-      )}
-      {settings.billing?.renews && (
-        <form action={cancelPlan} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface px-4 py-3">
-          <span className="text-sm text-body">Cancelar é imediato: para de cobrar e o acesso continua até {end}.</span>
-          <button type="submit" className="h-8 rounded-md border border-border px-3 text-sm font-medium text-text hover:bg-surface-2">Cancelar assinatura</button>
-        </form>
-      )}
       <SettingsForm initial={settings} canSignOut={isSupabaseConfigured()} />
     </div>
   );

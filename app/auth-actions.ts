@@ -31,7 +31,7 @@ export async function signUp(input: { name: string; email: string; password: str
   const parsed = z.object({ name: z.string().trim().min(1).max(80), email, password }).safeParse(input);
   if (!parsed.success) return { ok: false, error: "Confira os dados do cadastro." };
   const supabase = await createSessionClient();
-  const next = input.plan === "monthly" || input.plan === "yearly" ? `/planos?plano=${input.plan}` : "/conversa";
+  const next = input.plan && /^[a-z][a-z0-9_-]{1,31}$/.test(input.plan) ? `/planos?plano=${input.plan}` : "/conversa";
   const { error } = await supabase.auth.signUp({
     email: parsed.data.email, password: parsed.data.password,
     options: { data: { name: parsed.data.name }, emailRedirectTo: `${site()}/auth/confirm?next=${encodeURIComponent(next)}` },

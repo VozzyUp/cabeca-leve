@@ -1,3 +1,4 @@
+import type { Plan } from "@/lib/plans";
 // Tipos de domínio compartilhados pelas telas e pela camada de dados.
 // Espelham as tabelas de replica/schema.sql (só os campos que as telas usam).
 
@@ -211,7 +212,8 @@ export type Settings = {
   name: string;
   email: string;
   timezone: string;
-  plan: "trial" | "monthly" | "yearly" | "none";
+  plan: string;                  // "trial", "none" ou o id de um plano pago (monthly, yearly, ou um criado pelo time)
+  planInfo: Plan;                // o plano que vale agora, com os limites (o do teste, para quem está em teste ou sem plano)
   trialEndsOn: string | null;
   // assinatura paga: até quando vale e se renova sozinha
   billing?: {

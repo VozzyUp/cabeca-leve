@@ -4,17 +4,16 @@ import { describe, expect, it } from "vitest";
 import type { DataStore, DocumentInput, DocumentPatch } from "@/lib/data/store";
 import type { Doc, DocFolder } from "@/lib/data/types";
 import { assertRoom, changeDocument, changeFolderDeadline, DocumentError, pdfForReading, prepareFile, saveDocument } from "./documents";
-import { DEFAULT_STORAGE_MB, formatBytes, storageLimitBytes } from "./limits";
+import { formatBytes, storageLimitBytes } from "./limits";
+import { DEFAULT_PLANS } from "./plans";
 
 const MB = 1024 * 1024;
 
 describe("espaço por plano", () => {
-  it("teste 100 MB, pago 2 GB, e o admin ajusta", () => {
-    expect(storageLimitBytes("trial", {})).toBe(DEFAULT_STORAGE_MB.trial * MB);
-    expect(storageLimitBytes("none", {})).toBe(100 * MB);
-    expect(storageLimitBytes("monthly", {})).toBe(2048 * MB);
-    expect(storageLimitBytes("yearly", { LIMIT_STORAGE_MB_PAID: "5000" })).toBe(5000 * MB);
-    expect(storageLimitBytes("trial", { LIMIT_STORAGE_MB_TRIAL: "abc" })).toBe(100 * MB);
+  it("o espaço vem do plano, em megabytes", () => {
+    expect(storageLimitBytes(DEFAULT_PLANS[0])).toBe(100 * MB);
+    expect(storageLimitBytes(DEFAULT_PLANS[1])).toBe(2048 * MB);
+    expect(storageLimitBytes({ storageMb: 5000 })).toBe(5000 * MB);
   });
   it("escreve o tamanho em português", () => {
     expect(formatBytes(500)).toBe("1 KB");
@@ -80,7 +79,7 @@ function memoryStore(plan: "trial" | "monthly" = "trial", used = 0, folders: Doc
   const docs: Doc[] = [];
   const store = {
     timezone: () => "America/Sao_Paulo",
-    getSettings: async () => ({ plan }),
+    getSettings: async () => ({ plan, planInfo: plan === "trial" ? DEFAULT_PLANS[0] : DEFAULT_PLANS[1] }),
     documentBytesUsed: async () => used + docs.reduce((n, d) => n + d.sizeBytes, 0),
     listDocFolders: async () => folders,
     updateDocFolder: async (id: string, patch: { deadlineDays?: number | null }) => { const f = folders.find((x) => x.id === id)!; if (patch.deadlineDays !== undefined) f.deadlineDays = patch.deadlineDays; return f; },

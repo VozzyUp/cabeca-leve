@@ -5,6 +5,8 @@ import { Card, SectionLabel } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/load-error";
 import { listAdminActions, loadAccounts } from "@/lib/admin-accounts";
 import { loadAppConfig } from "@/lib/app-config";
+import { forSale, type Plan } from "@/lib/plans";
+import { loadPlans } from "@/lib/plans-server";
 import { accountState, brDay, KIND_LABEL, untilText } from "@/lib/domain/accounts";
 import { formatBytes } from "@/lib/limits";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -14,12 +16,12 @@ import { DEFAULT_TZ, localDate } from "@/lib/time";
 import { AccountControls } from "./admin-account-controls";
 import { StateChip } from "./admin-accounts-list";
 
-const ACTION_TEXT: Record<string, (d: Record<string, unknown>) => string> = {
-  "plano manual": (d) => `Plano manual ${d.plan === "yearly" ? "anual" : "mensal"} até ${brDay(String(d.until))}`,
+const actionText = (names: Record<string, string>): Record<string, (d: Record<string, unknown>) => string> => ({
+  "plano manual": (d) => `Plano manual ${String(names[String(d.plan)] ?? d.plan).toLowerCase()} até ${brDay(String(d.until))}`,
   "plano manual encerrado": () => "Plano manual encerrado",
   teste: (d) => `Teste até ${brDay(String(d.after))} (era ${brDay(String(d.before))})`,
   "conta excluída": () => "Conta excluída",
-};
+});
 const when = (iso: string) => new Intl.DateTimeFormat("pt-BR", { timeZone: DEFAULT_TZ, day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
 
 // Uma conta: situação, uso e as ações do time (plano manual, teste, excluir), com o registro do que já foi feito
@@ -30,7 +32,10 @@ export async function AdminAccountScreen({ id }: { id: string }) {
   const row = (await loadAccounts()).find((r) => r.userId === id);
   if (!row) notFound();
   const today = localDate(new Date(), DEFAULT_TZ);
-  const state = accountState(row, today);
+  const plans = await loadPlans();
+  const names = Object.fromEntries(plans.map((p: Plan) => [p.id, p.name]));
+  const ACTION_TEXT = actionText(names);
+  const state = accountState(row, today, names);
   const actions = await listAdminActions(id);
   const paidByAsaas = (state.kind === "paid" || state.kind === "canceling" || state.kind === "past_due") && !state.manual;
 
@@ -38,7 +43,7 @@ export async function AdminAccountScreen({ id }: { id: string }) {
     <div className="flex flex-col gap-6">
       <Link href="/admin/contas" className="inline-flex w-fit items-center gap-1.5 text-sm text-body hover:text-text"><ArrowLeft aria-hidden className="size-4" />Todas as contas</Link>
       <PageHeader id="admin-conta" title={row.name ?? "Sem nome"}>
-        <StateChip row={row} today={today} />
+        <StateChip row={row} today={today} names={names} />
       </PageHeader>
       <p className="-mt-3 text-sm text-muted">{row.email ?? "sem e-mail"}</p>
 
@@ -62,7 +67,7 @@ export async function AdminAccountScreen({ id }: { id: string }) {
         </p>
       )}
 
-      <AccountControls userId={row.userId} email={row.email ?? ""} manual={state.manual && state.kind !== "expired"} plan={state.plan} until={state.until} trialEndsOn={row.trialEndsOn} today={today} isTeam={isSupportAdmin(row.email)} />
+      <AccountControls userId={row.userId} email={row.email ?? ""} manual={state.manual && state.kind !== "expired"} plan={state.plan} until={state.until} trialEndsOn={row.trialEndsOn} today={today} plans={forSale(plans).concat(plans.filter((p) => p.kind === "paid" && !p.active)).map((p) => ({ id: p.id, name: p.name, active: p.active }))} isTeam={isSupportAdmin(row.email)} />
 
       <Card className="flex flex-col gap-2">
         <SectionLabel>Registro desta conta</SectionLabel>

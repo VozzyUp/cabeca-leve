@@ -1,7 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { billingEnabled, cancelSubscription, createCheckout } from "@/lib/billing/asaas";
+import { billingEnabled, cancelSubscription, createCheckout, PlanUnavailableError } from "@/lib/billing/asaas";
 import { z } from "zod";
 import { getStore } from "@/lib/data";
 import { FOLDER_EXISTS } from "@/lib/data/store";
@@ -15,6 +15,8 @@ import { confirmBill } from "@/lib/assistant/tools";
 import { CONFIG_FIELDS, CONFIG_KEYS, loadAppConfig, saveAppConfig } from "@/lib/app-config";
 import { pingAgent } from "@/lib/assistant/agent";
 import { changeDocument, changeFolderDeadline } from "@/lib/documents";
+import { deletePlan, savePlan, saveTrial } from "@/lib/admin-plans";
+import { planInput, trialInput, type PlanInput, type TrialInput } from "@/lib/plans";
 import { deleteAccountAsAdmin, endManualPlan, setManualPlan, setTrialEnd, type AdminResult } from "@/lib/admin-accounts";
 import { storageLimitBytes } from "@/lib/limits";
 import { isVapidPrivateKey, isVapidPublicKey, siteUrl } from "@/lib/public-env";
@@ -206,9 +208,9 @@ export async function linkWhatsApp(number: string, label?: string | null) {
   }
   const user = await currentUser();
   if (!user) throw new Error("Sessão expirada");
-  const { plan } = await (await getStore()).getSettings();
+  const { planInfo } = await (await getStore()).getSettings();
   try {
-    const result = await startLink(user.id, n, { label: name, limit: whatsappLimit(plan) });
+    const result = await startLink(user.id, n, { label: name, limit: whatsappLimit(planInfo) });
     revalidatePath("/", "layout");
     return result;
   } catch (error) {
@@ -239,13 +241,20 @@ export async function unlinkWhatsApp(id: string) {
 }
 
 // Abre a página de pagamento da Asaas para o plano escolhido
-export async function startCheckout(plan: "monthly" | "yearly") {
-  const p = z.enum(["monthly", "yearly"]).parse(plan);
+export async function startCheckout(plan: string) {
+  const p = z.string().regex(/^[a-z][a-z0-9_-]{1,31}$/).parse(plan);
   const user = await currentUser();
   if (!user) redirect(`/entrar?modo=criar&plano=${p}`);
   if (!billingEnabled()) throw new Error("Cobrança não configurada");
   const settings = await (await getStore()).getSettings();
-  redirect(await createCheckout(user.id, p, settings.trialEndsOn));
+  let url: string;
+  try {
+    url = await createCheckout(user.id, p, settings.trialEndsOn);
+  } catch (error) {
+    if (error instanceof PlanUnavailableError) redirect("/planos?indisponivel=1");  // o plano saiu da venda enquanto a página estava aberta
+    throw error;
+  }
+  redirect(url);
 }
 
 // Cancelar em um toque: para de cobrar e o acesso vale até o fim do período pago
@@ -414,7 +423,7 @@ export async function destroyVault(confirmation: string) {
 export async function loadDocuments() {
   const store = await getStore();
   const [folders, documents, usedBytes, settings] = await Promise.all([store.listDocFolders(), store.listDocuments(), store.documentBytesUsed(), store.getSettings()]);
-  return { folders, documents, usedBytes, limitBytes: storageLimitBytes(settings.plan), timezone: store.timezone() };
+  return { folders, documents, usedBytes, limitBytes: storageLimitBytes(settings.planInfo), timezone: store.timezone() };
 }
 
 const folderName = z.string().trim().min(1, "Dê um nome para a pasta.").max(80, "Nome grande demais (até 80 letras).");
@@ -494,9 +503,9 @@ export async function deleteDocument(id: string) {
 
 // ---- Contas e planos (/admin/contas): só ADMIN_EMAILS. Erros esperados voltam como resultado (a mensagem de uma ação que lança some em produção) ----
 
-export async function adminSetPlan(userId: string, plan: "monthly" | "yearly", until: string): Promise<AdminResult> {
+export async function adminSetPlan(userId: string, plan: string, until: string): Promise<AdminResult> {
   const by = await requireAdmin();
-  const parsed = z.object({ userId: uuid, plan: z.enum(["monthly", "yearly"]), until: day }).safeParse({ userId, plan, until });
+  const parsed = z.object({ userId: uuid, plan: z.string().regex(/^[a-z][a-z0-9_-]{1,31}$/), until: day }).safeParse({ userId, plan, until });
   if (!parsed.success) return { ok: false, error: "Escolha o plano e uma data válida." };
   const r = await setManualPlan(by, parsed.data.userId, parsed.data.plan, parsed.data.until);
   revalidatePath("/admin/contas", "layout");
@@ -523,5 +532,32 @@ export async function adminDeleteAccount(userId: string, confirmEmail: string): 
   const by = await requireAdmin();
   const r = await deleteAccountAsAdmin(by, uuid.parse(userId), z.string().max(320).parse(confirmEmail));
   revalidatePath("/admin/contas", "layout");
+  return r;
+}
+
+// ---- Planos (/admin/planos): só ADMIN_EMAILS ----
+
+export async function adminSavePlan(input: PlanInput): Promise<AdminResult & { id?: string }> {
+  const by = await requireAdmin();
+  const parsed = planInput.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Confira os campos." };
+  const r = await savePlan(by, parsed.data);
+  revalidatePath("/", "layout");
+  return r;
+}
+
+export async function adminSaveTrial(input: TrialInput): Promise<AdminResult> {
+  const by = await requireAdmin();
+  const parsed = trialInput.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Confira os campos." };
+  const r = await saveTrial(by, parsed.data);
+  revalidatePath("/", "layout");
+  return r;
+}
+
+export async function adminDeletePlan(id: string): Promise<AdminResult> {
+  const by = await requireAdmin();
+  const r = await deletePlan(by, z.string().regex(/^[a-z][a-z0-9_-]{1,31}$/).parse(id));
+  revalidatePath("/", "layout");
   return r;
 }

@@ -12,13 +12,13 @@ type Notice = { tone: "ok" | "error"; text: string } | null;
 const select = "h-10 rounded-md border border-border-input bg-bg px-3 text-sm text-text";
 
 // Ações do time numa conta: plano manual (dar, renovar, trocar, encerrar), teste e exclusão
-export function AccountControls({ userId, email, manual, plan, until, trialEndsOn, today, isTeam }: {
-  userId: string; email: string; manual: boolean; plan: "monthly" | "yearly" | null; until: string | null; trialEndsOn: string; today: string; isTeam: boolean;
+export function AccountControls({ userId, email, manual, plan, until, trialEndsOn, today, plans, isTeam }: {
+  userId: string; email: string; manual: boolean; plan: string | null; until: string | null; trialEndsOn: string; today: string; plans: { id: string; name: string; active: boolean }[]; isTeam: boolean;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [notice, setNotice] = useState<Notice>(null);
-  const [planChoice, setPlanChoice] = useState<"monthly" | "yearly">(plan ?? "monthly");
+  const [planChoice, setPlanChoice] = useState<string>(plan && plans.some((p) => p.id === plan) ? plan : plans[0]?.id ?? "");
   const [planEnd, setPlanEnd] = useState(until && until > today ? until : renewFrom(null, today, 30));
   const [trialEnd, setTrialEnd] = useState(trialEndsOn);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -45,9 +45,8 @@ export function AccountControls({ userId, email, manual, plan, until, trialEndsO
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="flex flex-col gap-1.5">
             <label htmlFor="plano-manual" className="text-sm font-medium text-body">Plano</label>
-            <select id="plano-manual" className={select} value={planChoice} onChange={(e) => setPlanChoice(e.target.value as "monthly" | "yearly")}>
-              <option value="monthly">Mensal</option>
-              <option value="yearly">Anual</option>
+            <select id="plano-manual" className={select} value={planChoice} onChange={(e) => setPlanChoice(e.target.value)}>
+              {plans.map((p) => <option key={p.id} value={p.id}>{p.name}{p.active ? "" : " (fora de venda)"}</option>)}
             </select>
           </div>
           <Field label="Vale até" type="date" min={today} max={MAX_PLAN_DAY} value={planEnd} onChange={(e) => setPlanEnd(e.target.value)} />
@@ -58,7 +57,7 @@ export function AccountControls({ userId, email, manual, plan, until, trialEndsO
           <Button size="sm" variant="ghost" onClick={() => setPlanEnd("2099-12-31")}>Até 2099</Button>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button loading={pending} onClick={() => run(() => adminSetPlan(userId, planChoice, planEnd), `Plano ${planChoice === "yearly" ? "anual" : "mensal"} até ${planEnd.split("-").reverse().join("/")}.`)}>
+          <Button loading={pending} onClick={() => run(() => adminSetPlan(userId, planChoice, planEnd), `Plano ${(plans.find((p) => p.id === planChoice)?.name ?? planChoice).toLowerCase()} até ${planEnd.split("-").reverse().join("/")}.`)}>
             {manual ? "Salvar plano manual" : "Dar o plano"}
           </Button>
           {manual && <Button variant="danger" loading={pending} onClick={() => run(() => adminEndPlan(userId), "Plano manual encerrado.")}>Encerrar plano manual</Button>}

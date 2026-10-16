@@ -34,7 +34,7 @@ export const screens: Screen[] = [
   { id: "S29", path: "/ajustes", title: "Configurações", purpose: "Conta, assinatura, canais e preferências.", milestone: "M2" },
   { id: "S30", path: "/ajustes/assistente", title: "Configurar assistente", purpose: "Tom, voz, memória e aparência.", milestone: "M3" },
   { id: "S31", path: "/entrar", title: "Entrar", purpose: "Login, cadastro e recuperação de senha.", milestone: "M2" },
-  { id: "S32", path: "/planos", title: "Planos", purpose: "Assinar o plano mensal ou anual.", milestone: "M2" },
+  { id: "S32", path: "/planos", title: "Planos", purpose: "Escolher e assinar um plano.", milestone: "M2" },
 ];
 
 export const screenById = (id: string) => screens.find((s) => s.id === id)!;

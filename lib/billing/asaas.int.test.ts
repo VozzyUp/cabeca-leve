@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import http from "node:http";
 import type { AddressInfo } from "node:net";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { createSupabaseStore } from "@/lib/data/supabase-store";
 import type { Database } from "@/lib/supabase/database.types";
 
 // Cobrança pela Asaas contra uma API falsa e o Supabase local.
@@ -93,6 +94,48 @@ describe.skipIf(!run)("Asaas", () => {
     const { data } = await admin.from("subscriptions").select("plan, status, current_period_end, cancel_at_period_end").eq("user_id", userId).single();
     expect(data).toMatchObject({ plan: "yearly", status: "active", cancel_at_period_end: true });
     expect(new Date(data!.current_period_end!).getTime() - Date.now()).toBeGreaterThan(360 * 86_400_000);
+  });
+
+  it("plano criado pelo time: ciclo e duração seguem o plano, e o valor vem do banco", async () => {
+    const { createCheckout, handleAsaasEvent, PlanUnavailableError } = await import("./asaas");
+    await admin.from("subscriptions").delete().eq("user_id", userId);
+    const planId = `trimestral-${runId}`;
+    await admin.from("plans").insert({ id: planId, name: "Trimestral", kind: "paid", price_cents: 9900, months: 3, recurring: true, whatsapp_limit: 4, messages_per_day: 300, storage_mb: 1000, sort: 900 });
+    try {
+      const url = await createCheckout(userId, planId, null);
+      expect(calls.at(-1)!.body).toMatchObject({ chargeTypes: ["RECURRENT"], items: [{ name: "Plano trimestral", value: 99 }], subscription: { cycle: "QUARTERLY" } });
+      await handleAsaasEvent(evt("evt_t1", "CHECKOUT_PAID", { checkout: { id: url.split("id=")[1], customer: `cus_3_${runId}` } }));
+      await handleAsaasEvent(evt("evt_t2", "SUBSCRIPTION_CREATED", { subscription: { id: `sub_tri_${runId}`, customer: `cus_3_${runId}` } }));
+      await handleAsaasEvent(evt("evt_t3", "PAYMENT_RECEIVED", { payment: { id: "pay_t", customer: `cus_3_${runId}`, subscription: `sub_tri_${runId}`, dueDate: "2026-10-08" } }));
+      const s = await (await createSupabaseStore(admin, userId, null)).getSettings();
+      expect(s.plan).toBe(planId);
+      expect(s.planInfo).toMatchObject({ whatsappLimit: 4, messagesPerDay: 300, storageMb: 1000, months: 3 });
+      expect(s.billing!.periodEnd!.slice(0, 10)).toBe("2027-01-08");  // renovação de 3 meses
+      // fora de venda, não abre pagamento novo
+      await admin.from("plans").update({ active: false }).eq("id", planId);
+      await expect(createCheckout(userId, planId, null)).rejects.toBeInstanceOf(PlanUnavailableError);
+      await expect(createCheckout(userId, "trial", null)).rejects.toBeInstanceOf(PlanUnavailableError);
+      await expect(createCheckout(userId, "nao-existe", null)).rejects.toBeInstanceOf(PlanUnavailableError);
+    } finally {
+      await admin.from("subscriptions").delete().eq("user_id", userId);
+      await admin.from("checkout_sessions").delete().eq("plan", planId);
+      await admin.from("plans").delete().eq("id", planId);
+    }
+  });
+
+  it("trocar de plano encerra a cobrança do anterior para não pagar dois", async () => {
+    const { createCheckout, handleAsaasEvent } = await import("./asaas");
+    await admin.from("subscriptions").delete().eq("user_id", userId);
+    await admin.from("subscriptions").insert({ user_id: userId, provider: "asaas", provider_customer_id: `cus_4_${runId}`, provider_subscription_id: `sub_velha_${runId}`, plan: "monthly", status: "active", current_period_end: "2099-01-01T00:00:00Z" });
+    const url = await createCheckout(userId, "yearly", null);
+    await handleAsaasEvent(evt("evt_s1", "CHECKOUT_PAID", { checkout: { id: url.split("id=")[1], customer: `cus_5_${runId}` } }));
+    expect(calls.some((c) => c.method === "DELETE" && c.url === `/v3/subscriptions/sub_velha_${runId}`)).toBe(true);
+    const { data } = await admin.from("subscriptions").select("plan, status, provider_subscription_id").eq("user_id", userId);
+    expect(data).toEqual(expect.arrayContaining([expect.objectContaining({ plan: "monthly", status: "canceled" }), expect.objectContaining({ plan: "yearly", status: "active" })]));
+    const s = await (await createSupabaseStore(admin, userId, null)).getSettings();
+    expect(s.plan).toBe("yearly");
+    expect(s.billing).toMatchObject({ renews: false });
+    await admin.from("subscriptions").delete().eq("user_id", userId);
   });
 
   it("sem plano e com o teste vencido, o assistente explica e não roda", async () => {

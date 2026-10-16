@@ -39,10 +39,12 @@ async function target(userId: string) {
 
 const manualRows = () => getAdmin().from("subscriptions");
 
-// Dá (ou renova, ou troca) o plano manual: mensal ou anual, ativo até o dia escolhido. Não cobra nada e a Asaas não conhece.
-export async function setManualPlan(by: string, userId: string, plan: "monthly" | "yearly", until: string): Promise<AdminResult> {
+// Dá (ou renova, ou troca) o plano manual: qualquer plano do catálogo, ativo até o dia escolhido. Não cobra nada e a Asaas não conhece.
+export async function setManualPlan(by: string, userId: string, plan: string, until: string): Promise<AdminResult> {
   const t = await target(userId);
   if (!t) return fail("Conta não encontrada.");
+  const { data: chosen } = await getAdmin().from("plans").select("id").eq("id", plan).eq("kind", "paid").maybeSingle();
+  if (!chosen) return fail("Esse plano não existe.");
   if (!isValidPlanEnd(until, localDate(new Date(), t.timezone))) return fail("Escolha uma data de hoje até 31/12/2099.");
   const db = getAdmin();
   const end = `${until}T23:59:59Z`;

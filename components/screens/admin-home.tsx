@@ -1,4 +1,4 @@
-import { ChevronRight, Coins, Inbox, KeyRound, Users, type LucideIcon } from "lucide-react";
+import { ChevronRight, Coins, Inbox, KeyRound, Layers, Users, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Card } from "@/components/ui/card";
@@ -12,7 +12,7 @@ import { currentUser, getAdmin } from "@/lib/supabase/server";
 import { isSupportAdmin } from "@/lib/support";
 import { DEFAULT_TZ, localDate } from "@/lib/time";
 
-const ICON: Record<string, LucideIcon> = { "/admin/contas": Users, "/suporte/painel": Inbox, "/admin/custos": Coins, "/admin/configuracoes": KeyRound };
+const ICON: Record<string, LucideIcon> = { "/admin/contas": Users, "/admin/planos": Layers, "/suporte/painel": Inbox, "/admin/custos": Coins, "/admin/configuracoes": KeyRound };
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 // Administração: tudo que é só do time, separado dos ajustes de quem usa o app. Só e-mails em ADMIN_EMAILS.

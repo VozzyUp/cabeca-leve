@@ -1,4 +1,5 @@
 import { whatsappLimit } from "@/lib/limits";
+import { DEFAULT_PLANS, planFromRow, planOfAccount } from "@/lib/plans";
 import { costUsd, WEB_SEARCH_USD } from "@/lib/assistant/models";
 import type { Admin } from "@/lib/supabase/server";
 import type { Json, TablesUpdate } from "@/lib/supabase/database.types";
@@ -725,11 +726,12 @@ export async function createSupabaseStore(db: Admin, userId: string, email: stri
     },
 
     async getSettings() {
-      const [p, sub, wa, integ] = await Promise.all([
+      const [p, sub, wa, integ, planRows] = await Promise.all([
         db.from("profiles").select("*").eq("user_id", userId).single(),
         db.from("subscriptions").select("plan, status, current_period_end, cancel_at_period_end, canceled_at, cancel_protocol").eq("user_id", userId).order("created_at", { ascending: false }).limit(5),
         db.from("channel_links").select("*").eq("user_id", userId).eq("channel", "whatsapp").order("created_at"),
         db.from("integrations").select("provider").eq("user_id", userId).eq("status", "active"),
+        db.from("plans").select("*"),
       ]);
       const prof = must(p);
       // vale a assinatura ativa, ou a cancelada que ainda está dentro do período pago
@@ -745,10 +747,11 @@ export async function createSupabaseStore(db: Admin, userId: string, email: stri
         ? must(await db.from("checkout_sessions").select("plan").eq("user_id", userId).eq("status", "pending")
             .gte("returned_at", new Date(Date.now() - 2 * 3_600_000).toISOString()).order("returned_at", { ascending: false }).limit(1))[0]
         : undefined;
-      const plan: Settings["plan"] = s ? (s.plan as "monthly" | "yearly") : confirming ? (confirming.plan as "monthly" | "yearly")
-        : prof.trial_ends_on >= today() ? "trial" : "none";
+      const plan: Settings["plan"] = s ? s.plan : confirming ? confirming.plan : prof.trial_ends_on >= today() ? "trial" : "none";
+      // sem a tabela (migração ainda não aplicada) valem os planos de partida
+      const planInfo = planOfAccount(planRows.error ? DEFAULT_PLANS : (planRows.data ?? []).map((r) => planFromRow(r)), plan);
       return {
-        name: prof.display_name ?? "você", email: email ?? "", timezone: prof.timezone, plan, trialEndsOn: plan === "trial" ? prof.trial_ends_on : null,
+        name: prof.display_name ?? "você", email: email ?? "", timezone: prof.timezone, plan, planInfo, trialEndsOn: plan === "trial" ? prof.trial_ends_on : null,
         billing: s ? {
           periodEnd: s.current_period_end, renews: !s.cancel_at_period_end && s.status !== "canceled", pastDue: s.status === "past_due",
           canceledAt: s.canceled_at, cancelProtocol: s.cancel_protocol,
@@ -757,7 +760,7 @@ export async function createSupabaseStore(db: Admin, userId: string, email: stri
         voice: (prof.assistant_voice === "male" ? "male" : "female"), memoryEnabled: prof.memory_enabled, theme: prof.theme as Settings["theme"],
         briefingTime: prof.briefing_enabled ? hm(prof.briefing_time) : null,
         channels: { whatsapp: waMain?.number ?? null, whatsappVerified: !!waMain?.verified, telegram: prof.notify_telegram, email: prof.notify_email, push: prof.notify_push },
-        whatsapp: { numbers: waRows, limit: whatsappLimit(plan) },
+        whatsapp: { numbers: waRows, limit: whatsappLimit(planInfo) },
         calendars: { google: providers.has("google"), outlook: providers.has("microsoft") },
         // sem a coluna (migração ainda não aplicada) conta como configurado: nada de janela presa
         onboarded: (prof as { onboarded_at?: string | null }).onboarded_at !== null,

@@ -1,3 +1,4 @@
+import { DEFAULT_PLANS } from "@/lib/plans";
 import fs from "node:fs";
 import path from "node:path";
 import { addDays, DEFAULT_TZ, localDate, zonedToUtc } from "@/lib/time";
@@ -737,7 +738,7 @@ export const fakeStore: DataStore = {
     const fresh = seedState();
     const empty = Object.fromEntries(Object.entries(fresh).map(([k, v]) => [k, Array.isArray(v) ? [] : v])) as unknown as State;
     save({ ...empty, categories: fresh.categories, accounts: fresh.accounts.map((a) => ({ ...a, openingBalanceCents: 0 })),
-      settings: { ...fresh.settings, name: "você", email: "", plan: "none", trialEndsOn: null, briefingTime: null,
+      settings: { ...fresh.settings, name: "você", email: "", plan: "none", planInfo: DEFAULT_PLANS[0], trialEndsOn: null, briefingTime: null,
         calendars: { google: false, outlook: false }, channels: { whatsapp: null, telegram: false, email: false, push: false } } });
   },
 };

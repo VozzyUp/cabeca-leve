@@ -33,7 +33,7 @@ test.describe("F1 cancelar com comprovante", () => {
     const run = `${Date.now()}`;
     await login(page, user, "/planos");
     const { cus, sub } = await subscribe(page, run);
-    await page.goto("/ajustes");
+    await page.goto("/ajustes/plano");
     await page.getByRole("button", { name: "Cancelar assinatura" }).click();
     const note = page.getByRole("note").filter({ hasText: "Assinatura cancelada em" });
     await expect(note).toBeVisible();

@@ -186,7 +186,7 @@ export function WhatsAppNumbers({ initial, owner }: { initial: NonNullable<Setti
         adding ? <WhatsAppLinkForm label="Número" askName onDone={() => setAdding(false)} onResult={gotCode} />
           : <Button variant="secondary" className="w-fit" onClick={() => setAdding(true)}>Adicionar outro WhatsApp</Button>
       ) : (
-        <p className="text-xs text-muted">Para vincular mais números (casal, família), <a href="/planos" className="underline">veja os planos</a>.</p>
+        <p className="text-xs text-muted">Para vincular mais números (casal, família), <a href="/ajustes/plano" className="underline">veja os planos</a>.</p>
       ))}
       <p className="text-xs text-muted">Cada pessoa conversa pelo próprio WhatsApp e vê os mesmos dados da conta. Os gastos ficam marcados com o nome de quem lançou.</p>
     </div>

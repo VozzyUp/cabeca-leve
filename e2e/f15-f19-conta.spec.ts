@@ -113,9 +113,12 @@ test.describe("F15 e F17 assinatura", () => {
     await page.unroute(/asaas\.com/);
     await page.goto("/ajustes");
     await expect(page.getByText(/Plano mensal · renova em/)).toBeVisible();
+    await page.getByRole("link", { name: /Meu plano/ }).click();
     await page.getByRole("button", { name: "Cancelar assinatura" }).click();
-    await expect(page.getByText(/Plano mensal · vale até .*, sem renovar/)).toBeVisible();
+    await expect(page.getByRole("note").filter({ hasText: "Assinatura cancelada em" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Cancelar assinatura" })).toHaveCount(0);
+    await page.goto("/ajustes");
+    await expect(page.getByText(/Plano mensal · vale até .*, sem renovar/)).toBeVisible();
     expect((await mockCalls()).some((c) => c.method === "DELETE" && c.url === `/v3/subscriptions/${sub}`)).toBe(true);
   });
 

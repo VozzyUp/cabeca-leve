@@ -1,8 +1,9 @@
 import type { Settings } from "@/lib/data/types";
+import type { Plan } from "@/lib/plans";
 
 // Limites de uso por plano: protegem o custo da IA e o número de WhatsApp.
-// Os valores vêm da configuração do admin (variáveis LIMIT_*); sem nada, valem os padrões abaixo.
-export const DEFAULT_LIMITS = { trialMessages: 40, paidMessages: 200, costUsd: 2, perMinute: 12 } as const;
+// Mensagens, WhatsApps e espaço vêm do plano (Administração > Planos); o teto de custo da IA é um só para o sistema (LIMIT_DAILY_COST_USD).
+export const DEFAULT_LIMITS = { costUsd: 2, perMinute: 12 } as const;
 
 export type Limits = { messagesPerDay: number; costUsdPerDay: number | null; perMinute: number };
 
@@ -18,11 +19,8 @@ const costCap = (value: string | undefined) => {
   return positive(v) ?? DEFAULT_LIMITS.costUsd;
 };
 
-export function limitsFor(plan: Settings["plan"], env: Record<string, string | undefined> = process.env): Limits {
-  const messages = plan === "trial" || plan === "none"
-    ? Math.floor(positive(env.LIMIT_DAILY_MESSAGES_TRIAL) ?? DEFAULT_LIMITS.trialMessages)
-    : Math.floor(positive(env.LIMIT_DAILY_MESSAGES_PAID) ?? DEFAULT_LIMITS.paidMessages);
-  return { messagesPerDay: messages, costUsdPerDay: costCap(env.LIMIT_DAILY_COST_USD), perMinute: DEFAULT_LIMITS.perMinute };
+export function limitsFor(plan: Pick<Plan, "messagesPerDay">, env: Record<string, string | undefined> = process.env): Limits {
+  return { messagesPerDay: plan.messagesPerDay, costUsdPerDay: costCap(env.LIMIT_DAILY_COST_USD), perMinute: DEFAULT_LIMITS.perMinute };
 }
 
 export type Usage = { lastMinute: number; today: number; costTodayUsd: number };
@@ -39,23 +37,11 @@ export function limitReply(plan: Settings["plan"], usage: Usage, limits: Limits)
   return null;
 }
 
-// Quantos WhatsApps a conta pode vincular (casal, família). Por plano, configurável no admin.
-export const DEFAULT_WHATSAPP = { trial: 1, monthly: 2, yearly: 3 } as const;
+// Quantos WhatsApps a conta pode vincular (casal, família): vem do plano
+export const whatsappLimit = (plan: Pick<Plan, "whatsappLimit">) => plan.whatsappLimit;
 
-export function whatsappLimit(plan: Settings["plan"], env: Record<string, string | undefined> = process.env): number {
-  const key = plan === "monthly" ? "LIMIT_WHATSAPP_MONTHLY" : plan === "yearly" ? "LIMIT_WHATSAPP_YEARLY" : "LIMIT_WHATSAPP_TRIAL";
-  const fallback = plan === "monthly" ? DEFAULT_WHATSAPP.monthly : plan === "yearly" ? DEFAULT_WHATSAPP.yearly : DEFAULT_WHATSAPP.trial;
-  return Math.min(20, Math.floor(positive(env[key]) ?? fallback));
-}
-
-// Espaço para guardar documentos (notas, recibos, pedidos). Por plano, configurável no admin em megabytes.
-export const DEFAULT_STORAGE_MB = { trial: 100, paid: 2048 } as const;
-
-export function storageLimitBytes(plan: Settings["plan"], env: Record<string, string | undefined> = process.env): number {
-  const paid = plan === "monthly" || plan === "yearly";
-  const mb = positive(env[paid ? "LIMIT_STORAGE_MB_PAID" : "LIMIT_STORAGE_MB_TRIAL"]) ?? (paid ? DEFAULT_STORAGE_MB.paid : DEFAULT_STORAGE_MB.trial);
-  return Math.floor(mb * 1024 * 1024);
-}
+// Espaço para guardar documentos (notas, recibos, pedidos): vem do plano, em megabytes
+export const storageLimitBytes = (plan: Pick<Plan, "storageMb">) => Math.floor(plan.storageMb * 1024 * 1024);
 
 export function formatBytes(bytes: number): string {
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;

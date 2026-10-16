@@ -51,7 +51,7 @@ Seção `tudo`, h2 **"Tudo o que cabe na sua cabeça, num lugar só"**, com a fr
 
 ## 5. Preço
 
-Os planos que existem hoje (`lib/plans.ts`): Mensal R$ 39,90 e Anual R$ 359, com 7 dias grátis. O número de WhatsApps de cada plano vem da configuração (padrão: mensal 2, anual 3). Link para `/planos`.
+Os planos à venda vêm do banco (Administração > Planos e limites); hoje: Mensal R$ 39,90 e Anual R$ 359, com 7 dias grátis. O número de WhatsApps de cada plano é um dos limites do plano (padrão: mensal 2, anual 3). Link para `/planos`.
 Se aprovar os níveis Pessoal e Casa de `pricing.md`, esta seção muda junto.
 
 ## 6. Dúvidas

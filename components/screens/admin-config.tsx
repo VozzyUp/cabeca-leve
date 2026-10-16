@@ -40,7 +40,11 @@ export async function AdminConfigScreen() {
             </p>
           )}
           <IntegrationInfo version={status.filter((s) => s.key.endsWith("_SECRET") || s.key.endsWith("_TOKEN")).map((s) => `${s.key}:${s.preview}`).join("|")} />
-          {CONFIG_GROUPS.map((g) => <AdminConfigForm key={g.title} group={g} status={status.filter((s) => g.fields.some((f) => f.key === s.key))} />)}
+          {CONFIG_GROUPS.map((g) => {
+            // limite antigo (LIMIT_*) só aparece enquanto tiver valor guardado no banco
+            const fields = g.fields.filter((f) => !f.legacy || status.find((s) => s.key === f.key)?.source === "banco");
+            return <AdminConfigForm key={g.title} group={{ ...g, fields }} status={status.filter((s) => fields.some((f) => f.key === s.key))} />;
+          })}
         </>
       )}
     </div>

@@ -16,6 +16,7 @@ const PARENTS: Record<string, string> = {
   "/admin/configuracoes": "/admin",
   "/admin/custos": "/admin",
   "/admin/contas": "/admin",
+  "/admin/planos": "/admin",
   "/suporte/painel": "/admin",
 };
 
@@ -42,6 +43,7 @@ export function showBackOnDesktop(path: string) {
 export const ADMIN_HOME: NavLink = { href: "/admin", label: "Administração", hint: "contas e planos, suporte, custo da IA e chaves do sistema" };
 export const ADMIN_LINKS: NavLink[] = [
   { href: "/admin/contas", label: "Contas e planos", hint: "quem criou conta, plano, teste e renovação manual" },
+  { href: "/admin/planos", label: "Planos e limites", hint: "valores, limites de uso e novos planos" },
   { href: "/suporte/painel", label: "Chamados de suporte", hint: "responder quem pediu uma pessoa" },
   { href: "/admin/custos", label: "Custo da IA", hint: "gasto por usuário e por modelo" },
   { href: "/admin/configuracoes", label: "Configuração do sistema", hint: "chaves dos serviços, modelo e limites" },
@@ -79,6 +81,7 @@ export const MORE_GROUPS: NavGroup[] = [
   ] },
   { title: "Conta", items: [
     { href: "/avisos", label: "Avisos", hint: "o que o assistente mandou para você" },
+    { href: "/ajustes/plano", label: "Meu plano", hint: "validade, limites de uso e troca de plano" },
     { href: "/ajustes", label: "Configurações", hint: "conta, WhatsApp, notificações e dados" },
     { href: "/ajustes/assistente", label: "Configurar assistente", hint: "tom, voz, memória e tema" },
     { href: "/ajustes/suporte", label: "Suporte humano" },

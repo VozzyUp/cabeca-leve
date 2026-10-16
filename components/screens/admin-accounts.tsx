@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/ui/load-error";
 import { loadAccounts } from "@/lib/admin-accounts";
 import { loadAppConfig } from "@/lib/app-config";
+import { loadPlans } from "@/lib/plans-server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { currentUser } from "@/lib/supabase/server";
 import { isSupportAdmin } from "@/lib/support";
@@ -30,7 +31,7 @@ export async function AdminAccountsScreen() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader id="admin-contas" title="Contas e planos" />
-      <AccountsList rows={rows} today={localDate(new Date(), DEFAULT_TZ)} />
+      <AccountsList rows={rows} today={localDate(new Date(), DEFAULT_TZ)} planNames={Object.fromEntries((await loadPlans()).map((p) => [p.id, p.name]))} />
     </div>
   );
 }

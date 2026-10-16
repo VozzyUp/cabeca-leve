@@ -89,7 +89,7 @@ async function turn(store: DataStore, text: string, opts: {
 }): Promise<{ user: ChatMessage | null; reply: AssistantReply; stored?: false }> {
   // limite de uso por plano: protege o custo de IA (e o número de WhatsApp) contra abuso
   const settings = await store.getSettings();
-  const limits = limitsFor(settings.plan);
+  const limits = limitsFor(settings.planInfo);
   const now = new Date();
   const dayStart = periodRange("hoje", now, store.timezone()).from.toISOString();
   const [lastMinute, today, costTodayUsd] = await Promise.all([

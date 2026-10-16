@@ -10,22 +10,23 @@ export type AccountRow = {
 };
 
 export type AccountKind = "paid" | "canceling" | "past_due" | "trial" | "expired";
-export type AccountState = { kind: AccountKind; label: string; plan: "monthly" | "yearly" | null; until: string | null; manual: boolean; daysLeft: number | null };
+export type AccountState = { kind: AccountKind; label: string; plan: string | null; until: string | null; manual: boolean; daysLeft: number | null };
 
 export const KIND_LABEL: Record<AccountKind, string> = { paid: "Plano ativo", canceling: "Cancelado (vale até o fim)", past_due: "Pagamento atrasado", trial: "Em teste", expired: "Sem plano" };
-export const PLAN_NAME = { monthly: "Mensal", yearly: "Anual" } as const;
+// Nome de cada plano pelo id; a tela passa os do catálogo (o time pode criar e renomear). Estes valem sem ele.
+export const DEFAULT_PLAN_NAMES: Record<string, string> = { monthly: "Mensal", yearly: "Anual" };
 export const MANUAL_PREFIX = "manual-";
 export const MAX_PLAN_DAY = "2100-01-01";
 
 const dayNumber = (day: string) => Math.round(Date.parse(`${day}T12:00:00Z`) / 86_400_000);
 export const daysBetween = (from: string, to: string) => dayNumber(to) - dayNumber(from);
 
-export function accountState(row: AccountRow, today: string): AccountState {
+export function accountState(row: AccountRow, today: string, names: Record<string, string> = DEFAULT_PLAN_NAMES): AccountState {
   if (row.subStatus && row.subPlan) {
-    const plan = row.subPlan === "yearly" ? "yearly" : "monthly";
+    const plan = row.subPlan;
     const until = row.subEnd ? row.subEnd.slice(0, 10) : null;
     const kind: AccountKind = row.subStatus === "past_due" ? "past_due" : row.subCancels || row.subStatus === "canceled" ? "canceling" : "paid";
-    return { kind, label: `${PLAN_NAME[plan]}`, plan, until, manual: !!row.subRef?.startsWith(MANUAL_PREFIX), daysLeft: until ? daysBetween(today, until) : null };
+    return { kind, label: names[plan] ?? plan, plan, until, manual: !!row.subRef?.startsWith(MANUAL_PREFIX), daysLeft: until ? daysBetween(today, until) : null };
   }
   const trial = row.trialEndsOn >= today;
   return { kind: trial ? "trial" : "expired", label: trial ? "Teste" : "Sem plano", plan: null, until: row.trialEndsOn, manual: false, daysLeft: daysBetween(today, row.trialEndsOn) };

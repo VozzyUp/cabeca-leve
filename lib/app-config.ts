@@ -6,7 +6,7 @@ import { DEFAULT_EFFORT, DEFAULT_MODEL, EFFORT_OPTIONS, MODEL_OPTIONS } from "@/
 // APP_SECRET_KEY. Ao ler, os valores entram em process.env: todo o resto do app continua lendo
 // process.env.X sem saber de onde veio. O que está no banco vale mais que a variável do stack.
 
-export type ConfigField = { key: string; label: string; secret: boolean; hint?: string; options?: string[]; labels?: Record<string, string>; fallback?: string; generate?: "vapid" | "hex32" };
+export type ConfigField = { legacy?: boolean; key: string; label: string; secret: boolean; hint?: string; options?: string[]; labels?: Record<string, string>; fallback?: string; generate?: "vapid" | "hex32" };
 export type ConfigGroup = { title: string; fields: ConfigField[] };
 
 export const CONFIG_GROUPS: ConfigGroup[] = [
@@ -59,14 +59,16 @@ export const CONFIG_GROUPS: ConfigGroup[] = [
     { key: "LEGAL_CONTACT_EMAIL", label: "E-mail para assuntos de dados pessoais", secret: false, hint: "sem isso, usa o e-mail do suporte" },
   ] },
   { title: "Limites de uso", fields: [
-    { key: "LIMIT_DAILY_MESSAGES_TRIAL", label: "Mensagens por dia no teste grátis", secret: false, hint: "padrão 40" },
-    { key: "LIMIT_DAILY_MESSAGES_PAID", label: "Mensagens por dia nos planos pagos", secret: false, hint: "padrão 200" },
-    { key: "LIMIT_DAILY_COST_USD", label: "Teto de custo de IA por pessoa por dia (US$)", secret: false, hint: "padrão 2. Use 0 para desligar" },
-    { key: "LIMIT_WHATSAPP_TRIAL", label: "Números de WhatsApp no teste grátis", secret: false, hint: "padrão 1" },
-    { key: "LIMIT_WHATSAPP_MONTHLY", label: "Números de WhatsApp no plano mensal", secret: false, hint: "padrão 2" },
-    { key: "LIMIT_WHATSAPP_YEARLY", label: "Números de WhatsApp no plano anual", secret: false, hint: "padrão 3" },
-    { key: "LIMIT_STORAGE_MB_TRIAL", label: "Espaço para documentos no teste grátis (MB)", secret: false, hint: "padrão 100" },
-    { key: "LIMIT_STORAGE_MB_PAID", label: "Espaço para documentos nos planos pagos (MB)", secret: false, hint: "padrão 2048 (2 GB)" },
+    { key: "LIMIT_DAILY_COST_USD", label: "Teto de custo de IA por pessoa por dia (US$)", secret: false, hint: "padrão 2. Use 0 para desligar. Mensagens, WhatsApps e espaço de cada plano ficam em Administração > Planos e limites" },
+    // Antes dos planos irem para o banco, estes limites moravam aqui. Seguem valendo para o plano que ainda não foi salvo em Planos e limites;
+    // só aparecem na tela quando têm valor, para o time poder limpar.
+    { key: "LIMIT_DAILY_MESSAGES_TRIAL", legacy: true, label: "Mensagens por dia no teste grátis (antigo)", secret: false, hint: "Agora fica em Planos e limites" },
+    { key: "LIMIT_DAILY_MESSAGES_PAID", legacy: true, label: "Mensagens por dia nos planos pagos (antigo)", secret: false, hint: "Agora fica em Planos e limites" },
+    { key: "LIMIT_WHATSAPP_TRIAL", legacy: true, label: "Números de WhatsApp no teste grátis (antigo)", secret: false, hint: "Agora fica em Planos e limites" },
+    { key: "LIMIT_WHATSAPP_MONTHLY", legacy: true, label: "Números de WhatsApp no plano mensal (antigo)", secret: false, hint: "Agora fica em Planos e limites" },
+    { key: "LIMIT_WHATSAPP_YEARLY", legacy: true, label: "Números de WhatsApp no plano anual (antigo)", secret: false, hint: "Agora fica em Planos e limites" },
+    { key: "LIMIT_STORAGE_MB_TRIAL", legacy: true, label: "Espaço para documentos no teste grátis (MB, antigo)", secret: false, hint: "Agora fica em Planos e limites" },
+    { key: "LIMIT_STORAGE_MB_PAID", legacy: true, label: "Espaço para documentos nos planos pagos (MB, antigo)", secret: false, hint: "Agora fica em Planos e limites" },
   ] },
   { title: "Suporte", fields: [
     { key: "SUPPORT_EMAIL", label: "E-mail que recebe os chamados", secret: false },

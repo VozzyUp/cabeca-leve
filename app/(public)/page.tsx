@@ -8,8 +8,8 @@ import { redirect } from "next/navigation";
 import conversa from "@/public/landing/conversa.png";
 import { cn } from "@/components/ui/cn";
 import { BRAND } from "@/lib/brand";
-import { whatsappLimit } from "@/lib/limits";
-import { PLANS, TRIAL_DAYS, yearlySaving } from "@/lib/plans";
+import { forSale, perMonthCents, planPeriod, planSaving, TRIAL_DAYS, waText } from "@/lib/plans";
+import { loadPlans } from "@/lib/plans-server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { currentUser } from "@/lib/supabase/server";
 import { formatMoney } from "@/lib/time";
@@ -83,11 +83,11 @@ const FAQ: [string, string][] = [
   ["A IA pode errar?", "Pode. Cada coisa que ela registra vem num card com Desfazer, e os totais vêm do que foi lançado."],
 ];
 
-const waText = (n: number) => (n === 1 ? "1 WhatsApp" : `até ${n} WhatsApps`);
-
 export default async function Page() {
   // quem já entrou segue direto para a conversa; sem o banco ligado (demonstração) também
   if (!isSupabaseConfigured() || (await currentUser())) redirect("/conversa");
+  const plans = await loadPlans();
+  const selling = forSale(plans);
   return (
     <div className="flex flex-col gap-20">
       <section aria-labelledby="titulo" className="grid items-center gap-10 pt-4 lg:grid-cols-[1.2fr_1fr]">
@@ -184,18 +184,18 @@ export default async function Page() {
 
       <section aria-labelledby="preco" className="flex flex-col gap-6">
         <h2 id="preco" className="text-2xl font-bold text-text">Um preço simples</h2>
-        <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {[PLANS.monthly, PLANS.yearly].map((p) => {
-            const yearly = p.id === "yearly";
+        <ul className={cn("grid grid-cols-1 gap-4", selling.length > 1 && "sm:grid-cols-2", selling.length > 2 && "lg:grid-cols-3")}>
+          {selling.map((p) => {
+            const saving = planSaving(p, plans);
             return (
-              <li key={p.id} className={cn("flex flex-col gap-3 rounded-lg border bg-surface p-6", yearly ? "border-accent" : "border-border")}>
+              <li key={p.id} className={cn("flex flex-col gap-3 rounded-lg border bg-surface p-6", p.featured ? "border-accent" : "border-border")}>
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-text">{p.name}</h3>
-                  {yearly && <span className="rounded-full bg-accent px-2 py-0.5 text-xs font-semibold text-on-accent">economize {Math.round(yearlySaving * 100)}%</span>}
+                  {saving !== null && <span className="rounded-full bg-accent px-2 py-0.5 text-xs font-semibold text-on-accent">economize {Math.round(saving * 100)}%</span>}
                 </div>
-                <p><span className="font-mono text-3xl font-semibold text-text">{formatMoney(p.priceCents)}</span> <span className="text-sm text-muted">{p.period}</span></p>
-                <p className="text-sm text-body">{yearly ? "pagamento único no Pix ou no cartão, sem renovação automática" : "no cartão, cancele quando quiser"}</p>
-                <p className="flex items-center gap-2 text-sm text-body"><Check aria-hidden className="size-4 text-success" />{waText(whatsappLimit(p.id))} e tudo do app</p>
+                <p><span className="font-mono text-3xl font-semibold text-text">{formatMoney(p.priceCents)}</span> <span className="text-sm text-muted">{planPeriod(p)}</span></p>
+                <p className="text-sm text-body">{p.tagline ?? (p.months > 1 ? `equivale a ${formatMoney(perMonthCents(p))} por mês` : p.recurring ? "no cartão, cancele quando quiser" : "pagamento único, sem renovação automática")}</p>
+                <p className="flex items-center gap-2 text-sm text-body"><Check aria-hidden className="size-4 text-success" />{waText(p.whatsappLimit)} e tudo do app</p>
               </li>
             );
           })}
