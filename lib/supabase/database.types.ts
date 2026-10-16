@@ -193,6 +193,20 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"billing_customers": {
+                  Row: {
+                    "created_at": string,"customer_id": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"customer_id": string,"user_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"customer_id"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"billing_events": {
                   Row: {
                     "created_at": string,"event_id": string,"id": string,"payload": NonNullable<Json>,"processed_at": string | null,"provider": string,"type": string,"updated_at": string,"user_id": string | null
@@ -363,14 +377,14 @@ isOneToOne: false
                   ]
                 },"checkout_sessions": {
                   Row: {
-                    "created_at": string,"id": string,"plan": string,"returned_at": string | null,"status": string,"updated_at": string,"user_id": string
+                    "created_at": string,"failure": string | null,"id": string,"info": NonNullable<Json>,"kind": string,"method": string | null,"plan": string,"returned_at": string | null,"status": string,"updated_at": string,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"id": string,"plan": string,"returned_at"?: string | null,"status"?: string,"updated_at"?: string,"user_id": string
+                    "created_at"?: string,"failure"?: string | null,"id": string,"info"?: NonNullable<Json>,"kind"?: string,"method"?: string | null,"plan": string,"returned_at"?: string | null,"status"?: string,"updated_at"?: string,"user_id": string
                   }
                   Update: {
-                    "created_at"?: string,"id"?: string,"plan"?: string,"returned_at"?: string | null,"status"?: string,"updated_at"?: string,"user_id"?: string
+                    "created_at"?: string,"failure"?: string | null,"id"?: string,"info"?: NonNullable<Json>,"kind"?: string,"method"?: string | null,"plan"?: string,"returned_at"?: string | null,"status"?: string,"updated_at"?: string,"user_id"?: string
                   }
                   Relationships: [
                     {

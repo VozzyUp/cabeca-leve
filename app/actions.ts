@@ -1,7 +1,8 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
-import { billingEnabled, cancelSubscription, createCheckout, PlanUnavailableError } from "@/lib/billing/asaas";
+import { billingEnabled, cancelSubscription, payPlan as payPlanWithAsaas, PlanUnavailableError, type PayResult } from "@/lib/billing/asaas";
+import { isCep, isCpfCnpj, isCvv, isPhone, luhnOk, parseExpiry } from "@/lib/br-docs";
+import { headers } from "next/headers";
 import { z } from "zod";
 import { getStore } from "@/lib/data";
 import { FOLDER_EXISTS } from "@/lib/data/store";
@@ -252,25 +253,60 @@ export async function unlinkWhatsApp(id: string) {
   revalidatePath("/", "layout");
 }
 
-// Abre a página de pagamento da Asaas para o plano escolhido
-export async function startCheckout(plan: string) {
-  const p = z.string().regex(/^[a-z][a-z0-9_-]{1,31}$/).parse(plan);
-  const user = await currentUser();
-  if (!user) redirect(`/entrar?modo=criar&plano=${p}`);
-  let url: string;
-  try {
-    if (!billingEnabled()) throw new Error("ASAAS_API_KEY não está configurada");
-    const settings = await (await getStore({ allowLocked: true })).getSettings();
-    url = await createCheckout(user.id, p, settings.trialEndsOn);
-  } catch (error) {
-    if (error instanceof PlanUnavailableError) redirect("/planos?indisponivel=1");  // o plano saiu da venda enquanto a página estava aberta
-    // Falha da Asaas ou de configuração: a pessoa vê uma mensagem em vez de uma tela quebrada, e o time vê o motivo em Administração
-    console.error("checkout não criado", p, (error as Error).message);
-    await recordStatus("asaas_checkout", `Não consegui abrir o pagamento do plano ${p}`, false, (error as Error).message);
-    redirect("/ajustes/plano?erro=pagamento");
+// Paga o plano dentro do app: Pix, boleto ou cartão, tudo pela API da Asaas (a pessoa não vê a Asaas).
+// Devolve o resultado para a tela mostrar "aprovado", o QR do Pix, a linha do boleto ou o motivo da recusa.
+const payInput = z.object({
+  plan: z.string().regex(/^[a-z][a-z0-9_-]{1,31}$/),
+  method: z.enum(["pix", "boleto", "card"]),
+  name: z.string().trim().min(3, "Digite o nome completo.").max(100, "Nome grande demais."),
+  cpfCnpj: z.string().refine(isCpfCnpj, "CPF ou CNPJ inválido."),
+  phone: z.string().refine(isPhone, "Celular inválido. Use o DDD, como (11) 91234-5678."),
+  postalCode: z.string().optional(),
+  addressNumber: z.string().trim().max(20).optional(),
+  card: z.object({
+    holderName: z.string().trim().min(3, "Digite o nome como está no cartão.").max(60),
+    number: z.string().refine(luhnOk, "Número do cartão inválido."),
+    expiry: z.string().refine((v) => !!parseExpiry(v), "Validade inválida ou vencida."),
+    ccv: z.string().refine(isCvv, "Código de segurança inválido."),
+  }).optional(),
+});
+export type PayInput = z.input<typeof payInput>;
+
+export async function payPlan(input: PayInput): Promise<PayResult> {
+  const parsed = payInput.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Confira os dados." };
+  const d = parsed.data;
+  if (d.method === "card") {
+    if (!d.card) return { ok: false, error: "Preencha os dados do cartão." };
+    if (!isCep(d.postalCode ?? "")) return { ok: false, error: "CEP inválido." };
+    if (!d.addressNumber) return { ok: false, error: "Digite o número do endereço." };
   }
-  await recordStatus("asaas_checkout", `Pagamento do plano ${p} aberto`, true);
-  redirect(url);
+  const user = await currentUser();
+  if (!user) return { ok: false, error: "Sua sessão expirou. Entre de novo para pagar." };
+  const fail = (error: string) => ({ ok: false, error }) as const;
+  if (!billingEnabled()) {
+    await recordStatus("asaas_checkout", "Pagamento sem ASAAS_API_KEY configurada", false);
+    return fail("O pagamento ainda não está disponível. Fale com a gente.");
+  }
+  try {
+    const settings = await (await getStore({ allowLocked: true })).getSettings();
+    const expiry = d.card ? parseExpiry(d.card.expiry)! : null;
+    const result = await payPlanWithAsaas({
+      userId: user.id, email: user.email ?? "", plan: d.plan, method: d.method, trialEndsOn: settings.trialEndsOn,
+      payer: { name: d.name, cpfCnpj: d.cpfCnpj, phone: d.phone, postalCode: d.postalCode, addressNumber: d.addressNumber },
+      card: d.card && expiry ? { holderName: d.card.holderName, number: d.card.number, expiryMonth: expiry.month, expiryYear: expiry.year, ccv: d.card.ccv } : undefined,
+      remoteIp: (await headers()).get("x-forwarded-for")?.split(",")[0].trim() || "127.0.0.1",
+    });
+    await recordStatus("asaas_checkout", result.ok ? `Pagamento do plano ${d.plan} (${d.method}) ${result.status === "paid" ? "aprovado" : "aguardando"}` : `Pagamento do plano ${d.plan} (${d.method}) recusado`, result.ok, result.ok ? undefined : result.error);
+    if (result.ok) revalidatePath("/", "layout");
+    return result;
+  } catch (error) {
+    if (error instanceof PlanUnavailableError) return fail("Esse plano saiu da venda. Escolha outro na lista.");
+    // falha da Asaas ou de configuração: a pessoa vê um aviso, o time vê o motivo em Administração (a mensagem nunca leva dados do cartão)
+    console.error("pagamento não concluído", d.plan, d.method, (error as Error).message);
+    await recordStatus("asaas_checkout", `Não consegui processar o pagamento do plano ${d.plan} (${d.method})`, false, (error as Error).message);
+    return fail("Não deu para concluir o pagamento agora. Nada foi cobrado. Tente de novo em instantes ou fale com a gente.");
+  }
 }
 
 // Cancelar em um toque: para de cobrar e o acesso vale até o fim do período pago

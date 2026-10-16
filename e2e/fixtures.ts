@@ -61,6 +61,36 @@ export async function noHorizontalScroll(page: Page) {
 
 type Fixtures = { user: TestUser; allowConsole: RegExp[]; guard: void };
 
+// Tela de pagamento do app (/assinar/<plano>): escolhe a forma, preenche e envia. Devolve o id da cobrança ou da assinatura criada.
+export const PAYER = { name: "Maria da Silva", cpf: "529.982.247-25", phone: "(11) 91234-5678", cep: "01310-100", number: "100" };
+export const CARD = { number: "4111 1111 1111 1111", refused: "4000 0000 0000 0002", holder: "MARIA DA SILVA", expiry: "12/30", cvv: "123" };
+export async function fillPayment(page: Page, method: "Pix" | "Boleto" | "Cartão de crédito", opts: { card?: string } = {}) {
+  await page.getByRole("radio", { name: new RegExp(`^${method}`) }).check();
+  await page.getByRole("button", { name: "Continuar" }).click();
+  await page.getByLabel("Nome completo").fill(PAYER.name);
+  await page.getByLabel("CPF ou CNPJ").fill(PAYER.cpf);
+  await page.getByLabel("Celular").fill(PAYER.phone);
+  if (method === "Cartão de crédito") {
+    await page.getByLabel("Número do cartão").fill(opts.card ?? CARD.number);
+    await page.getByLabel("Nome no cartão").fill(CARD.holder);
+    await page.getByLabel("Validade (MM/AA)").fill(CARD.expiry);
+    await page.getByLabel("Código de segurança").fill(CARD.cvv);
+    await page.getByLabel("CEP").fill(PAYER.cep);
+    await page.getByLabel("Número do endereço").fill(PAYER.number);
+  }
+  await page.getByRole("button", { name: method === "Pix" ? /Gerar Pix/ : method === "Boleto" ? /Gerar boleto/ : /Pagar com cartão/ }).click();
+}
+export async function lastAttempt(userId: string) {
+  const { data } = await admin.from("checkout_sessions").select("id, status, method, kind, failure").eq("user_id", userId).order("created_at", { ascending: false }).limit(1).single();
+  return data!;
+}
+export async function pay(page: Page, user: TestUser, plan: string, method: "Pix" | "Boleto" | "Cartão de crédito", opts: { card?: string } = {}) {
+  await page.goto(`/assinar/${plan}`, { waitUntil: "networkidle" });
+  await fillPayment(page, method, opts);
+  await expect.poll(async () => (await lastAttempt(user.id).catch(() => null))?.id ?? "").not.toBe("");
+  return (await lastAttempt(user.id)).id;
+}
+
 export const test = base.extend<Fixtures>({
   allowConsole: [[], { option: true }],
   user: async ({}, provide) => {

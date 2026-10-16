@@ -79,8 +79,23 @@ export function planPeriod(p: Pick<Plan, "months" | "recurring">): string {
   return p.months === 12 ? "por ano" : `por ${monthsText(p.months)}`;
 }
 
-// Texto do botão de pagar
-export const checkoutLabel = (p: Pick<Plan, "months" | "recurring">) => (p.recurring ? "Assinar no cartão" : p.months === 12 ? "Pagar o ano (Pix ou cartão)" : `Pagar ${monthsText(p.months)} (Pix ou cartão)`);
+// Texto do botão de cada plano: a forma de pagar se escolhe na tela seguinte
+export const checkoutLabel = () => "Assinar";
+
+export type PayMethod = "pix" | "boleto" | "card";
+export const PAY_METHODS: PayMethod[] = ["pix", "boleto", "card"];
+export const METHOD_NAME: Record<PayMethod, string> = { pix: "Pix", boleto: "Boleto", card: "Cartão de crédito" };
+
+// Só o cartão de um plano que renova vira assinatura; Pix e boleto (e cartão em plano sem renovação) pagam um período
+export const renewsWith = (p: Pick<Plan, "recurring">, method: PayMethod) => p.recurring && method === "card";
+
+export function methodHint(p: Pick<Plan, "months" | "recurring">, method: PayMethod): string {
+  const period = p.months === 1 ? "1 mês" : p.months === 12 ? "1 ano" : `${p.months} meses`;
+  if (renewsWith(p, method)) return `Renova ${planPeriod(p)} no cartão. Cancele quando quiser.`;
+  if (method === "pix") return `Aprovação na hora. Vale por ${period}, sem renovação automática.`;
+  if (method === "boleto") return `Vence em 3 dias e libera quando o banco confirmar (1 a 2 dias úteis). Vale por ${period}.`;
+  return `Um pagamento só, sem renovação automática. Vale por ${period}.`;
+}
 
 export const perMonthCents = (p: Pick<Plan, "priceCents" | "months">) => Math.round(p.priceCents / p.months);
 

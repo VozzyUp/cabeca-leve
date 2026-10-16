@@ -1,4 +1,4 @@
-import { admin, createUser, expect, login, mockCalls, PASSWORD, test } from "./fixtures";
+import { admin, createUser, expect, login, mockCalls, pay, PASSWORD, test } from "./fixtures";
 
 // F15 assinar e entrar, F17 cancelar, F18 excluir, F19 personalizar, e a sessão
 const mailpit = "http://127.0.0.1:54324/api/v1";
@@ -145,24 +145,20 @@ test.describe("F15 entrar", () => {
 });
 
 test.describe("F15 e F17 assinatura", () => {
-  test("F15-H2 assinar, pagar e cancelar (F17-H1)", async ({ page, user }) => {
-    // a página de pagamento é da Asaas: nada sai para fora, só confere o endereço
-    let checkoutUrl = "";
-    await page.route(/https:\/\/(sandbox\.)?asaas\.com\/.*/, (route) => { checkoutUrl = route.request().url(); return route.fulfill({ body: "checkout falso" }); });
+  test("F15-H2 assinar no cartão pela tela do app e cancelar (F17-H1)", async ({ page, user }) => {
     await login(page, user, "/planos");
-    await page.getByRole("button", { name: "Assinar no cartão" }).click();
-    await expect.poll(() => checkoutUrl).toMatch(/checkoutSession\/show\?id=chk_e2e_/);
-    const checkoutId = new URL(checkoutUrl).searchParams.get("id")!;
-    const sent = (await mockCalls()).filter((c) => c.url === "/v3/checkouts" && c.body.externalReference === user.id);
+    await page.getByRole("listitem").filter({ has: page.getByRole("heading", { name: "Mensal" }) }).getByRole("link", { name: "Assinar" }).click();
+    await expect(page).toHaveURL(/\/assinar\/monthly$/);
+    const sub = await pay(page, user, "monthly", "Cartão de crédito");
+    await expect(page.getByRole("heading", { name: "Pagamento aprovado" })).toBeVisible();
+    const sent = (await mockCalls()).filter((c) => c.url === "/v3/subscriptions" && c.body.externalReference === user.id);
     expect(sent).toHaveLength(1);
+    expect(sent[0].body).toMatchObject({ billingType: "CREDIT_CARD", cycle: "MONTHLY", value: 39.9 });
 
     const run = `${Date.now()}`;
-    const cus = `cus_${run}`, sub = `sub_${run}`;
-    expect((await asaas({ id: `e1_${run}`, event: "CHECKOUT_PAID", checkout: { id: checkoutId, customer: cus } })).status).toBe(200);
-    await asaas({ id: `e2_${run}`, event: "SUBSCRIPTION_CREATED", subscription: { id: sub, customer: cus } });
+    const cus = `cus_${run}`;
     await asaas({ id: `e3_${run}`, event: "PAYMENT_CONFIRMED", payment: { id: `pay_${run}`, customer: cus, subscription: sub, dueDate: new Date().toISOString().slice(0, 10) } });
 
-    await page.unroute(/asaas\.com/);
     await page.goto("/ajustes");
     await expect(page.getByText(/Plano mensal · renova em/)).toBeVisible();
     await page.getByRole("link", { name: /Meu plano/ }).click();
@@ -175,7 +171,7 @@ test.describe("F15 e F17 assinatura", () => {
   });
 
   test("F15-N3 webhook da Asaas sem o token é recusado", async () => {
-    expect((await asaas({ id: "x", event: "CHECKOUT_PAID" }, "errado")).status).toBe(401);
+    expect((await asaas({ id: "x", event: "PAYMENT_RECEIVED" }, "errado")).status).toBe(401);
   });
 
   test("F15-E2 teste grátis acabou e sem plano: o app bloqueia, explica e manda para os planos", async ({ page, user }) => {

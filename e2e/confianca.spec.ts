@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { admin, createUser, expect, login, markOnboarded, mockCalls, PASSWORD, test, type TestUser } from "./fixtures";
+import { admin, createUser, expect, login, markOnboarded, mockCalls, pay, PASSWORD, test, type TestUser } from "./fixtures";
 
 // F1, F2 e F3 do replica/fixes.md: o que mais irrita quem usa o original.
 const TOKEN = "token-do-webhook-e2e-com-mais-de-32-caracteres";
@@ -8,22 +8,11 @@ const asaas = (body: object) => fetch("http://localhost:3000/api/webhooks/asaas"
 });
 const emailsTo = async (to: string) => (await mockCalls()).filter((c) => c.url === "/emails" && (c.body.to as string[])?.includes(to));
 
-// abre a página de pagamento (interceptada: nada sai para a Asaas de verdade) e devolve o id do checkout
-async function openCheckout(page: Page, button = "Assinar no cartão") {
-  let url = "";
-  await page.route(/https:\/\/(sandbox\.)?asaas\.com\/.*/, (r) => { url = r.request().url(); return r.fulfill({ body: "checkout falso" }); });
-  await page.goto("/planos", { waitUntil: "networkidle" });
-  await page.getByRole("button", { name: button }).click();
-  await expect.poll(() => url).toMatch(/checkoutSession/);
-  await page.unroute(/asaas\.com/);
-  return new URL(url).searchParams.get("id")!;
-}
-
-async function subscribe(page: Page, run: string) {
-  const checkoutId = await openCheckout(page);
-  const cus = `cus_${run}`, sub = `sub_${run}`;
-  await asaas({ id: `a1_${run}`, event: "CHECKOUT_PAID", checkout: { id: checkoutId, customer: cus } });
-  await asaas({ id: `a2_${run}`, event: "SUBSCRIPTION_CREATED", subscription: { id: sub, customer: cus } });
+// paga o plano mensal no cartão pela tela do app e devolve o id da assinatura criada
+async function subscribe(page: Page, user: TestUser, run: string) {
+  const sub = await pay(page, user, "monthly", "Cartão de crédito");
+  const cus = `cus_${run}`;
+  await expect(page.getByRole("heading", { name: "Pagamento aprovado" })).toBeVisible();
   await asaas({ id: `a3_${run}`, event: "PAYMENT_CONFIRMED", payment: { id: `pay1_${run}`, customer: cus, subscription: sub, dueDate: new Date().toISOString().slice(0, 10) } });
   return { cus, sub };
 }
@@ -31,8 +20,8 @@ async function subscribe(page: Page, run: string) {
 test.describe("F1 cancelar com comprovante", () => {
   test("F17-H2 cancelar mostra protocolo, manda e-mail e estorna cobrança que chegar depois", async ({ page, user }) => {
     const run = `${Date.now()}`;
-    await login(page, user, "/planos");
-    const { cus, sub } = await subscribe(page, run);
+    await login(page, user, "/ajustes");
+    const { cus, sub } = await subscribe(page, user, run);
     await page.goto("/ajustes/plano");
     await page.getByRole("button", { name: "Cancelar assinatura" }).click();
     const note = page.getByRole("note").filter({ hasText: "Assinatura cancelada em" });
@@ -58,7 +47,9 @@ test.describe("F2 pagamento em confirmação", () => {
   test("F15-E4 teste vencido: voltou do pagamento, usa o app enquanto a Asaas confirma, e depois fica ativo", async ({ page, user }) => {
     await admin.from("profiles").update({ trial_ends_on: "2026-01-01" }).eq("user_id", user.id);
     await login(page, user, "/planos");
-    const checkoutId = await openCheckout(page);
+    // volta da página de pagamento (checkout hospedado antigo, ainda aceito): a tentativa fica pendente até o webhook
+    const checkoutId = `chk_antigo_${Date.now()}`;
+    await admin.from("checkout_sessions").insert({ id: checkoutId, user_id: user.id, plan: "monthly", status: "pending" });
     await page.goto("/planos/obrigado");
     await expect(page.getByRole("heading", { name: "Confirmando o pagamento…" })).toBeVisible();
     await page.goto("/conversa", { waitUntil: "networkidle" });

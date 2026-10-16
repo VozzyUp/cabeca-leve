@@ -12,7 +12,7 @@ import { localDate } from "@/lib/time";
 export const EXPIRED_HREF = "/ajustes/plano?expirou=1";
 
 // Telas e rotas que seguem abertas para quem está sem plano (as públicas — início, planos, entrar, termos — já são abertas)
-const OPEN_WHEN_LOCKED = [/^\/ajustes\/?$/, /^\/ajustes\/plano\/?$/, /^\/ajustes\/suporte\/?$/, /^\/api\/billing\//];
+const OPEN_WHEN_LOCKED = [/^\/ajustes\/?$/, /^\/ajustes\/plano\/?$/, /^\/ajustes\/suporte\/?$/, /^\/assinar\//, /^\/api\/billing\//];
 export const openWhenLocked = (path: string) => OPEN_WHEN_LOCKED.some((r) => r.test(path));
 
 export class PlanExpiredError extends Error {

@@ -14,7 +14,7 @@ test.describe("Sem plano: tudo bloqueado", () => {
     await expect(alert).toContainText("Tudo o que você anotou continua guardado");
     await expect(page.getByRole("link", { name: "Falar com uma pessoa" })).toBeVisible();
     await expect(page.getByRole("heading", { level: 2, name: "Escolha um plano" })).toBeVisible();
-    await expect(page.getByRole("button", { name: /Assinar no cartão \(plano mensal\)/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Assinar \(plano mensal\)/ })).toBeVisible();
 
     // sem menu do app: nem lateral, nem barra de baixo, nem avisos
     await expect(page.getByRole("navigation")).toHaveCount(0);

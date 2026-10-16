@@ -170,10 +170,10 @@ export function WhatsAppDiagnostic() {
                 {u.reachable && u.error && <Line ok={false}>{u.error}</Line>}
                 {u.reachable && hooks.length === 0 && !u.error && <Line ok={false}>A UAZAPI não tem nenhum webhook cadastrado: ela não avisa o app das mensagens. Cadastre o endereço que aparece em Endereços para colar nos serviços.</Line>}
                 {hooks.map((h) => (
-                  <Line key={h.url} ok={h.pointsHere && h.secretOk}>
+                  <Line key={h.url} ok={h.pointsHere ? h.secretOk : h.enabled === false ? null : false}>
                     Webhook cadastrado na UAZAPI: <span className="break-all font-mono">{h.url.replace(/secret=[^&]+/, "secret=…")}</span>
-                    {h.pointsHere ? (h.secretOk ? " — confere com este app" : " — o endereço é este app, mas o segredo não é o do sistema") : " — aponta para OUTRO endereço (domínio antigo?). Troque pelo de cima"}
-                    {h.enabled === false ? " (desligado)" : ""}
+                    {h.pointsHere ? (h.secretOk ? " — confere com este app" : " — o endereço é este app, mas o segredo não é o do sistema") : h.enabled === false ? " — é de outro sistema e está desligado: não afeta o app" : " — aponta para OUTRO endereço (domínio antigo?). Troque pelo de cima"}
+                    {h.enabled === false && h.pointsHere ? " (desligado)" : ""}
                   </Line>
                 ))}
                 {u.reachable && hooks.length > 0 && !good && !hooks.some((h) => h.pointsHere) && <Line ok={false}>Nenhum webhook aponta para este app. Foi o que mais travou o WhatsApp depois de trocar o domínio.</Line>}

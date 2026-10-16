@@ -1,6 +1,6 @@
 import { CalendarClock, Check, FileText, MessageCircle, Smartphone } from "lucide-react";
 import Link from "next/link";
-import { cancelPlan, startCheckout } from "@/app/actions";
+import { cancelPlan } from "@/app/actions";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/components/ui/cn";
 import { PageHeader } from "@/components/ui/load-error";
@@ -177,12 +177,12 @@ export async function MyPlanScreen({ paymentError = false }: { paymentError?: bo
                     {p.tagline && <p className="text-xs text-muted">{p.tagline}</p>}
                     <Limits plan={p} />
                     {!current && (
-                      <form action={startCheckout.bind(null, p.id)} className="mt-auto pt-1">
-                        <button type="submit" aria-label={`${up ? "Fazer upgrade" : paid ? "Trocar para este" : checkoutLabel(p)} (plano ${p.name.toLowerCase()})`}
+                      <div className="mt-auto pt-1">
+                        <Link href={`/assinar/${p.id}`} aria-label={`${up ? "Fazer upgrade" : paid ? "Trocar para este" : checkoutLabel()} (plano ${p.name.toLowerCase()})`}
                           className={cn("inline-flex h-11 w-full items-center justify-center rounded-md px-4 text-sm font-semibold", up || !paid ? "bg-accent text-on-accent hover:opacity-90" : "border border-border text-text hover:bg-surface-2")}>
-                          {up ? "Fazer upgrade" : paid ? "Trocar para este" : checkoutLabel(p)}
-                        </button>
-                      </form>
+                          {up ? "Fazer upgrade" : paid ? "Trocar para este" : checkoutLabel()}
+                        </Link>
+                      </div>
                     )}
                   </Card>
                 </li>

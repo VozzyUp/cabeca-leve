@@ -2,7 +2,6 @@ import { Check } from "lucide-react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/components/ui/cn";
-import { startCheckout } from "@/app/actions";
 import { WHATSAPP_PROMISE } from "@/lib/whatsapp/promise";
 import { checkoutLabel, forSale, perMonthCents, planPeriod, planSaving, storageText, TRIAL_DAYS, waText } from "@/lib/plans";
 import { loadPlans } from "@/lib/plans-server";
@@ -24,7 +23,7 @@ const FAQ = [
   ["Meus dados ficam com quem?", "Só com você. Dá para baixar tudo ou excluir a conta a qualquer momento, em Configurações."],
 ];
 
-// S32: planos. Quem já entrou vai direto para a página de pagamento da Asaas; quem não, para o cadastro.
+// S32: planos. Quem já entrou vai para a tela de pagamento do app (Pix, boleto ou cartão); quem não, para o cadastro.
 const cta = "inline-flex h-12 items-center justify-center rounded-md text-base font-semibold";
 const primary = "bg-accent text-on-accent hover:opacity-90";
 const secondary = "border border-border text-text hover:bg-surface-2";
@@ -63,11 +62,9 @@ export default async function Page({ searchParams }: PageProps<"/planos">) {
                 </ul>
                 {p.tagline && <p className="text-xs text-muted">{p.tagline}</p>}
                 {loggedIn ? (
-                  <form action={startCheckout.bind(null, p.id)} className="mt-auto">
-                    <button type="submit" className={cn(cta, "w-full", p.featured ? primary : secondary, chosen === p.id && "ring-2 ring-focus")}>
-                      {checkoutLabel(p)}
-                    </button>
-                  </form>
+                  <Link href={`/assinar/${p.id}`} className={cn(cta, "mt-auto w-full", p.featured ? primary : secondary, chosen === p.id && "ring-2 ring-focus")}>
+                    {checkoutLabel()}
+                  </Link>
                 ) : (
                   <Link href={`/entrar?modo=criar&plano=${p.id}`} className={cn(cta, "mt-auto", p.featured ? primary : secondary)}>
                     Começar {TRIAL_DAYS} dias grátis

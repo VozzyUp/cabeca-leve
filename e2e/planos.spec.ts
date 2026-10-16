@@ -1,5 +1,4 @@
-import type { Page } from "@playwright/test";
-import { a11y, admin, expect, login, markOnboarded, mockCalls, noHorizontalScroll, openAdmin, PASSWORD, test, type TestUser } from "./fixtures";
+import { a11y, admin, expect, login, markOnboarded, noHorizontalScroll, openAdmin, PASSWORD, test, type TestUser } from "./fixtures";
 
 // Planos: o time cria, edita e tira da venda (/admin/planos); quem usa vê o próprio plano, o uso e troca de plano (/ajustes/plano).
 const ADMIN = "config-e2e@exemplo.com.br";  // está em ADMIN_EMAILS (playwright.config.ts)
@@ -11,13 +10,6 @@ async function adminUser(): Promise<TestUser> {
   if (error) throw error;
   await markOnboarded(created.user!.id);
   return { id: created.user!.id, email: ADMIN, name: "Dono" };
-}
-
-// a página de pagamento é da Asaas: nada sai para fora, só confere o endereço
-async function captureCheckout(page: Page) {
-  let url = "";
-  await page.route(/https:\/\/(sandbox\.)?asaas\.com\/.*/, (r) => { url = r.request().url(); return r.fulfill({ body: "checkout falso" }); });
-  return () => url;
 }
 
 test.describe("Administração: planos e limites", () => {
@@ -68,7 +60,7 @@ test.describe("Administração: planos e limites", () => {
       await expect(pub).toContainText("até 6 números de WhatsApp");
       await expect(pub).toContainText("500 mensagens por dia");
       await expect(pub).toContainText("4 GB para documentos");
-      await expect(pub.getByRole("button", { name: "Assinar no cartão" })).toBeVisible();
+      await expect(pub.getByRole("link", { name: "Assinar" })).toBeVisible();
 
       // editar: preço e limite
       await page.goto("/admin/planos", { waitUntil: "networkidle" });
@@ -170,39 +162,17 @@ test.describe("Meu plano", () => {
     for (const meter of ["Mensagens hoje", "WhatsApps vinculados", "Espaço para documentos"]) await expect(page.getByRole("progressbar", { name: meter })).toBeVisible();
     await expect(page.getByRole("progressbar", { name: "Mensagens hoje" })).toHaveAttribute("aria-valuenow", "0");
     await expect(page.getByRole("heading", { level: 2, name: "Escolha um plano" })).toBeVisible();
-    await expect(page.getByRole("button", { name: /Assinar no cartão \(plano mensal\)/ })).toBeVisible();
-    await expect(page.getByRole("button", { name: /Pagar o ano.*\(plano anual\)/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Assinar \(plano mensal\)/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Assinar \(plano anual\)/ })).toBeVisible();
     await expect(page.getByRole("button", { name: "Cancelar assinatura" })).toHaveCount(0);
     expect(await a11y(page)).toEqual([]);
     expect(await noHorizontalScroll(page)).toBe(true);
 
-    // assinar abre a página de pagamento do plano escolhido
-    const url = await captureCheckout(page);
-    await page.getByRole("button", { name: /Pagar o ano.*\(plano anual\)/ }).click();
-    await expect.poll(url).toMatch(/checkoutSession\/show\?id=chk_e2e_/);
-    const sent = (await mockCalls()).filter((c) => c.url === "/v3/checkouts" && c.body.externalReference === user.id);
-    expect(sent.at(-1)!.body).toMatchObject({ chargeTypes: ["DETACHED"], items: [{ value: 359 }] });
-  });
-
-  test("PLN-U5 a Asaas recusa o checkout: a pessoa vê o aviso (não uma tela quebrada) e o time vê o motivo", async ({ page, user }) => {
-    test.setTimeout(90_000);
-    const name = `Falha e2e ${Date.now()}`;
-    try {
-      await admin.from("plans").insert({ id: `falha-e2e-${Date.now()}`, name, kind: "paid", price_cents: 666, months: 1, recurring: true, whatsapp_limit: 2, messages_per_day: 200, storage_mb: 2048, sort: 900 });
-      await login(page, user, "/ajustes/plano");
-      await page.getByRole("button", { name: new RegExp(`Assinar no cartão \\(plano ${name.toLowerCase()}\\)`) }).click();
-      await expect(page).toHaveURL(/\/ajustes\/plano\?erro=pagamento/);
-      await expect(page.getByRole("alert").filter({ hasText: "Não deu para abrir a página de pagamento" })).toBeVisible();
-      await expect(page.getByText("Não deu para carregar esta tela")).toHaveCount(0);
-      expect(await a11y(page)).toEqual([]);
-      await expect(async () => {
-        const { data } = await admin.from("system_status").select("value").eq("key", "asaas_checkout").single();
-        expect(data?.value).toMatchObject({ ok: false });
-        expect(JSON.stringify(data?.value)).toContain("Checkout recusado no teste");
-      }).toPass({ timeout: 10_000 });
-    } finally {
-      await admin.from("plans").delete().like("name", "Falha e2e %");
-    }
+    // assinar leva à tela de pagamento do app, com o plano escolhido
+    await page.getByRole("link", { name: /Assinar \(plano anual\)/ }).click();
+    await expect(page).toHaveURL(/\/assinar\/yearly$/);
+    await expect(page.getByRole("heading", { level: 1, name: "Assinar o plano anual" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 2, name: "Como você quer pagar?" })).toBeVisible();
   });
 
   test("PLN-U2 teste vencido: avisa que acabou e oferece os planos", async ({ page, user }) => {
@@ -230,17 +200,13 @@ test.describe("Meu plano", () => {
     await expect(page.getByRole("heading", { level: 2, name: "Mudar de plano" })).toBeVisible();
     const mine = page.getByRole("listitem").filter({ has: page.getByRole("heading", { level: 3, name: "Mensal" }) });
     await expect(mine).toContainText("Seu plano");
-    await expect(mine.getByRole("button")).toHaveCount(0);
+    await expect(mine.getByRole("link")).toHaveCount(0);
     expect(await a11y(page)).toEqual([]);
     expect(await noHorizontalScroll(page)).toBe(true);
 
-    // upgrade abre o pagamento do plano anual
-    const url = await captureCheckout(page);
-    await page.getByRole("button", { name: /Fazer upgrade \(plano anual\)/ }).click();
-    await expect.poll(url).toMatch(/checkoutSession/);
-    await page.waitForURL(/asaas\.com/);  // a navegação para a página de pagamento termina antes de seguir
-    await page.unroute(/asaas\.com/);
-    expect((await mockCalls()).filter((c) => c.url === "/v3/checkouts" && c.body.externalReference === user.id).at(-1)!.body).toMatchObject({ chargeTypes: ["DETACHED"], items: [{ value: 359 }] });
+    // upgrade leva à tela de pagamento do plano anual
+    await page.getByRole("link", { name: /Fazer upgrade \(plano anual\)/ }).click();
+    await expect(page).toHaveURL(/\/assinar\/yearly$/);
 
     // cancelar: comprovante e o status muda
     await page.goto("/ajustes/plano", { waitUntil: "networkidle" });

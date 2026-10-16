@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkoutLabel, DEFAULT_PLANS, forSale, isUpgrade, parseMoneyToCents, perMonthCents, planFromRow, planInput, planOfAccount, planPeriod, planSaving, slugify, storageText, waText, type PlanRow } from "./plans";
+import { checkoutLabel, methodHint, renewsWith, DEFAULT_PLANS, forSale, isUpgrade, parseMoneyToCents, perMonthCents, planFromRow, planInput, planOfAccount, planPeriod, planSaving, slugify, storageText, waText, type PlanRow } from "./plans";
 
 const row = (over: Partial<PlanRow> = {}): PlanRow => ({
   id: "monthly", name: "Mensal", tagline: null, kind: "paid", price_cents: 3990, months: 1, recurring: true,
@@ -33,9 +33,11 @@ describe("catálogo de planos", () => {
     expect(planPeriod({ months: 12, recurring: false })).toBe("por ano");
     expect(planPeriod({ months: 3, recurring: true })).toBe("a cada 3 meses");
     expect(planPeriod({ months: 6, recurring: false })).toBe("por 6 meses");
-    expect(checkoutLabel({ months: 1, recurring: true })).toBe("Assinar no cartão");
-    expect(checkoutLabel({ months: 12, recurring: false })).toBe("Pagar o ano (Pix ou cartão)");
-    expect(checkoutLabel({ months: 3, recurring: false })).toBe("Pagar 3 meses (Pix ou cartão)");
+    expect(checkoutLabel()).toBe("Assinar");
+    expect(renewsWith({ recurring: true }, "card")).toBe(true);
+    expect(renewsWith({ recurring: true }, "pix")).toBe(false);
+    expect(renewsWith({ recurring: false }, "card")).toBe(false);
+    expect(methodHint({ months: 12, recurring: false }, "pix")).toContain("1 ano");
   });
   it("calcula a economia contra o mensal mais barato; sem mensal ou sem economia, nada", () => {
     const [, monthly, yearly] = DEFAULT_PLANS;
