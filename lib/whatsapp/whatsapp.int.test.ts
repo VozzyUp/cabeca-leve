@@ -358,4 +358,33 @@ describe.skipIf(!run)("WhatsApp (UAZAPI)", () => {
     await admin.from("channel_links").update({ receives_notices: false }).eq("user_id", userId).eq("external_id", `+${fromWithout9}`);
     expect(await fire("Comprar ração")).toEqual(["5511912340000"]);
   });
+
+  it("refazer o número: o formulário único troca o que estava pendente, tentativa vencida não ocupa vaga e número confirmado nunca é apagado", async () => {
+    const { LinkLimitError, startLink } = await import("./link");
+    const { data } = await admin.auth.admin.createUser({ email: `refazer-${Date.now()}@teste.local`, password: "x".repeat(12), email_confirm: true });
+    const id = data.user!.id;
+    const n = (suffix: string) => `+55119${String(Date.now()).slice(-4)}${suffix}`;  // números só deste teste (o vínculo confirmado é único no banco)
+    const [n1, n2, n3, n4] = [n("1001"), n("1002"), n("1003"), n("1004")];
+    try {
+      const pending = async () => ((await admin.from("channel_links").select("external_id, verified_at").eq("user_id", id).order("created_at")).data ?? []).map((l) => [l.external_id, !!l.verified_at]);
+      // errou o número e tentou outro: sem trocar, as duas tentativas ocupam vaga e o limite de 1 recusa
+      await startLink(id, n1, { limit: 1 });
+      await expect(startLink(id, n2, { limit: 1 })).rejects.toBeInstanceOf(LinkLimitError);
+      // trocando o que estava pendente, o novo substitui o antigo
+      const r = await startLink(id, n2, { limit: 1, replacePending: true });
+      expect(r).toMatchObject({ number: n2, alreadyLinked: false });
+      expect(await pending()).toEqual([[n2, false]]);
+      // pedir o mesmo número de novo só renova o código
+      await startLink(id, n2, { limit: 1, replacePending: true });
+      expect(await pending()).toEqual([[n2, false]]);
+      // tentativa com o código vencido não conta no limite
+      await admin.from("channel_links").update({ verification_expires_at: new Date(Date.now() - 60_000).toISOString() }).eq("user_id", id);
+      await startLink(id, n3, { limit: 1 });
+      expect(await pending()).toEqual([[n3, false]]);
+      // número confirmado nunca é apagado pela troca
+      expect((await admin.from("channel_links").update({ verified_at: new Date().toISOString(), verification_code_hash: null, verification_expires_at: null }).eq("user_id", id)).error).toBeNull();
+      await expect(startLink(id, n4, { limit: 1, replacePending: true })).rejects.toBeInstanceOf(LinkLimitError);
+      expect(await pending()).toEqual([[n3, true]]);
+    } finally { await admin.auth.admin.deleteUser(id).catch(() => {}); }
+  });
 });

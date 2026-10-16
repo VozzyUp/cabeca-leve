@@ -128,6 +128,31 @@ test.describe("Navegação e configuração inicial", () => {
     await expect(dialog.getByRole("heading", { name: /Boas-vindas/ })).toBeVisible();
   });
 
+  test("ONB-H4 refazer com um número pendente: o botão é Vincular, o número novo troca o antigo e o código aparece @celular", async ({ page, user }) => {
+    test.setTimeout(90_000);
+    const stamp = String(Date.now()).slice(-4);
+    const old = `+55119${stamp}1001`, fresh = `55119${stamp}1002`;
+    // sobrou uma tentativa de antes, com o número errado e ainda sem confirmar
+    await admin.from("channel_links").insert({ user_id: user.id, channel: "whatsapp", external_id: old, verified_at: null, verification_code_hash: "x", verification_expires_at: new Date(Date.now() + 600_000).toISOString() });
+    await login(page, user);
+    await page.getByRole("button", { name: "Sua conta" }).click();
+    await page.getByRole("link", { name: "Refazer a configuração inicial" }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByRole("button", { name: "Continuar" }).click();
+    await expect(dialog.getByRole("heading", { name: "Fale comigo pelo WhatsApp" })).toBeVisible();
+    // número ainda não confirmado: o botão é Vincular (Trocar é só para número já confirmado), e não há Continuar
+    await expect(dialog.getByRole("button", { name: "Trocar" })).toHaveCount(0);
+    await expect(dialog.getByRole("button", { name: "Continuar" })).toHaveCount(0);
+    await dialog.getByLabel("Seu número de WhatsApp").fill(fresh.slice(2));
+    await dialog.getByRole("button", { name: "Vincular" }).click();
+    const status = dialog.getByRole("status").filter({ hasText: "mande este código" });
+    await expect(status).toBeVisible();
+    await expect(status.getByRole("link", { name: "Abrir o WhatsApp com o código" })).toBeVisible();
+    await expect(dialog.getByText(`Aguardando confirmação: +${fresh}`)).toBeVisible();
+    // o número errado sai de cena: só o novo espera confirmação
+    expect((await admin.from("channel_links").select("external_id").eq("user_id", user.id)).data).toEqual([{ external_id: `+${fresh}` }]);
+  });
+
   test("ONB-E1 fechar no primeiro passo conta como feito", async ({ page, user }) => {
     await admin.from("profiles").update({ onboarded_at: null }).eq("user_id", user.id);
     await login(page, user);

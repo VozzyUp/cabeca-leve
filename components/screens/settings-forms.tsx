@@ -112,8 +112,8 @@ export function LinkCode({ result, onLinked }: { result: LinkResult; onLinked?: 
 
 // Vincular um WhatsApp: número (e, na conta dividida, o nome de quem usa) e o código de confirmação.
 // Usado em Configurações e na configuração inicial.
-export function WhatsAppLinkForm({ channels, label = "WhatsApp", owner, askName = false, primary = false, onDone, onResult }: {
-  channels?: Settings["channels"]; label?: string; owner?: string | null; askName?: boolean; primary?: boolean; onDone?: () => void;
+export function WhatsAppLinkForm({ channels, label = "WhatsApp", owner, askName = false, primary = false, submitLabel, onDone, onResult }: {
+  channels?: Settings["channels"]; label?: string; owner?: string | null; askName?: boolean; primary?: boolean; submitLabel?: string; onDone?: () => void;
   onResult?: (r: LinkResult) => void;  // quem chama mostra o código (o formulário some quando a lista atualiza)
 }) {
   const router = useRouter();
@@ -129,7 +129,7 @@ export function WhatsAppLinkForm({ channels, label = "WhatsApp", owner, askName 
     setPhoneError(null);
     startLinking(async () => {
       try {
-        const r = await startWhatsAppLink(n, name.trim() || owner || null);
+        const r = await startWhatsAppLink(n, name.trim() || owner || null, !askName);  // formulário de um número só: refazer troca o que estava pendente
         if (r && "limitReached" in r) { setPhoneError(`Seu plano permite ${r.limitReached} número${r.limitReached === 1 ? "" : "s"} de WhatsApp. Remova um ou troque de plano.`); return; }
         setResult(r);
         onResult?.(r);
@@ -138,16 +138,18 @@ export function WhatsAppLinkForm({ channels, label = "WhatsApp", owner, askName 
       } catch { setPhoneError("Não deu para vincular agora. Tente de novo."); }
     });
   }
+  const started = result && !("limitReached" in result) && result.code ? result.number : null;
   const hint = askName ? "Com DDD. A pessoa confirma mandando um código desse WhatsApp."
+    : started ? `Aguardando confirmação: ${started}`
     : !channels?.whatsapp ? `Mande e receba tudo pelo WhatsApp. ${WHATSAPP_PROMISE}`
-    : channels.whatsappVerified === false ? `Aguardando confirmação: ${channels.whatsapp}` : `Vinculado: ${channels.whatsapp}`;
+    : channels.whatsappVerified === false ? `Aguardando confirmação: ${channels.whatsapp}. Para usar outro número, digite-o e toque em Vincular.` : `Vinculado: ${channels.whatsapp}`;
   return (
     <form onSubmit={linkWhatsApp} className="flex flex-col gap-2">
       {askName && <Field label="Nome de quem vai usar" value={name} onChange={(e) => setName(e.target.value)} maxLength={40} placeholder="Ex.: Ana" />}
       <div className="flex items-end gap-3">
         <Field label={label} type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="11 99999-0000"
           error={phoneError ?? undefined} className="flex-1" hint={hint} />
-        <Button type="submit" variant={primary ? "primary" : "secondary"} className="mb-6" loading={linking}>{!askName && channels?.whatsapp ? "Trocar" : "Vincular"}</Button>
+        <Button type="submit" variant={primary ? "primary" : "secondary"} className="mb-6" loading={linking}>{submitLabel ?? (!askName && channels?.whatsapp && channels.whatsappVerified !== false ? "Trocar" : "Vincular")}</Button>
       </div>
       {result && !("limitReached" in result) && result.alreadyLinked && <p role="status" className="text-sm text-body">Esse número já está vinculado. Nome atualizado.</p>}
       {!onResult && <LinkCode result={result} />}
@@ -203,7 +205,7 @@ export function WhatsAppNumbers({ initial, owner }: { initial: NonNullable<Setti
                   <Switch label={`Avisos no ${n.label ?? n.number}`} checked={n.receivesNotices} onChange={(v) => run(() => updateWhatsApp(n.id, { receivesNotices: v }))} />
                 </span>
               </div>
-              {!n.verified && <WhatsAppLinkForm label="Mandar o código de novo" channels={{ whatsapp: n.number, whatsappVerified: false, telegram: false, email: false, push: false }} />}
+              {!n.verified && <WhatsAppLinkForm label="Mandar o código de novo" submitLabel="Gerar código" channels={{ whatsapp: n.number, whatsappVerified: false, telegram: false, email: false, push: false }} />}
             </li>
           ))}
         </ul>

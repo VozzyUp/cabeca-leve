@@ -199,7 +199,7 @@ export async function deleteAccount(confirmation: string) {
 // no modo de demonstração, só guarda o número. A conta pode ter vários (casal, família),
 // até o limite do plano, cada um com o nome de quem usa.
 const waLabel = z.string().trim().min(1).max(40).nullable().optional();
-export async function linkWhatsApp(number: string, label?: string | null) {
+export async function linkWhatsApp(number: string, label?: string | null, replacePending = false) {
   const n = z.string().regex(/^\+\d{12,13}$/).parse(number);
   const name = waLabel.parse(label ?? null);
   if (!isSupabaseConfigured()) {
@@ -213,7 +213,7 @@ export async function linkWhatsApp(number: string, label?: string | null) {
   if (!user) throw new Error("Sessão expirada");
   const { planInfo } = await (await getStore({ allowLocked: true })).getSettings();
   try {
-    const result = await startLink(user.id, n, { label: name, limit: whatsappLimit(planInfo) });
+    const result = await startLink(user.id, n, { label: name, limit: whatsappLimit(planInfo), replacePending: z.boolean().parse(replacePending) });
     revalidatePath("/", "layout");
     return result;
   } catch (error) {

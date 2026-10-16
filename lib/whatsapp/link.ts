@@ -16,22 +16,29 @@ export class LinkLimitError extends Error {
 
 // Começa (ou recomeça) o vínculo de um número. Pedir de novo um número da própria conta só
 // renova o código; número novo conta no limite do plano (confirmados e aguardando código).
-export async function startLink(userId: string, number: string, opts: { label?: string | null; limit?: number } = {}) {
+export async function startLink(userId: string, number: string, opts: { label?: string | null; limit?: number; replacePending?: boolean } = {}) {
   const code = String(crypto.randomInt(100000, 1000000));
   const expires = new Date(Date.now() + 30 * 60_000).toISOString();
   const db = getAdmin();
   const e164 = toE164(number);
-  const { data: mine, error: listError } = await db.from("channel_links").select("id, external_id, verified_at").eq("user_id", userId).eq("channel", "whatsapp");
+  const { data: all, error: listError } = await db.from("channel_links").select("id, external_id, verified_at, verification_expires_at").eq("user_id", userId).eq("channel", "whatsapp");
   if (listError) throw new Error(listError.message);
   // o mesmo número com ou sem o 9 (o WhatsApp às vezes confirma sem ele)
   const same = new Set(variants(digitsOnly(e164)));
-  const existing = (mine ?? []).find((l) => same.has(l.external_id));
+  // Tentativas que ficaram pelo caminho não ocupam vaga: as que o código já venceu, e (ao refazer o número no formulário
+  // único) as de outros números que ainda esperavam confirmação. Número já confirmado nunca é apagado aqui.
+  const nowIso = new Date().toISOString();
+  const drop = (all ?? []).filter((l) => !l.verified_at && !same.has(l.external_id) && (opts.replacePending || (l.verification_expires_at ?? "") < nowIso));
+  if (drop.length) await db.from("channel_links").delete().in("id", drop.map((l) => l.id));
+  const gone = new Set(drop.map((l) => l.id));
+  const mine = (all ?? []).filter((l) => !gone.has(l.id));
+  const existing = mine.find((l) => same.has(l.external_id));
   if (existing?.verified_at) {
     // já confirmado: só atualiza o nome, sem código novo
     if (opts.label !== undefined) await db.from("channel_links").update({ label: opts.label }).eq("id", existing.id);
     return { code: null, expiresAt: null, link: null, number: e164, alreadyLinked: true as const };
   }
-  if (!existing && opts.limit !== undefined && (mine ?? []).length >= opts.limit) throw new LinkLimitError(opts.limit);
+  if (!existing && opts.limit !== undefined && mine.length >= opts.limit) throw new LinkLimitError(opts.limit);
   const { error } = await db.from("channel_links").upsert({
     user_id: userId, channel: "whatsapp", external_id: existing?.external_id ?? e164, verified_at: null,
     verification_code_hash: hash(code), verification_expires_at: expires,
