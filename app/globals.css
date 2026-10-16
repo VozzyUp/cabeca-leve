@@ -58,6 +58,21 @@ body {
   color: var(--c-text);
 }
 
+/* A página nunca arrasta para o lado (clip não cria rolagem, então o menu fixo e o topo grudado seguem iguais) */
+html, body {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+/* App instalado (tela inicial do Android): fica parado como um app. Sem o "puxar para atualizar" nem o quique ao fim
+   da rolagem, sem arrastar para os lados e sem zoom de pinça. No navegador comum o zoom segue livre, por acessibilidade. */
+@media (display-mode: standalone), (display-mode: fullscreen), (display-mode: minimal-ui) {
+  html, body {
+    overscroll-behavior: none;
+    touch-action: pan-x pan-y;
+  }
+}
+
 /* Foco visível em tudo que é interativo: anel de 2px na cor de foco.
    Na camada base, para um componente poder trocar o anel (ex.: o campo de mensagem). */
 @layer base {

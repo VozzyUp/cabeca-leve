@@ -333,3 +333,12 @@ Paridade 63,2/100; **40 de 40 obrigatórias completas**.
 - **Onde é barrado** (`lib/plan-lock.ts`): no `proxy.ts` (telas redirecionam; `/api/*` responde 402 com `code: "plan_expired"`) e de novo em `getStore()` (as ações e telas do servidor; só as da conta e da cobrança passam `allowLocked`). A conferência é uma a duas consultas pequenas e só o "liberado" fica guardado por 30 s, então quem acabou de pagar entra na hora e quem acabou de vencer espera no máximo meio minuto. Em dúvida (erro de banco), deixa passar.
 - **WhatsApp**: já respondia só o aviso de teste terminado (e pedir uma pessoa). Os lembretes e resumos automáticos também já pulam quem está sem plano.
 - **Testes**: integração `plan-lock.int.test.ts`; e2e `bloqueio.spec.ts` (todas as telas, 402 nas rotas, o que segue aberto, liberar ao assinar, teste em dia não é bloqueado); os testes que usavam a conversa com o teste vencido (F15-E2, F15-N5, F3-E1) agora conferem o bloqueio e o suporte pela tela.
+
+## 2026-10-16: app instalado no Android fica parado
+
+- Sintoma: adicionado à tela inicial do Android, a tela saía do lugar a qualquer arrasto (para o lado, quique no fim da rolagem, puxar para atualizar, zoom de pinça, teclado empurrando a página).
+- `globals.css`: `overflow-x: clip` em `html` e `body` (a página nunca arrasta para o lado e o topo grudado e a barra fixa seguem iguais); só no app instalado (`display-mode: standalone`, `fullscreen` ou `minimal-ui`): `overscroll-behavior: none` (sem quique nem "puxar para atualizar") e `touch-action: pan-x pan-y` (rola em qualquer sentido, mas não dá zoom de pinça).
+- `app/layout.tsx` (viewport): `width=device-width`, `initial-scale=1`, `viewport-fit=cover` e `interactive-widget=resizes-content` (o teclado encolhe a página em vez de empurrá-la para o lado).
+- O zoom do navegador comum **continua livre**: travar com `user-scalable=no` reprova na acessibilidade (WCAG 1.4.4) e na varredura axe do projeto, então o zoom só é travado no app instalado.
+- Não travei a orientação no manifesto: celular em pé já é o uso normal, e travar atrapalharia tablet e dobrável.
+- Teste `e2e/app-instalado.spec.ts` (viewport, rolagem lateral e manifesto).

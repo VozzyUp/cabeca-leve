@@ -16,7 +16,9 @@ export const metadata: Metadata = {
   appleWebApp: { capable: true, title: BRAND.name, statusBarStyle: "black" },
 };
 
-export const viewport: Viewport = { themeColor: BRAND.color };
+// O teclado do celular encolhe a página (resizes-content) em vez de empurrá-la para o lado. O zoom de pinça continua
+// liberado no navegador (acessibilidade); só o app instalado o trava, em globals.css.
+export const viewport: Viewport = { themeColor: BRAND.color, width: "device-width", initialScale: 1, viewportFit: "cover", interactiveWidget: "resizes-content" };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
