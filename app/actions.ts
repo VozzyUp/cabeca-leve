@@ -116,6 +116,7 @@ const settingsPatch = z.object({
   answerLength: z.enum(["short", "detailed"]),
   voice: z.enum(["female", "male"]),
   memoryEnabled: z.boolean(),
+  mirrorWhatsapp: z.boolean(),
   theme: z.enum(["dark", "light", "system"]),
   briefingTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).nullable(),
   channels: z.object({ whatsapp: z.string().regex(/^\+\d{10,15}$/).nullable(), telegram: z.boolean(), email: z.boolean(), push: z.boolean() }),

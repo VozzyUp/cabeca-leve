@@ -419,4 +419,30 @@ describe.skipIf(!run)("WhatsApp (UAZAPI)", () => {
       expect(dup.error?.code).toBe("23505");
     } finally { await admin.auth.admin.deleteUser(a).catch(() => {}); await admin.auth.admin.deleteUser(b).catch(() => {}); }
   });
+
+  it("espelho: a pergunta e a resposta do app vão para os WhatsApps que recebem avisos, e só para eles", async () => {
+    const { mirrorText, mirrorToNumbers } = await import("./mirror");
+    const tag = String(Date.now()).slice(-8);
+    const one = `55119${tag}`, two = `55118${tag}`;
+    const { data } = await admin.auth.admin.createUser({ email: `espelho-${Date.now()}@teste.local`, password: "x".repeat(12), email_confirm: true });
+    const id = data.user!.id;
+    try {
+      const now = new Date().toISOString();
+      await admin.from("channel_links").insert([
+        { user_id: id, channel: "whatsapp", external_id: `+${one}`, verified_at: now, receives_notices: true },
+        { user_id: id, channel: "whatsapp", external_id: `+${two}`, verified_at: now, receives_notices: false },
+      ]);
+      const cards = [{ kind: "transaction", title: "Mercado", value: "-R$ 48,00", meta: "Hoje" }] as never;
+      const before = sent.length;
+      expect(await mirrorToNumbers(id, "gastei 48 no mercado", { text: "Anotado.", cards })).toBe(1);
+      const out = sent.slice(before);
+      expect(out.map((m) => m.number)).toEqual([one]);  // o número com os avisos desligados não recebe
+      expect(out[0].text).toBe("💬 *No app, você:*\ngastei 48 no mercado\n\n🤖 Anotado.\n\n✅ Lançamento: Mercado · -R$ 48,00 · Hoje");
+      // texto enorme é cortado para caber numa mensagem do WhatsApp
+      expect(mirrorText("x".repeat(5000), "ok", []).length).toBeLessThanOrEqual(3800);
+      // sem nenhum número confirmado, não manda nada
+      await admin.from("channel_links").delete().eq("user_id", id);
+      expect(await mirrorToNumbers(id, "oi", { text: "oi", cards: [] })).toBe(0);
+    } finally { await admin.auth.admin.deleteUser(id).catch(() => {}); }
+  });
 });

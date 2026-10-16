@@ -40,10 +40,10 @@ export function SaveStatus({ status }: { status: ReturnType<typeof useSaver>["st
   );
 }
 
-export function Switch({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
+export function Switch({ checked, onChange, label, disabled = false }: { checked: boolean; onChange: (v: boolean) => void; label: string; disabled?: boolean }) {
   return (
-    <button type="button" role="switch" aria-checked={checked} aria-label={label} onClick={() => onChange(!checked)}
-      className={cn("relative h-6 w-10 shrink-0 rounded-full transition-colors", checked ? "bg-accent" : "bg-surface-3")}>
+    <button type="button" role="switch" aria-checked={checked} aria-label={label} disabled={disabled} onClick={() => onChange(!checked)}
+      className={cn("relative h-6 w-10 shrink-0 rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50", checked ? "bg-accent" : "bg-surface-3")}>
       <span aria-hidden className={cn("absolute top-0.5 size-5 rounded-full transition-[left] duration-150", checked ? "left-[18px] bg-on-accent" : "left-0.5 bg-muted")} />
     </button>
   );
@@ -419,6 +419,15 @@ export function AssistantForm({ initial, memories: initialMemories }: { initial:
           <Switch label="Lembrar o que eu conto" checked={settings.memoryEnabled} onChange={(memoryEnabled) => save({ memoryEnabled })} />
         </Row>
         <MemoryList initial={initialMemories} enabled={settings.memoryEnabled} />
+      </Card>
+      <Card className="flex flex-col">
+        <SectionLabel className="mb-1">WhatsApp</SectionLabel>
+        <Row title="Espelhar no WhatsApp o que eu conversar no app"
+          hint={settings.whatsapp?.numbers.some((n) => n.verified)
+            ? "cada pergunta e cada resposta do app também chegam no seu WhatsApp, para as duas conversas ficarem iguais. O celular avisa a cada mensagem, então fica desligado até você ligar"
+            : "vincule um WhatsApp em Configurações para poder ligar"}>
+          <Switch label="Espelhar no WhatsApp o que eu conversar no app" checked={settings.mirrorWhatsapp} disabled={!settings.whatsapp?.numbers.some((n) => n.verified)} onChange={(mirrorWhatsapp) => save({ mirrorWhatsapp })} />
+        </Row>
       </Card>
       <Card className="flex flex-wrap items-center justify-between gap-3">
         <SectionLabel>Aparência</SectionLabel>

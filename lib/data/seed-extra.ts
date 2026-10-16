@@ -191,7 +191,7 @@ export function seedHealth(ctx: { today: string }) {
 export function seedSettings(ctx: { today: string; tz: string }): Settings {
   return {
     name: "Fernanda", email: "voce@exemplo.com.br", timezone: ctx.tz, plan: "trial", planInfo: DEFAULT_PLANS[0], trialEndsOn: addDays(ctx.today, 5),
-    tone: "warm", answerLength: "short", voice: "female", memoryEnabled: true, theme: "dark", briefingTime: "07:00",
+    tone: "warm", answerLength: "short", voice: "female", memoryEnabled: true, mirrorWhatsapp: false, theme: "dark", briefingTime: "07:00",
     channels: { whatsapp: null, telegram: false, email: true, push: true }, calendars: { google: true, outlook: false },
   };
 }

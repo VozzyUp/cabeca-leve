@@ -757,7 +757,7 @@ export async function createSupabaseStore(db: Admin, userId: string, email: stri
           canceledAt: s.canceled_at, cancelProtocol: s.cancel_protocol,
         } : confirming ? { periodEnd: null, renews: false, pastDue: false, confirming: true } : undefined,
         tone: (prof.assistant_tone === "custom" ? "warm" : prof.assistant_tone) as Settings["tone"], answerLength: prof.answer_length as Settings["answerLength"],
-        voice: (prof.assistant_voice === "male" ? "male" : "female"), memoryEnabled: prof.memory_enabled, theme: prof.theme as Settings["theme"],
+        voice: (prof.assistant_voice === "male" ? "male" : "female"), memoryEnabled: prof.memory_enabled, mirrorWhatsapp: !!(prof as { mirror_whatsapp?: boolean }).mirror_whatsapp, theme: prof.theme as Settings["theme"],
         briefingTime: prof.briefing_enabled ? hm(prof.briefing_time) : null,
         channels: { whatsapp: waMain?.number ?? null, whatsappVerified: !!waMain?.verified, telegram: prof.notify_telegram, email: prof.notify_email, push: prof.notify_push },
         whatsapp: { numbers: waRows, limit: whatsappLimit(planInfo) },
@@ -773,6 +773,7 @@ export async function createSupabaseStore(db: Admin, userId: string, email: stri
       if (patch.answerLength !== undefined) row.answer_length = patch.answerLength;
       if (patch.voice !== undefined) row.assistant_voice = patch.voice;
       if (patch.memoryEnabled !== undefined) row.memory_enabled = patch.memoryEnabled;
+      if (patch.mirrorWhatsapp !== undefined) row.mirror_whatsapp = patch.mirrorWhatsapp;
       if (patch.theme !== undefined) row.theme = patch.theme;
       if (patch.onboarded !== undefined) row.onboarded_at = patch.onboarded ? new Date().toISOString() : null;
       if (patch.briefingTime !== undefined) {

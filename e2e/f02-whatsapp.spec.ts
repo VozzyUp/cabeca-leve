@@ -133,3 +133,49 @@ test.describe("F02 e F16 WhatsApp", () => {
   });
 });
 void MOCK;
+
+test.describe("Espelho no WhatsApp", () => {
+  test("ESP-1 ligado: o que se conversa no app chega no WhatsApp; desligado, não; a chave pede um WhatsApp vinculado", async ({ page, user }) => {
+    test.setTimeout(120_000);
+    const number = phone();
+    const mirrored = async () => (await sentTo(number)).filter((t) => t.includes("No app, você:"));
+    const send = async (text: string) => {
+      const box = page.getByLabel("Mensagem para o assistente");
+      await box.fill(text);
+      await box.press("Enter");
+    };
+    const toggle = page.getByRole("switch", { name: "Espelhar no WhatsApp o que eu conversar no app" });
+
+    // sem WhatsApp vinculado a chave fica travada
+    await login(page, user, "/ajustes/assistente");
+    await expect(toggle).toBeDisabled();
+    await expect(page.getByText("vincule um WhatsApp em Configurações para poder ligar")).toBeVisible();
+
+    // com o número confirmado, liga (e fica salvo)
+    await admin.from("channel_links").insert({ user_id: user.id, channel: "whatsapp", external_id: `+${number}`, verified_at: new Date().toISOString() });
+    await page.reload();
+    await expect(toggle).toBeEnabled();
+    await expect(toggle).not.toBeChecked();  // desligado por padrão
+    await toggle.click();
+    await expect.poll(async () => (await admin.from("profiles").select("mirror_whatsapp").eq("user_id", user.id).single()).data?.mirror_whatsapp).toBe(true);
+
+    // conversa no app: a pergunta e a resposta aparecem no WhatsApp
+    await page.goto("/conversa", { waitUntil: "networkidle" });
+    await send("gastei 33 no espelho um");
+    await expect(page.getByRole("article", { name: /Lançamento salvo/ }).first()).toBeVisible();
+    await expect.poll(async () => (await mirrored()).length, { timeout: 20_000 }).toBe(1);
+    const text = (await mirrored())[0];
+    expect(text).toContain("gastei 33 no espelho um");
+    expect(text).toMatch(/🤖[\s\S]*✅ Lançamento: [\s\S]*R\$\s33,00/);
+
+    // desliga: o app continua funcionando e nada mais vai para o WhatsApp
+    await page.goto("/ajustes/assistente", { waitUntil: "networkidle" });
+    await toggle.click();
+    await expect.poll(async () => (await admin.from("profiles").select("mirror_whatsapp").eq("user_id", user.id).single()).data?.mirror_whatsapp).toBe(false);
+    await page.goto("/conversa", { waitUntil: "networkidle" });
+    await send("gastei 44 no espelho dois");
+    await expect(page.getByRole("article", { name: /Lançamento salvo/ }).nth(1)).toBeVisible();
+    await new Promise((r) => setTimeout(r, 3000));
+    expect(await mirrored()).toHaveLength(1);
+  });
+});

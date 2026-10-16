@@ -1,6 +1,8 @@
+import { after } from "next/server";
 import { z } from "zod";
 import { respond } from "@/lib/assistant";
 import { getStore } from "@/lib/data";
+import { mirrorExchange } from "@/lib/whatsapp/mirror";
 
 const Body = z.object({
   clientMessageId: z.string().min(1).max(100),
@@ -17,6 +19,8 @@ export async function POST(request: Request) {
   const store = await getStore();
   try {
     const result = await respond(store, parsed.data.text, { channel: "web", clientMessageId: parsed.data.clientMessageId });
+    // espelho no WhatsApp (se a pessoa ligou): depois de responder, sem atrasar a tela
+    after(() => mirrorExchange({ userText: parsed.data.text, reply: result.reply }));
     if (result.stored === false) {
       // limite de uso: nada foi gravado, mas a pessoa precisa ver a mensagem e o motivo
       const createdAt = new Date().toISOString();

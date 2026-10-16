@@ -1,8 +1,10 @@
+import { after } from "next/server";
 import { respond } from "@/lib/assistant";
 import { agentEnabled } from "@/lib/assistant/agent";
 import { stageOriginal } from "@/lib/documents";
 import { getStore } from "@/lib/data";
 import { ImageError, MAX_IMAGE_BYTES, normalizeImage } from "@/lib/image";
+import { mirrorExchange } from "@/lib/whatsapp/mirror";
 
 // POST /api/chat/image?id=<clientMessageId>&caption=<legenda>: a foto vai no corpo (Content-Type: image/*).
 // Reduz a foto, manda para o assistente e devolve o histórico atualizado, como o /api/chat.
@@ -27,6 +29,7 @@ export async function POST(request: Request) {
   const files = agentEnabled() ? await stageOriginal(store, original, request.headers.get("content-type") ?? "image/jpeg", "foto.jpg") : undefined;
   try {
     const result = await respond(store, caption, { channel: "web", clientMessageId, images: [image], ...(files ? { files } : {}) });
+    after(() => mirrorExchange({ userText: caption ? `📷 ${caption}` : "📷 Foto", reply: result.reply }));  // espelho no WhatsApp, se ligado
     if (result.stored === false) {
       // limite de uso: nada foi gravado, mas a pessoa precisa ver a mensagem e o motivo
       const createdAt = new Date().toISOString();

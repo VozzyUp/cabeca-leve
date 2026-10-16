@@ -225,6 +225,7 @@ export type Settings = {
   answerLength: "short" | "detailed";
   voice: "female" | "male";
   memoryEnabled: boolean;
+  mirrorWhatsapp: boolean;      // o que a pessoa conversa no app também vai para o WhatsApp dela (desligado por padrão)
   theme: "dark" | "light" | "system";
   briefingTime: string | null;
   channels: { whatsapp: string | null; whatsappVerified?: boolean; telegram: boolean; email: boolean; push: boolean };
