@@ -1,4 +1,95 @@
-<h2>Criar uma senha nova</h2>
-<p>Recebemos um pedido para trocar a senha da sua conta no Peraí.</p>
-<p><a href="{{ .ConfirmationURL }}">Criar senha nova</a></p>
-<p>O link vale por 1 hora. Se não foi você, ignore esta mensagem: sua senha continua a mesma.</p>
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="supported-color-schemes" content="light dark">
+<title>Crie uma senha nova · Peraí</title>
+<style>
+  body { margin: 0; padding: 0; width: 100%; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+  table { border-collapse: collapse; }
+  img { border: 0; outline: none; text-decoration: none; }
+  a { color: #b45309; }
+  @media only screen and (max-width: 600px) {
+    .wrap { width: 100% !important; }
+    .pad { padding-left: 22px !important; padding-right: 22px !important; }
+    .h1 { font-size: 24px !important; line-height: 30px !important; }
+  }
+  @media (prefers-color-scheme: dark) {
+    .bg { background-color: #0f0e0d !important; }
+    .card { background-color: #1a1816 !important; border-color: #2e2a26 !important; }
+    .t { color: #f5f3f0 !important; }
+    .b { color: #cfc9c1 !important; }
+    .m { color: #a8a198 !important; }
+    .lnk { color: #fb923c !important; }
+    .rule { border-color: #2e2a26 !important; }
+    .box { background-color: #23201d !important; }
+  }
+</style>
+</head>
+<body class="bg" style="margin:0; padding:0; background-color:#fbfaf8;">
+<!-- texto de prévia (aparece ao lado do assunto na caixa de entrada) -->
+<div style="display:none; font-size:1px; line-height:1px; max-height:0; max-width:0; opacity:0; overflow:hidden; mso-hide:all;">Toque para criar uma senha nova para a sua conta.&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="bg" style="background-color:#fbfaf8;">
+  <tr>
+    <td align="center" style="padding:32px 12px;">
+      <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" class="wrap" style="width:560px; max-width:560px;">
+
+        <!-- marca -->
+        <tr>
+          <td style="padding:0 4px 20px 4px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td valign="middle" style="padding-right:10px;">
+                  <img src="{{ .SiteURL }}/icons/icon-192.png" width="40" height="40" alt="" style="display:block; width:40px; height:40px; border-radius:10px;">
+                </td>
+                <td valign="middle" class="t" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:22px; line-height:26px; font-weight:700; color:#1a1816;">Peraí</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- cartão -->
+        <tr>
+          <td class="card pad" style="background-color:#ffffff; border:1px solid #e8e3dc; border-radius:16px; padding:36px 36px 32px 36px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+            <h1 class="t h1" style="margin:0 0 14px 0; font-size:28px; line-height:34px; font-weight:700; color:#1a1816;">Vamos criar uma senha nova</h1>
+            <p class="b" style="margin:0 0 24px 0; font-size:16px; line-height:25px; color:#3d3833;">Recebemos um pedido para trocar a senha da sua conta no Peraí. Toque no botão e escolha uma senha nova. O link vale por 1 hora.</p>
+
+            <!-- botão -->
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px 0;">
+              <tr>
+                <td align="center" bgcolor="#fb923c" style="border-radius:12px; background-color:#fb923c;">
+                  <a href="{{ .ConfirmationURL }}" target="_blank" style="display:inline-block; padding:15px 30px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:16px; line-height:20px; font-weight:700; color:#1a1816; text-decoration:none; border-radius:12px;">Criar senha nova</a>
+                </td>
+              </tr>
+            </table>
+
+            
+
+            <!-- se o botão não abrir -->
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="rule" style="border-top:1px solid #ece7e0; margin-top:4px;">
+              <tr>
+                <td style="padding-top:20px;">
+                  <p class="m" style="margin:0 0 6px 0; font-size:13px; line-height:20px; color:#6b655d;">O botão não abriu? Copie este endereço e cole no navegador:</p>
+                  <p style="margin:0; font-size:12px; line-height:18px; word-break:break-all;"><a href="{{ .ConfirmationURL }}" class="lnk" target="_blank" style="color:#b45309; text-decoration:underline;">{{ .ConfirmationURL }}</a></p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- rodapé -->
+        <tr>
+          <td class="pad" style="padding:22px 12px 0 12px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+            <p class="m" style="margin:0 0 8px 0; font-size:13px; line-height:20px; color:#6b655d;">Não pediu a troca? Pode ignorar este e-mail: sua senha continua a mesma.</p>
+            <p class="m" style="margin:0; font-size:12px; line-height:18px; color:#6b655d;">Peraí &middot; o assistente no WhatsApp para a cabeça que não para.</p>
+          </td>
+        </tr>
+
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>
