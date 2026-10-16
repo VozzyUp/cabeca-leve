@@ -351,3 +351,12 @@ Paridade 63,2/100; **40 de 40 obrigatórias completas**.
   - `touch-action: manipulation` nos controles (sem zoom de toque duplo), `-webkit-text-size-adjust: 100%` (sem inflar o texto ao girar) e `html { overflow-x: hidden }` com `body { overflow-x: clip }` (Safari antigo sem `clip`).
   - Áreas seguras (`viewport-fit=cover`): a barra de baixo, a caixa de mensagem da conversa e o aviso de lembrete sobem o `safe-area-inset-bottom` (barra do iPhone), e o corpo ganha folga lateral para o entalhe com a tela deitada. `formatDetection` desliga o link automático de telefone.
 - Só foi verificado em Chromium (não há WebKit nesta máquina); o comportamento no iPhone de verdade precisa de um teste real.
+
+## 2026-10-16: tela fixa, sem zoom, igual a um app (iPhone e Android)
+
+- Capturas do iPhone mostraram a página **ampliada e deslocada** (texto cortado nas duas bordas): o zoom que o iPhone dá ao tocar num campo, ou de pinça, deixa a tela assim e não volta sozinho.
+- **Decisão do dono: o zoom deixa de existir**, em qualquer navegador de celular, para o app parecer um app. Troca consciente: travar o zoom tira o recurso de ampliar a tela de quem tem baixa visão (WCAG 1.4.4). Por isso o axe do projeto agora desliga só a regra `meta-viewport` (`e2e/fixtures.ts`), com o motivo no comentário. Se um dia quiser voltar atrás: tirar `maximumScale`, `minimumScale` e `userScalable` de `app/layout.tsx` e religar a regra.
+- `app/layout.tsx`: viewport `width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content` (a escala 1 também impede o zoom automático do iPhone nos campos).
+- `globals.css`, em todo celular (não só instalado): `touch-action: pan-x pan-y` (rola, não dá zoom), `overscroll-behavior: none` (sem quique nem puxar para atualizar), `touch-action: manipulation` nos controles (sem zoom de toque duplo), texto sem inflar ao girar, campos com 16px em tela de toque, folga lateral para o entalhe e `overflow-x` travado.
+- `StandaloneGuard`: em tela de toque, corta o gesto de pinça do iPhone (`gesturestart`/`gesturechange`) e, se a página mesmo assim ficar ampliada ou deslocada (campo, teclado fechando, girar a tela), reescreve o viewport e devolve ao lugar.
+- Testado só em Chromium; o iPhone de verdade precisa ser conferido (apagar o app da Tela de Início e adicionar de novo, para pegar o viewport novo).

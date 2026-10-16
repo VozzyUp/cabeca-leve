@@ -1,13 +1,17 @@
 import { a11y, expect, noHorizontalScroll, test } from "./fixtures";
 
 // App na tela inicial do celular: a tela fica parada (sem arrastar para o lado), o teclado encolhe a página
-// e o zoom segue liberado no navegador (acessibilidade).
-test("INS-1 viewport e rolagem: nada arrasta para o lado e o zoom do navegador continua livre @celular", async ({ page }) => {
+// e não existe zoom (nem de pinça, nem o do iPhone ao tocar num campo).
+test("INS-1 viewport e rolagem: tela fixa, sem zoom e sem arrasto para o lado @celular", async ({ page }) => {
   await page.goto("/entrar", { waitUntil: "networkidle" });
   const viewport = await page.locator('meta[name="viewport"]').getAttribute("content");
   expect(viewport).toContain("width=device-width");
   expect(viewport).toContain("interactive-widget=resizes-content");
-  expect(viewport).not.toMatch(/user-scalable=no|maximum-scale=1(\D|$)/);  // travar o zoom reprova na acessibilidade
+  expect(viewport).toMatch(/user-scalable=no/);
+  expect(viewport).toMatch(/maximum-scale=1(,|$)/);
+  expect(viewport).toMatch(/minimum-scale=1(,|$)/);
+  const touch = await page.evaluate(() => [getComputedStyle(document.documentElement).touchAction, getComputedStyle(document.documentElement).overscrollBehaviorY]);
+  expect(touch).toEqual(["pan-x pan-y", "none"]);
   const overflow = await page.evaluate(() => [getComputedStyle(document.documentElement).overflowX, getComputedStyle(document.body).overflowX]);
   expect(overflow).toEqual(["hidden", "clip"]);
   expect(await noHorizontalScroll(page)).toBe(true);

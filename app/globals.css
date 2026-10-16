@@ -65,29 +65,28 @@ html, body {
 html { overflow-x: hidden; }  /* Safari antigo (sem clip): o html segura o arrasto lateral da janela inteira */
 body { overflow-x: clip; }
 
-/* iPhone: sem inflar o texto ao girar, sem o zoom do toque duplo (o zoom de pinça segue livre no navegador) e com
-   folga nas laterais para o entalhe quando a tela está deitada. */
-html { -webkit-text-size-adjust: 100%; }
-a, button, input, textarea, select, summary, label, [role="button"] { touch-action: manipulation; }
+/* Tela fixa, como um app: sem zoom de pinça nem de toque duplo, sem quique no fim da rolagem, sem "puxar para atualizar",
+   sem arrastar para os lados, sem inflar o texto ao girar e com folga nas laterais para o entalhe (tela deitada). */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  touch-action: pan-x pan-y;
+  overscroll-behavior: none;
+}
 body {
+  overscroll-behavior: none;
+  touch-action: pan-x pan-y;
+  -webkit-tap-highlight-color: transparent;
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
 }
+a, button, input, textarea, select, summary, label, [role="button"] { touch-action: manipulation; }
 
-/* iPhone dá zoom sozinho ao tocar num campo com letra menor que 16px, e a tela fica fora do lugar. Em tela de toque,
+/* O iPhone dá zoom sozinho ao tocar num campo com letra menor que 16px, e a tela fica fora do lugar. Em tela de toque,
    os campos têm 16px (fora da camada do Tailwind, para valer sobre text-sm). */
 @media (hover: none) and (pointer: coarse) {
   input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]), textarea, select {
     font-size: 16px;
-  }
-}
-
-/* App instalado (tela inicial do Android): fica parado como um app. Sem o "puxar para atualizar" nem o quique ao fim
-   da rolagem, sem arrastar para os lados e sem zoom de pinça. No navegador comum o zoom segue livre, por acessibilidade. */
-@media (display-mode: standalone), (display-mode: fullscreen), (display-mode: minimal-ui) {
-  html, body {
-    overscroll-behavior: none;
-    touch-action: pan-x pan-y;
   }
 }
 

@@ -50,7 +50,8 @@ export async function mockCalls(): Promise<Array<{ method: string; url: string; 
 
 // Acessibilidade WCAG 2.1 A e AA. Devolve a lista legível para a mensagem do teste falhar clara.
 export async function a11y(page: Page) {
-  const r = await new AxeBuilder({ page: page as never }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
+  // meta-viewport desligada de propósito: o app trava o zoom para parecer um app (decisão do dono, ver build-log)
+  const r = await new AxeBuilder({ page: page as never }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).disableRules(["meta-viewport"]).analyze();
   return r.violations.map((v) => `${v.id} (${v.impact}): ${v.help} → ${v.nodes.slice(0, 3).map((n) => n.target.join(" ")).join(" | ")}`);
 }
 

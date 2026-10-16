@@ -18,9 +18,12 @@ export const metadata: Metadata = {
   formatDetection: { telephone: false },  // o iPhone não transforma números em links e muda o layout
 };
 
-// O teclado do celular encolhe a página (resizes-content) em vez de empurrá-la para o lado. O zoom de pinça continua
-// liberado no navegador (acessibilidade); só o app instalado o trava, em globals.css.
-export const viewport: Viewport = { themeColor: BRAND.color, width: "device-width", initialScale: 1, viewportFit: "cover", interactiveWidget: "resizes-content" };
+// Tela fixa como a de um app: sem zoom (nem de pinça, nem o que o iPhone dá ao tocar num campo) e o teclado encolhe a
+// página (resizes-content) em vez de empurrá-la. Decisão do dono: parecer app vale mais que o zoom do navegador.
+export const viewport: Viewport = {
+  themeColor: BRAND.color, width: "device-width", initialScale: 1, minimumScale: 1, maximumScale: 1, userScalable: false,
+  viewportFit: "cover", interactiveWidget: "resizes-content",
+};
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
