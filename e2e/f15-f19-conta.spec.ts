@@ -28,13 +28,65 @@ test.describe("F15 entrar", () => {
     await page.getByLabel("Senha").fill(PASSWORD);
     await page.getByRole("button", { name: "Criar conta" }).last().click();
     await expect(page.getByText("Quase lá")).toBeVisible();
-    await page.goto(await lastLinkTo(email, /verify/));
+    await page.goto(await lastLinkTo(email, /auth\/confirmar/));
+    await page.getByRole("button", { name: "Confirmar meu e-mail" }).click();
     await page.waitForURL("**/conversa");
     await page.goto("/ajustes");
     await expect(page.getByText(/Teste grátis até/)).toBeVisible();
     const { data } = await admin.auth.admin.listUsers();
     const id = data.users.find((u) => u.email === email)?.id;
     if (id) await admin.auth.admin.deleteUser(id);
+  });
+
+  test("F15-H1b o link do e-mail abre em outro navegador e só gasta no toque do botão", async ({ page, browser }) => {
+    const email = `outro-${Date.now()}@exemplo.com.br`;
+    await page.goto("/entrar?modo=criar");
+    await page.getByLabel("Seu nome").fill("Teste Outro Navegador");
+    await page.getByLabel("E-mail").fill(email);
+    await page.getByLabel("Senha").fill(PASSWORD);
+    await page.getByRole("button", { name: "Criar conta" }).last().click();
+    await expect(page.getByText("Quase lá")).toBeVisible();
+    const link = await lastLinkTo(email, /auth\/confirmar/);
+    // um leitor de links só faz GET: não pode gastar o link
+    await fetch(link);
+    await fetch(link.replace("/auth/confirmar", "/auth/confirm"));
+    // aparelho novo, sem o cookie de quem se cadastrou
+    const other = await browser.newContext();
+    const tab = await other.newPage();
+    await tab.goto(link);
+    await tab.getByRole("button", { name: "Confirmar meu e-mail" }).click();
+    await tab.waitForURL("**/conversa");
+    // gastou: de novo, link inválido com opção de reenviar
+    const again = await browser.newContext();
+    const tab2 = await again.newPage();
+    await tab2.goto(link);
+    await tab2.getByRole("button", { name: "Confirmar meu e-mail" }).click();
+    await tab2.waitForURL(/link=invalido/);
+    await expect(tab2.getByText("Esse link expirou ou já foi usado.")).toBeVisible();
+    await expect(tab2.getByRole("button", { name: "Reenviar o e-mail de confirmação" })).toBeVisible();
+    await other.close(); await again.close();
+    const { data } = await admin.auth.admin.listUsers();
+    const id = data.users.find((u) => u.email === email)?.id;
+    if (id) await admin.auth.admin.deleteUser(id);
+  });
+
+  test("F15-H3 esqueci a senha: o link do e-mail leva à senha nova", async ({ page, user }) => {
+    await page.goto("/entrar?modo=senha");
+    await page.getByLabel("E-mail").fill(user.email);
+    await page.getByRole("button", { name: "Mandar o link" }).click();
+    await expect(page.getByText(/mandamos um link para criar uma senha nova/)).toBeVisible();
+    await page.goto(await lastLinkTo(user.email, /auth\/confirmar/));
+    await page.getByRole("button", { name: "Criar uma senha nova" }).click();
+    await page.waitForURL("**/entrar/nova-senha");
+    await page.getByLabel("Senha nova").fill("outra-senha-forte-123");
+    await page.getByRole("button", { name: "Salvar a senha" }).click();
+    await page.waitForURL("**/conversa");
+  });
+
+  test("F15-N0 link sem código vai para a tela de entrar com aviso", async ({ page }) => {
+    await page.goto("/auth/confirmar?token_hash=curto&type=email");
+    await expect(page).toHaveURL(/link=invalido/);
+    await expect(page.getByRole("button", { name: "Reenviar o e-mail de confirmação" })).toBeVisible();
   });
 
   test("F15-N1 senha errada explica sem dizer se o e-mail existe", async ({ page, user }) => {

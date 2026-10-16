@@ -413,3 +413,11 @@ Paridade 63,2/100; **40 de 40 obrigatórias completas**.
 - O WhatsApp não deixa o app escrever "como a pessoa", então a pergunta vai citada dentro de uma mensagem do assistente. O webhook já ignora mensagens enviadas pelo app, então não há eco.
 - **Limites**: na API oficial da Meta o espelho só vai dentro da janela de 24 h do número (fora dela exigiria modelo pago, e o espelho pula o número em vez de gastar); na UAZAPI (não oficial) vai sempre, e dobrar o volume de envio aumenta o risco de o número ser bloqueado, por isso começa desligado. Respostas com arquivos (documentos) levam o texto, não o arquivo.
 - Testes: integração (só os números que recebem avisos, formato exato, corte, sem número não manda) e e2e `ESP-1` (chave travada sem WhatsApp, liga, conversa no app chega no WhatsApp, desliga e nada mais vai).
+
+## Link do e-mail caía em "link inválido"
+
+- Causa: o modelo do Supabase usava `{{ .ConfirmationURL }}` (fluxo PKCE), que só funciona no mesmo navegador que fez o cadastro (guarda um cookie de verificação) e gasta o link no primeiro acesso, inclusive o do leitor de links do provedor de e-mail. Cadastro no celular e e-mail aberto no computador, ou no app de e-mail, dava `/entrar?link=invalido`.
+- Correção: o e-mail agora leva a `/auth/confirmar?token_hash=...&type=...`, uma página com botão; só o toque (POST em `/auth/confirm`) valida o link e abre a sessão. GET nunca gasta o link. Links antigos (`?code=`) continuam aceitos. O destino do cadastro (ex.: plano escolhido) vai em `user_metadata.next`.
+- Tela de entrar: "Reenviar o e-mail de confirmação" quando o link é inválido ou o e-mail não foi confirmado (`resendConfirmation`, mesma resposta exista a conta ou não).
+- Produção: colar de novo os três modelos de `supabase/templates/` no painel (ver `replica/launch/email-templates.md`).
+- Testes: F15-H1 (confirmar pelo botão), F15-H1b (outro navegador, GET não gasta, segundo uso → inválido com reenvio), F15-H3 (esqueci a senha), F15-N0.

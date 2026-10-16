@@ -34,10 +34,20 @@ export async function signUp(input: { name: string; email: string; password: str
   const next = input.plan && /^[a-z][a-z0-9_-]{1,31}$/.test(input.plan) ? `/planos?plano=${input.plan}` : "/conversa";
   const { error } = await supabase.auth.signUp({
     email: parsed.data.email, password: parsed.data.password,
-    options: { data: { name: parsed.data.name }, emailRedirectTo: `${site()}/auth/confirm?next=${encodeURIComponent(next)}` },
+    options: { data: { name: parsed.data.name, next }, emailRedirectTo: `${site()}/auth/confirm?next=${encodeURIComponent(next)}` },
   });
   // e-mail já cadastrado não vira erro: a resposta é a mesma (o Supabase não reenvia nada)
   return error ? { ok: false, error: friendly(error.message) } : { ok: true };
+}
+
+// Reenvia o link de confirmação (link vencido, gasto ou e-mail que não chegou). A resposta é a mesma exista a conta ou não.
+export async function resendConfirmation(input: { email: string }): Promise<Result> {
+  const parsed = email.safeParse(input.email);
+  if (!parsed.success) return { ok: false, error: "Confira o e-mail." };
+  const supabase = await createSessionClient();
+  const { error } = await supabase.auth.resend({ type: "signup", email: parsed.data, options: { emailRedirectTo: `${site()}/auth/confirm?next=/conversa` } });
+  if (error && /rate limit|too many|seconds/i.test(error.message)) return { ok: false, error: "Espere um minuto antes de pedir outro e-mail." };
+  return { ok: true };
 }
 
 export async function requestPasswordReset(input: { email: string }): Promise<Result> {

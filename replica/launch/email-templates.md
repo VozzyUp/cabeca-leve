@@ -12,7 +12,7 @@ Passo a passo: abra o modelo, troque a aba para **Source**, apague o conteúdo, 
 
 ## O que cada modelo usa
 
-- `{{ .ConfirmationURL }}`: o link do botão (e o endereço de reserva embaixo). Não mude esse trecho.
+- `{{ .SiteURL }}/auth/confirmar?token_hash={{ .TokenHash }}&type=...`: o link do botão (e o endereço de reserva embaixo). Não mude esse trecho. Ele leva a uma página do app com um botão; só o toque nesse botão gasta o link. Por isso o link funciona abrindo o e-mail em outro aparelho ou navegador, e o leitor de links do provedor de e-mail não o "queima". (O `{{ .ConfirmationURL }}` padrão usa o fluxo PKCE, que só funciona no mesmo navegador do cadastro, e deu "link inválido".)
 - `{{ .SiteURL }}`: o **Site URL** de Authentication > URL Configuration. O ícone do cabeçalho vem de `{{ .SiteURL }}/icons/icon-192.png`, então o Site URL precisa ser `https://perai.vozzyup.com.br`.
 - `{{ .Email }}` (confirmação) e `{{ .NewEmail }}` (troca de e-mail).
 

@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { requestPasswordReset, signIn, signUp, updatePassword } from "@/app/auth-actions";
+import { requestPasswordReset, resendConfirmation, signIn, signUp, updatePassword } from "@/app/auth-actions";
 import { WHATSAPP_PROMISE } from "@/lib/whatsapp/promise";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -53,6 +53,17 @@ export function SignIn({ initialMode, notice, demo, next, plan }: {
       else { router.push(mode === "newPassword" ? "/conversa" : next); router.refresh(); }
     });
   }
+  const [resent, setResent] = useState<string | null>(null);
+  const canResend = mode === "signin" && !sent && (!!notice?.startsWith("Esse link") || !!serverError?.startsWith("Confirme o e-mail"));
+  function resend() {
+    const email = form.email.trim();
+    if (!EMAIL.test(email)) { setErrors({ ...errors, email: "Digite o e-mail do cadastro para reenviar." }); return; }
+    setErrors({});
+    start(async () => {
+      const r = await resendConfirmation({ email });
+      setResent(r.ok ? `Se existir uma conta ainda não confirmada com ${email}, mandamos um link novo. Confira também o spam.` : r.error);
+    });
+  }
   const change = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, [k]: e.target.value });
   const go = (m: Mode) => { setMode(m); setErrors({}); setServerError(null); };
 
@@ -85,7 +96,9 @@ export function SignIn({ initialMode, notice, demo, next, plan }: {
               value={form.password} onChange={change("password")} error={errors.password} hint={mode === "signin" ? undefined : "Pelo menos 8 caracteres."} />
           )}
           {serverError && <p role="alert" className="text-sm text-danger">{serverError}</p>}
+          {resent && <p role="status" className="text-sm text-body">{resent}</p>}
           <Button type="submit" size="lg" loading={pending}>{SUBMIT[mode]}</Button>
+          {canResend && <button type="button" onClick={resend} disabled={pending} className="text-sm font-medium text-accent hover:underline">Reenviar o e-mail de confirmação</button>}
           {mode === "signup" && <p className="text-xs text-muted">{WHATSAPP_PROMISE}</p>}
           {mode === "signup" && <p className="text-xs text-muted">Ao criar a conta, você concorda com os <Link href="/termos" className="underline">Termos de uso</Link> e a <Link href="/privacidade" className="underline">Política de privacidade</Link>.</p>}
           {mode === "signin" && <button type="button" onClick={() => go("reset")} className="text-sm font-medium text-accent hover:underline">Esqueci a senha</button>}
