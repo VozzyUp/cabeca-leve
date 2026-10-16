@@ -67,6 +67,35 @@ test.describe("Navegação e configuração inicial", () => {
     await expect(page.getByRole("dialog").getByLabel("Como quer que eu chame você?")).toHaveValue("Ana Clara");
   });
 
+  test("ONB-H2 WhatsApp na configuração inicial: só continua depois de vincular (ou de pular)", async ({ page, user }) => {
+    test.setTimeout(90_000);
+    const number = `55119${String(Date.now()).slice(-8)}`;
+    await admin.from("profiles").update({ onboarded_at: null }).eq("user_id", user.id);
+    await login(page, user);
+    const dialog = page.getByRole("dialog");
+    await dialog.getByLabel("Como quer que eu chame você?").fill("Bia");
+    await dialog.getByRole("button", { name: "Continuar" }).click();
+    await expect(dialog.getByRole("heading", { name: "Fale comigo pelo WhatsApp" })).toBeVisible();
+    // digitar o número não basta: não há Continuar, e Vincular é o botão principal
+    await dialog.getByLabel("Seu número de WhatsApp").fill(number.slice(2));
+    await expect(dialog.getByRole("button", { name: "Continuar" })).toHaveCount(0);
+    await expect(dialog.getByRole("button", { name: "Pular por agora" })).toBeVisible();
+    await dialog.getByRole("button", { name: "Vincular" }).click();
+    const status = dialog.getByRole("status").filter({ hasText: "mande este código" });
+    await expect(status).toBeVisible();
+    await expect(dialog.getByRole("button", { name: "Continuar" })).toHaveCount(0);  // com o código na tela, ainda falta mandar
+    // o código chega pelo WhatsApp: a janela percebe e libera o Continuar
+    const code = (await status.locator(".font-mono").textContent())!.trim();
+    const res = await fetch("http://localhost:3000/api/webhooks/whatsapp?secret=segredo-e2e", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
+      EventType: "messages", token: "token-e2e",
+      message: { messageid: `onb-${number}`, chatid: `${number}@s.whatsapp.net`, sender_pn: `${number}@s.whatsapp.net`, fromMe: false, isGroup: false, wasSentByApi: false, messageType: "Conversation", text: `Meu código: ${code}`, messageTimestamp: Date.now() },
+    }) });
+    expect(res.status).toBe(200);
+    await expect(dialog.getByRole("status").filter({ hasText: "WhatsApp vinculado" }).first()).toBeVisible({ timeout: 20_000 });
+    await dialog.getByRole("button", { name: "Continuar" }).click();
+    await expect(dialog.getByRole("heading", { name: "Como você quer ser avisado" })).toBeVisible();
+  });
+
   test("ONB-E1 fechar no primeiro passo conta como feito", async ({ page, user }) => {
     await admin.from("profiles").update({ onboarded_at: null }).eq("user_id", user.id);
     await login(page, user);

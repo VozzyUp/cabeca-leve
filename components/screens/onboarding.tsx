@@ -1,14 +1,15 @@
 "use client";
 import { Check, MessageCircle } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useCallback, useState, useTransition } from "react";
 import { updateSettings } from "@/app/actions";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/components/ui/cn";
 import { Dialog } from "@/components/ui/dialog";
 import { Field } from "@/components/ui/field";
 import type { Settings } from "@/lib/data/types";
-import { PushSwitch, Row, Switch, ToneChooser, WhatsAppLinkForm } from "./settings-forms";
+import type { linkWhatsApp } from "@/app/actions";
+import { LinkCode, PushSwitch, Row, Switch, ToneChooser, WhatsAppLinkForm } from "./settings-forms";
 
 const TITLES = ["Boas-vindas! Vamos deixar tudo do seu jeito", "Fale comigo pelo WhatsApp", "Como você quer ser avisado", "Tudo pronto"];
 const EXAMPLES = ["gastei 35 na padaria", "me lembra de pagar a luz amanhã às 9h", "quero ler 20 minutos todo dia às 21h", "monta um treino de 3 dias pra mim"];
@@ -29,6 +30,10 @@ export function Onboarding({ initial }: { initial: Settings }) {
   const [briefing, setBriefing] = useState(initial.briefingTime);
   const [saving, start] = useTransition();
   const [error, setError] = useState(false);
+  // vincular o WhatsApp: só dá para continuar depois de confirmado; sem isso, o jeito de seguir é "Pular por agora"
+  const [link, setLink] = useState<Awaited<ReturnType<typeof linkWhatsApp>>>(null);
+  const [linked, setLinked] = useState(initial.channels.whatsappVerified === true);
+  const onLinked = useCallback(() => setLinked(true), []);
 
   function save(patch: Partial<Settings>, then?: () => void) {
     setError(false);
@@ -65,8 +70,12 @@ export function Onboarding({ initial }: { initial: Settings }) {
       {step === 1 && (
         <div className="flex flex-col gap-4">
           <p className="text-sm text-body">Com o WhatsApp vinculado, você anota gastos, cria lembretes e recebe os avisos por lá, com botões para concluir ou adiar.</p>
-          <WhatsAppLinkForm channels={channels} label="Seu número de WhatsApp" owner={name.trim() || null} />
-          <Footer onNext={() => setStep(2)} onSkip={() => setStep(2)} skipLabel="Pular por agora" nextLabel={channels.whatsapp ? "Continuar" : undefined} />
+          <WhatsAppLinkForm channels={channels} label="Seu número de WhatsApp" owner={name.trim() || null} primary={!linked}
+            onResult={(r) => { setLink(r); if (r && "alreadyLinked" in r && r.alreadyLinked) setLinked(true); }} />
+          <LinkCode result={link} onLinked={onLinked} />
+          {linked && <p role="status" className="text-sm font-medium text-success">✓ WhatsApp vinculado.</p>}
+          {!linked && <p className="text-xs text-muted">{link && "code" in link && link.code ? "Mande o código para o assistente; assim que ele chegar, o botão Continuar aparece." : "Digite o número e toque em Vincular. O código chega só depois que você manda ele pelo WhatsApp."}</p>}
+          <Footer onNext={() => setStep(2)} onSkip={() => setStep(2)} skipLabel="Pular por agora" hideNext={!linked} />
         </div>
       )}
 
@@ -108,15 +117,15 @@ export function Onboarding({ initial }: { initial: Settings }) {
   );
 }
 
-function Footer({ saving, error, disabled, onNext, onSkip, nextLabel = "Continuar", skipLabel }: {
-  saving?: boolean; error?: boolean; disabled?: boolean; onNext?: () => void; onSkip?: () => void; nextLabel?: string; skipLabel?: string;
+function Footer({ saving, error, disabled, hideNext, onNext, onSkip, nextLabel = "Continuar", skipLabel }: {
+  saving?: boolean; error?: boolean; disabled?: boolean; hideNext?: boolean; onNext?: () => void; onSkip?: () => void; nextLabel?: string; skipLabel?: string;
 }) {
   return (
     <div className="flex flex-col gap-2">
       {error && <p role="alert" className="text-xs text-danger">Não deu para salvar. Tente de novo.</p>}
       <div className="flex flex-wrap items-center justify-between gap-2">
         {onSkip ? <Button variant="ghost" onClick={onSkip}>{skipLabel}</Button> : <span />}
-        <Button type={onNext ? "button" : "submit"} onClick={onNext} loading={saving} disabled={disabled}>{nextLabel}</Button>
+        {!hideNext && <Button type={onNext ? "button" : "submit"} onClick={onNext} loading={saving} disabled={disabled}>{nextLabel}</Button>}
       </div>
     </div>
   );

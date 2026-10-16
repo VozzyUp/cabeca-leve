@@ -2,7 +2,7 @@
 import { Download, Play, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
-import { clearMemories, deleteAccount, deleteMemory, exportData, linkWhatsApp as startWhatsAppLink, testNotice, unlinkWhatsApp, updateSettings, updateWhatsApp, verifiedWhatsAppCount } from "@/app/actions";
+import { clearMemories, deleteAccount, deleteMemory, exportData, linkWhatsApp as startWhatsAppLink, testNotice, unlinkWhatsApp, updateSettings, updateWhatsApp, isWhatsAppVerified } from "@/app/actions";
 import { signOut } from "@/app/auth-actions";
 import { isIos, pushAvailability, subscribePush, unsubscribePush, type PushAvailability } from "@/lib/push-client";
 import { Button } from "@/components/ui/button";
@@ -75,27 +75,26 @@ const showPhone = (e164: string) => {
 };
 
 // Código para confirmar o número, com o link que abre o WhatsApp já com a mensagem
-function LinkCode({ result }: { result: LinkResult }) {
+export function LinkCode({ result, onLinked }: { result: LinkResult; onLinked?: () => void }) {
   const router = useRouter();
   const code = result && !("limitReached" in result) ? result.code : null;
+  const number = result && !("limitReached" in result) ? result.number : null;
   const [linked, setLinked] = useState(false);
-  // espera o código chegar pelo WhatsApp: confere a cada 3 s (por até 30 min, a validade do código) e avisa quando vincula
+  // espera o código chegar pelo WhatsApp: confere a cada 3 s (por até 30 min, a validade do código) se ESTE número já foi confirmado
   useEffect(() => {
-    if (!code) return;
-    let stop = false, baseline: number | null = null;
+    if (!code || !number) return;
+    let stop = false;
     const tick = async () => {
       try {
-        const n = await verifiedWhatsAppCount();
-        if (stop) return;
-        if (baseline === null) baseline = n;
-        else if (n > baseline) { setLinked(true); router.refresh(); stop = true; clearInterval(timer); }
+        if (stop || !(await isWhatsAppVerified(number)) || stop) return;
+        stop = true; clearInterval(timer); setLinked(true); onLinked?.(); router.refresh();
       } catch { /* sem conexão: tenta de novo no próximo ciclo */ }
     };
     const timer = setInterval(tick, 3000);
     const giveUp = setTimeout(() => { stop = true; clearInterval(timer); }, 30 * 60_000);
     tick();
     return () => { stop = true; clearInterval(timer); clearTimeout(giveUp); };
-  }, [code, router]);
+  }, [code, number, router, onLinked]);
   if (!result || "limitReached" in result || !result.code) return null;
   if (linked) return <p role="status" className="rounded-md bg-surface-2 p-3 text-sm font-medium text-success">✓ WhatsApp vinculado! Pode mandar o que quiser por lá.</p>;
   return (
@@ -113,8 +112,8 @@ function LinkCode({ result }: { result: LinkResult }) {
 
 // Vincular um WhatsApp: número (e, na conta dividida, o nome de quem usa) e o código de confirmação.
 // Usado em Configurações e na configuração inicial.
-export function WhatsAppLinkForm({ channels, label = "WhatsApp", owner, askName = false, onDone, onResult }: {
-  channels?: Settings["channels"]; label?: string; owner?: string | null; askName?: boolean; onDone?: () => void;
+export function WhatsAppLinkForm({ channels, label = "WhatsApp", owner, askName = false, primary = false, onDone, onResult }: {
+  channels?: Settings["channels"]; label?: string; owner?: string | null; askName?: boolean; primary?: boolean; onDone?: () => void;
   onResult?: (r: LinkResult) => void;  // quem chama mostra o código (o formulário some quando a lista atualiza)
 }) {
   const router = useRouter();
@@ -148,7 +147,7 @@ export function WhatsAppLinkForm({ channels, label = "WhatsApp", owner, askName 
       <div className="flex items-end gap-3">
         <Field label={label} type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="11 99999-0000"
           error={phoneError ?? undefined} className="flex-1" hint={hint} />
-        <Button type="submit" variant="secondary" className="mb-6" loading={linking}>{!askName && channels?.whatsapp ? "Trocar" : "Vincular"}</Button>
+        <Button type="submit" variant={primary ? "primary" : "secondary"} className="mb-6" loading={linking}>{!askName && channels?.whatsapp ? "Trocar" : "Vincular"}</Button>
       </div>
       {result && !("limitReached" in result) && result.alreadyLinked && <p role="status" className="text-sm text-body">Esse número já está vinculado. Nome atualizado.</p>}
       {!onResult && <LinkCode result={result} />}

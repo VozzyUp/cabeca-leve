@@ -375,3 +375,11 @@ Paridade 63,2/100; **40 de 40 obrigatórias completas**.
 - A resposta no WhatsApp para um código que não confere deixou de ser o aviso genérico: diz que recebeu o código, mostra o final do número de quem mandou e orienta a conferir o número digitado e usar o código mais recente (cada toque em Vincular invalida o anterior). Não revela se o código existe para outro número.
 - Não afrouxei a regra (código + número exato): quem vir o código na tela não pode ligar outro número à conta.
 - Testes: `F16-N1` confere o número na tela e a resposta nova; `DIA-1` repete até ver o próprio sinal (o painel mostra o último sinal do sistema e outros testes mandam avisos ao mesmo tempo).
+
+## 2026-10-16: configuração inicial não deixa passar sem vincular o WhatsApp
+
+- Relato: na configuração inicial, depois de digitar o telefone, a janela "passava direto" sem pedir para vincular. Causa: o botão grande **Continuar** já aparecia quando a conta tinha algum número guardado (inclusive um pendente de tentativa anterior), enquanto **Vincular** era o botão pequeno e secundário. Tocar no grande pulava o passo.
+- Agora, no passo do WhatsApp: **Vincular** é o botão principal; **Continuar** só existe depois que o número está confirmado (aparece "✓ WhatsApp vinculado."); o jeito de seguir sem vincular é **Pular por agora**, explícito. Com o código na tela, um texto diz "mande o código; assim que ele chegar, o botão Continuar aparece".
+- Corrigi uma corrida na espera do código: a tela comparava a quantidade de números confirmados com a de quando abriu, e se o código chegasse antes da primeira conferência (lento no primeiro uso), nunca percebia. Agora ela pergunta se **este número** já está confirmado (`isWhatsAppVerified`, aceita com e sem o 9 depois do DDD). Vale também para Configurações.
+- O mesmo passo serve para "Refazer a configuração inicial" no menu da conta.
+- Teste novo `ONB-H2`: sem Continuar ao digitar o número nem com o código na tela; o código chega pelo webhook e a janela libera o Continuar sozinha.

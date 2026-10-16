@@ -8,6 +8,7 @@ import { FOLDER_EXISTS } from "@/lib/data/store";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { currentUser, getAdmin } from "@/lib/supabase/server";
 import { LinkLimitError, startLink } from "@/lib/whatsapp/link";
+import { phoneVariants } from "@/lib/whatsapp/phone";
 import { whatsappLimit } from "@/lib/limits";
 import { answerTicket, isSupportAdmin } from "@/lib/support";
 import { sendTestNotice } from "@/lib/deliveries";
@@ -221,10 +222,12 @@ export async function linkWhatsApp(number: string, label?: string | null) {
   }
 }
 
-// Quantos WhatsApps da conta já estão confirmados (a tela espera o código chegar e avisa quando vincula)
-export async function verifiedWhatsAppCount() {
+// Este número da conta já está confirmado? (a tela espera o código chegar e avisa quando vincula)
+// Compara com e sem o 9 depois do DDD: o WhatsApp às vezes confirma sem ele.
+export async function isWhatsAppVerified(number: string) {
+  const wanted = new Set(phoneVariants(z.string().max(20).parse(number)));
   const { whatsapp } = await (await getStore({ allowLocked: true })).getSettings();
-  return (whatsapp?.numbers ?? []).filter((n) => n.verified).length;
+  return (whatsapp?.numbers ?? []).some((n) => n.verified && phoneVariants(n.number).some((v) => wanted.has(v)));
 }
 
 // Nome de quem usa o número e se ele recebe os avisos (lembretes, resumo, suporte)
