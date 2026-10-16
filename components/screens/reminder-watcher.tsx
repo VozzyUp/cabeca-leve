@@ -52,7 +52,7 @@ export function ReminderWatcher({ serverDelivery = false }: { serverDelivery?: b
   }, [serverDelivery]);
 
   return (
-    <div className="fixed bottom-24 right-4 z-20 flex flex-col items-end gap-2 lg:bottom-6">
+    <div className="fixed bottom-[calc(6rem+env(safe-area-inset-bottom))] right-4 z-20 flex flex-col items-end gap-2 lg:bottom-6">
       {permission === "default" && !serverDelivery && (
         <Toast action={<Button size="sm" variant="ghost" onClick={async () => setAnswered(await Notification.requestPermission())}>Ativar</Button>}>
           Quer receber os lembretes como notificação?

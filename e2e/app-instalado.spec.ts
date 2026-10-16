@@ -9,11 +9,15 @@ test("INS-1 viewport e rolagem: nada arrasta para o lado e o zoom do navegador c
   expect(viewport).toContain("interactive-widget=resizes-content");
   expect(viewport).not.toMatch(/user-scalable=no|maximum-scale=1(\D|$)/);  // travar o zoom reprova na acessibilidade
   const overflow = await page.evaluate(() => [getComputedStyle(document.documentElement).overflowX, getComputedStyle(document.body).overflowX]);
-  expect(overflow).toEqual(["clip", "clip"]);
+  expect(overflow).toEqual(["hidden", "clip"]);
   expect(await noHorizontalScroll(page)).toBe(true);
   // tentar empurrar a página para o lado não move nada
   await page.evaluate(() => window.scrollTo(200, 0));
   expect(await page.evaluate(() => window.scrollX)).toBe(0);
+  // iPhone dá zoom ao tocar num campo com letra menor que 16px: em tela de toque os campos têm 16px
+  if (test.info().project.name === "celular") {
+    expect(await page.getByLabel("E-mail").evaluate((el) => getComputedStyle(el).fontSize)).toBe("16px");
+  }
   expect(await a11y(page)).toEqual([]);
 });
 

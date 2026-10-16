@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import Script from "next/script";
+import { StandaloneGuard } from "@/components/standalone-guard";
 import { BRAND } from "@/lib/brand";
 import "./globals.css";
 
@@ -14,6 +15,7 @@ export const metadata: Metadata = {
   icons: { icon: "/icon.svg", apple: "/icons/apple-touch-icon.png" },
   // no iPhone, abre como app (sem a barra do Safari) quando adicionado à Tela de Início
   appleWebApp: { capable: true, title: BRAND.name, statusBarStyle: "black" },
+  formatDetection: { telephone: false },  // o iPhone não transforma números em links e muda o layout
 };
 
 // O teclado do celular encolhe a página (resizes-content) em vez de empurrá-la para o lado. O zoom de pinça continua
@@ -25,6 +27,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="pt-BR" className={`${inter.variable} ${jetbrains.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col font-sans">
         {children}
+        <StandaloneGuard />
         {/* valores públicos do ambiente; o Next põe no <head>, antes de qualquer script do app (lib/public-env.ts) */}
         <Script src="/env.js" strategy="beforeInteractive" />
       </body>

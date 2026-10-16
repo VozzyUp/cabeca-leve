@@ -342,3 +342,12 @@ Paridade 63,2/100; **40 de 40 obrigatórias completas**.
 - O zoom do navegador comum **continua livre**: travar com `user-scalable=no` reprova na acessibilidade (WCAG 1.4.4) e na varredura axe do projeto, então o zoom só é travado no app instalado.
 - Não travei a orientação no manifesto: celular em pé já é o uso normal, e travar atrapalharia tablet e dobrável.
 - Teste `e2e/app-instalado.spec.ts` (viewport, rolagem lateral e manifesto).
+
+## 2026-10-16: o mesmo no iPhone
+
+- O iPhone (Safari e app na Tela de Início) ignora `touch-action` para o zoom de pinça e dá zoom sozinho ao tocar num campo com letra menor que 16px, que era o jeito mais comum de a tela "sair do lugar". Mudanças:
+  - Campos de texto com 16px em tela de toque (`globals.css`, fora da camada do Tailwind para valer sobre `text-sm`).
+  - `StandaloneGuard` (`components/standalone-guard.tsx`): só com o app instalado, corta o gesto de pinça do iPhone (`gesturestart`) e, quando o teclado fecha e a página fica deslocada para o lado, devolve ao lugar. No navegador comum o zoom segue livre.
+  - `touch-action: manipulation` nos controles (sem zoom de toque duplo), `-webkit-text-size-adjust: 100%` (sem inflar o texto ao girar) e `html { overflow-x: hidden }` com `body { overflow-x: clip }` (Safari antigo sem `clip`).
+  - Áreas seguras (`viewport-fit=cover`): a barra de baixo, a caixa de mensagem da conversa e o aviso de lembrete sobem o `safe-area-inset-bottom` (barra do iPhone), e o corpo ganha folga lateral para o entalhe com a tela deitada. `formatDetection` desliga o link automático de telefone.
+- Só foi verificado em Chromium (não há WebKit nesta máquina); o comportamento no iPhone de verdade precisa de um teste real.

@@ -27,11 +27,11 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       <ThemeSync theme={settings.theme} />
       {user && !locked && <RealtimeSync userId={user.id} />}
       {!locked && <div className="hidden lg:block"><NavRail isTeam={isTeam} /></div>}
-      <main className="mx-auto flex w-full max-w-[1120px] flex-1 flex-col px-4 pb-28 lg:px-8 lg:pb-10">
+      <main className="mx-auto flex w-full max-w-[1120px] flex-1 flex-col px-4 pb-[calc(7rem+env(safe-area-inset-bottom))] lg:px-8 lg:pb-10">
         <TopBar unread={unread} name={settings.name} email={settings.email} theme={settings.theme} canSignOut={configured} isTeam={isTeam} locked={locked} />
         {children}
       </main>
-      {!locked && <div className="fixed inset-x-4 bottom-4 z-10 lg:hidden"><BottomNav /></div>}
+      {!locked && <div className="fixed inset-x-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-10 lg:hidden"><BottomNav /></div>}
       {!locked && <ReminderWatcher serverDelivery={configured} />}
       {configured && !locked && <PushKeeper enabled={settings.channels.push} />}
       {configured && !locked && <Suspense><Onboarding initial={settings} /></Suspense>}

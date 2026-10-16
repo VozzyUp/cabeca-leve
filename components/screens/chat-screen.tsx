@@ -195,7 +195,7 @@ export function ChatScreen() {
         {audioError && <p role="alert" className="text-sm text-danger">{audioError}</p>}
         <div ref={bottom} className="scroll-mb-40 lg:scroll-mb-28" />
       </div>
-      <div className="sticky bottom-20 -mx-4 bg-bg px-4 pb-4 pt-2 lg:bottom-0 lg:mx-0 lg:px-0 lg:pb-6">
+      <div className="sticky bottom-[calc(5rem+env(safe-area-inset-bottom))] -mx-4 bg-bg px-4 pb-4 pt-2 lg:bottom-0 lg:mx-0 lg:px-0 lg:pb-6">
         <input ref={fileInput} type="file" accept="audio/*,image/*" className="sr-only" tabIndex={-1} aria-hidden
           onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (!f) return; void (f.type.startsWith("image/") ? sendImage(f) : sendAudio(f)); }} />
         <Composer onSend={(t) => send(t)} sending={sending || transcribing} offline={offline} onVoiceMode={() => router.push("/conversa/voz")}
