@@ -45,7 +45,7 @@ Sem `.env.local`, o app roda no **modo de demonstração**: dados de exemplo num
 ## Backend
 
 Com as variáveis de `.env.example` preenchidas, o app usa Supabase (banco e login), Claude
-(assistente), UAZAPI (WhatsApp), Groq (áudio), QStash (agendamento), Web Push e Asaas (cobrança).
+(assistente), ZapCoder (WhatsApp), Groq (áudio), QStash (agendamento), Web Push e Asaas (cobrança).
 Passo a passo para criar cada conta, checklist de segurança e pendências: `replica/backend.md`.
 
 ```bash

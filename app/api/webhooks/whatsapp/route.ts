@@ -15,12 +15,12 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const wa = whatsapp();
   if (!wa) {
-    await recordStatus("whatsapp_webhook", "WhatsApp sem provedor configurado (faltam as chaves da UAZAPI ou da Meta)", false);
+    await recordStatus("whatsapp_webhook", "WhatsApp sem provedor configurado (faltam as chaves da ZapCoder, da UAZAPI ou da Meta)", false);
     return Response.json({ error: "WhatsApp não configurado" }, { status: 503 });
   }
   const rawBody = await request.text();
   if (!wa.verifyWebhook({ url: request.url, headers: request.headers, rawBody })) {
-    await recordStatus("whatsapp_webhook", "Recusado: o segredo na URL do webhook ou o token da instância não batem com os do sistema", false);
+    await recordStatus("whatsapp_webhook", wa.name === "zapcoder" ? "Recusado: a assinatura do webhook não bate (o segredo cadastrado na ZapCoder precisa ser o mesmo do sistema; use Cadastrar webhook no diagnóstico)" : "Recusado: o segredo na URL do webhook ou o token da instância não batem com os do sistema", false);
     return new Response("forbidden", { status: 401 });
   }
   let body: unknown;

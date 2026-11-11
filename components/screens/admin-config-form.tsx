@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useId, useRef, useState, useTransition } from "react";
-import { checkWhatsApp, generateSystemSecret, revealIntegrationInfo, saveSystemConfig, testAnthropicKey } from "@/app/actions";
+import { checkWhatsApp, generateSystemSecret, revealIntegrationInfo, saveSystemConfig, setupWhatsAppWebhook, testAnthropicKey } from "@/app/actions";
 import { Button } from "@/components/ui/button";
 import { Card, SectionLabel } from "@/components/ui/card";
 import type { ConfigGroup, FieldStatus } from "@/lib/app-config";
@@ -78,7 +78,7 @@ export function AdminConfigForm({ group, status }: { group: ConfigGroup; status:
   );
 }
 
-// Endereços e tokens para colar nos painéis da UAZAPI, da Asaas e da Meta
+// Endereços e tokens para colar nos painéis da ZapCoder, da Asaas e da Meta
 // `version` muda quando um segredo é salvo ou gerado: com o painel aberto, ele busca de novo,
 // para não ficar mostrando "gere abaixo" depois de gerar.
 export function IntegrationInfo({ version }: { version: string }) {
@@ -89,7 +89,8 @@ export function IntegrationInfo({ version }: { version: string }) {
     if (open.current) revealIntegrationInfo().then(setInfo).catch(() => setInfo(null));
   }, [version]);
   const rows = info ? [
-    ["Webhook da UAZAPI (POST /webhook da instância)", info.whatsappWebhook ?? "gere o segredo do webhook da UAZAPI abaixo"],
+    [info.whatsappProvider === "uazapi" ? "Webhook da UAZAPI (POST /webhook da instância)" : "Webhook da ZapCoder (o botão Cadastrar webhook, no diagnóstico, já faz isto)", info.whatsappWebhook ?? "gere o segredo do webhook abaixo"],
+    ...(info.whatsappProvider === "uazapi" ? [] : [["Segredo do webhook da ZapCoder (assina cada mensagem)", info.whatsappWebhookSecret ?? "gere abaixo"] as [string, string]]),
     ["Webhook da Asaas (Integrações > Webhooks)", info.asaasWebhook],
     ["Token do webhook da Asaas", info.asaasToken ?? "gere abaixo"],
     ["Callback da Meta", info.metaCallback],
@@ -128,7 +129,7 @@ function Line({ ok, children }: { ok: boolean | null; children: React.ReactNode 
   return <li className={`flex gap-2 ${ok === false ? "text-danger" : ok === true ? "text-text" : "text-body"}`}><span aria-hidden>{ok === true ? "✓" : ok === false ? "✗" : "•"}</span><span>{children}</span></li>;
 }
 
-// Quando o WhatsApp "não responde": mostra o último sinal que chegou ao sistema e o que a UAZAPI diz (conectada? para onde manda?)
+// Quando o WhatsApp "não responde": mostra o último sinal que chegou ao sistema e o que o gateway diz (conectado? para onde manda?)
 export function WhatsAppDiagnostic() {
   const [data, setData] = useState<Diagnosis | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -137,7 +138,19 @@ export function WhatsAppDiagnostic() {
     setError(null);
     try { setData(await checkWhatsApp()); } catch { setError("Não deu para conferir agora. Tente de novo."); }
   });
-  const u = data?.check.uazapi;
+  const [setting, startSetup] = useTransition();
+  const [setupMessage, setSetupMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const setup = () => startSetup(async () => {
+    setSetupMessage(null);
+    try {
+      const r = await setupWhatsAppWebhook();
+      setData({ check: r.check, signals: r.signals });
+      setSetupMessage(r.result.ok ? { ok: true, text: "Webhook cadastrado na ZapCoder. Mande uma mensagem para o número do assistente para testar." } : { ok: false, text: r.result.error });
+    } catch { setSetupMessage({ ok: false, text: "Não deu para cadastrar agora. Tente de novo." }); }
+  });
+  const u = data?.check.gateway;
+  const gw = data?.check.gatewayName;
+  const zap = data?.check.provider === "zapcoder";
   const hooks = u?.webhooks ?? [];
   const good = hooks.some((h) => h.pointsHere && h.secretOk);
   const signals = data ? ([["Último aviso que chegou do WhatsApp", data.signals.whatsapp_webhook], ["Fila (processamento)", data.signals.whatsapp_job], ["Último número que mandou mensagem", data.signals.whatsapp_inbound], ["Última tentativa de abrir o pagamento (Asaas)", data.signals.asaas_checkout]] as const) : [];
@@ -161,22 +174,29 @@ export function WhatsAppDiagnostic() {
             ))}
           </ul>
           <ul className="flex flex-col gap-1.5">
-            <Line ok={null}>Endereço do app que a UAZAPI precisa usar: <span className="break-all font-mono">{data.check.expectedWebhook}</span></Line>
-            {data.check.provider === "uazapi" && u && (
+            <Line ok={null}>Endereço do app que {gw ?? "o provedor"} precisa usar: <span className="break-all font-mono">{data.check.expectedWebhook}</span></Line>
+            {gw && u && (
               <>
                 <Line ok={u.reachable && u.connected === true ? true : false}>
-                  {u.reachable ? `Instância da UAZAPI: ${u.connected ? "conectada" : `DESCONECTADA${u.state ? ` (${u.state})` : ""}. Leia o QR code de novo no painel da UAZAPI`}${u.number ? `, número ${u.number}` : ""}` : u.error}
+                  {u.reachable ? `Instância da ${gw}: ${u.connected ? "conectada" : `DESCONECTADA${u.state ? ` (${u.state})` : ""}. Leia o QR code de novo no painel da ${gw}`}${u.number ? `, número ${u.number}` : ""}` : u.error}
                 </Line>
                 {u.reachable && u.error && <Line ok={false}>{u.error}</Line>}
-                {u.reachable && hooks.length === 0 && !u.error && <Line ok={false}>A UAZAPI não tem nenhum webhook cadastrado: ela não avisa o app das mensagens. Cadastre o endereço que aparece em Endereços para colar nos serviços.</Line>}
+                {u.reachable && hooks.length === 0 && !u.error && <Line ok={false}>A {gw} não tem nenhum webhook cadastrado: ela não avisa o app das mensagens. {zap ? "Toque em Cadastrar webhook abaixo." : "Cadastre o endereço que aparece em Endereços para colar nos serviços."}</Line>}
                 {hooks.map((h) => (
                   <Line key={h.url} ok={h.pointsHere ? h.secretOk : h.enabled === false ? null : false}>
-                    Webhook cadastrado na UAZAPI: <span className="break-all font-mono">{h.url.replace(/secret=[^&]+/, "secret=…")}</span>
-                    {h.pointsHere ? (h.secretOk ? " — confere com este app" : " — o endereço é este app, mas o segredo não é o do sistema") : h.enabled === false ? " — é de outro sistema e está desligado: não afeta o app" : " — aponta para OUTRO endereço (domínio antigo?). Troque pelo de cima"}
+                    Webhook cadastrado na {gw}: <span className="break-all font-mono">{h.url.replace(/secret=[^&]+/, "secret=…")}</span>
+                    {h.pointsHere ? (h.secretOk ? " — confere com este app" : zap ? " — o endereço é este app, mas o webhook está sem segredo (ou o segredo do sistema não foi gerado). Toque em Cadastrar webhook" : " — o endereço é este app, mas o segredo não é o do sistema") : h.enabled === false ? " — é de outro sistema e está desligado: não afeta o app" : " — aponta para OUTRO endereço (domínio antigo?). Troque pelo de cima"}
                     {h.enabled === false && h.pointsHere ? " (desligado)" : ""}
                   </Line>
                 ))}
                 {u.reachable && hooks.length > 0 && !good && !hooks.some((h) => h.pointsHere) && <Line ok={false}>Nenhum webhook aponta para este app. Foi o que mais travou o WhatsApp depois de trocar o domínio.</Line>}
+                {zap && u.reachable && (
+                  <li className="flex flex-wrap items-center gap-3 pt-1">
+                    <Button size="sm" loading={setting} onClick={setup}>Cadastrar webhook na ZapCoder</Button>
+                    <span className="text-xs text-muted">Registra o endereço do app e o segredo do sistema (só mensagens recebidas).</span>
+                  </li>
+                )}
+                {setupMessage && <Line ok={setupMessage.ok}>{setupMessage.text}</Line>}
               </>
             )}
             <Line ok={data.check.queue.token && data.check.queue.signingKeys}>

@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import AxeBuilder from "@axe-core/playwright";
 import { test as base, expect, type Page } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
@@ -7,6 +8,15 @@ import type { Database } from "@/lib/supabase/database.types";
 // login pela tela, falha em erro de console ou resposta 5xx, e varredura de acessibilidade.
 export const admin = createClient<Database>("http://127.0.0.1:54321", (process.env.SUPABASE_SECRET_KEY ?? ""), { auth: { persistSession: false } });
 export const MOCK = "http://127.0.0.1:4010";
+
+// Webhook do WhatsApp como a ZapCoder chama: corpo JSON assinado (X-Zapcoder-Signature: sha256=HMAC do corpo cru)
+export const WA_SECRET = "segredo-e2e-do-webhook-com-mais-de-16";
+export function postWebhook(body: object, opts: { secret?: string; signed?: boolean } = {}) {
+  const raw = JSON.stringify(body);
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (opts.signed !== false) headers["X-Zapcoder-Signature"] = `sha256=${crypto.createHmac("sha256", opts.secret ?? WA_SECRET).update(raw).digest("hex")}`;
+  return fetch("http://localhost:3000/api/webhooks/whatsapp", { method: "POST", headers, body: raw });
+}
 export const PASSWORD = "senha-boa-12345";
 
 export type TestUser = { id: string; email: string; name: string };

@@ -33,7 +33,7 @@ Depois de preencher: `npm run dev` e criar a primeira conta pelo `/entrar`.
 | exclusão de conta | apaga o usuário no Auth e tudo dele em cascata (testado com conversa e notas) | `lib/data/supabase-store.ts` |
 | agente | Claude Opus 5.5 (`claude-opus-5-5`) pelo Tool Runner, 21 ferramentas estritas (criar, consultar, editar e apagar), esquema sem os limites que a API não aceita (o Zod confere no servidor), esforço `low`, cache do prompt, reserva automática em recusas (`fallbacks: "default"`), histórico do dia reenviado byte a byte; sem chave, usa o intérprete de regras | `lib/assistant/agent.ts` |
 | limites | 12 mensagens por minuto e 400 por dia por pessoa (custo de IA e abuso) | `lib/assistant/index.ts` |
-| WhatsApp | interface única com UAZAPI (agora) e WhatsApp Cloud API da Meta (pronta); vínculo do número por código enviado do próprio celular; respostas com uma linha por item salvo; mensagem repetida não roda duas vezes | `lib/whatsapp/` |
+| WhatsApp | interface única com ZapCoder (padrão), UAZAPI (antigo, ainda aceito) e WhatsApp Cloud API da Meta (pronta); vínculo do número por código enviado do próprio celular; respostas com uma linha por item salvo; mensagem repetida não roda duas vezes | `lib/whatsapp/` |
 | áudio | Groq `whisper-large-v3-turbo` em português: áudios do WhatsApp e ditado no app quando o navegador não reconhece voz | `lib/transcribe.ts`, `app/api/transcribe` |
 | entregas | varredura de cada minuto: lembretes vencidos e resumo da manhã por push e WhatsApp, com reserva em `scheduled_deliveries` (nada sai em dobro) e registro em Avisos | `lib/deliveries.ts`, `app/api/cron/sweep` |
 | push | Web Push com service worker; ligado em Ajustes > Notificações no aparelho | `lib/push.ts`, `public/sw.js` |
@@ -58,17 +58,17 @@ node scripts/musts-check.cjs replica/clone-screens  # repetição, edição, cat
 - [x] entrada validada no servidor (Zod) em todas as rotas e ações
 - [x] autorização em toda leitura e escrita: filtro por `user_id` + FKs compostas + RLS; **testado com um segundo usuário** (não vê nem altera nada, nem pelo navegador)
 - [x] limites: Supabase Auth limita cadastro, login e e-mails; o app limita mensagens por pessoa
-- [x] webhooks conferem a origem: Meta (assinatura HMAC), UAZAPI (segredo na URL + token da instância), Asaas (token no cabeçalho), QStash e varredura (assinatura ou `CRON_SECRET`)
+- [x] webhooks conferem a origem: Meta (assinatura HMAC), ZapCoder (assinatura HMAC `X-Zapcoder-Signature`), UAZAPI (segredo na URL + token da instância), Asaas (token no cabeçalho), QStash e varredura (assinatura ou `CRON_SECRET`)
 - [x] uploads: áudio do ditado até 10 MB e só tipos de áudio; mídia do WhatsApp é baixada no servidor e não fica guardada
 - [x] nada de dado do usuário em URL ou log (logs só com códigos de erro)
 - [x] `npm audit --omit=dev`: 0 vulnerabilidades
 - [x] cabeçalhos de segurança (X-Frame-Options, HSTS, nosniff, Referrer-Policy, Permissions-Policy)
-- [ ] política de privacidade listando os operadores: Supabase, Vercel, Anthropic, Groq, UAZAPI (depois Meta), Upstash, Asaas, Resend (página escrita no `/replica-launch`)
+- [ ] política de privacidade listando os operadores: Supabase, Vercel, Anthropic, Groq, ZapCoder (depois Meta), Upstash, Asaas, Resend (página escrita no `/replica-launch`)
 - [ ] backups: ativar no plano do Supabase (o gratuito não tem backup diário)
 
 ## Pendências e riscos
 
-- **UAZAPI não é a API oficial do WhatsApp.** O número pode ser bloqueado pelo WhatsApp, sobretudo com muitas mensagens proativas (lembretes, resumos). Use um número dedicado.
+- **ZapCoder (como a UAZAPI) não é a API oficial do WhatsApp.** O número pode ser bloqueado pelo WhatsApp, sobretudo com muitas mensagens proativas (lembretes, resumos). Use um número dedicado.
   - **Para migrar:** preencher as variáveis `META_*`, mudar `WHATSAPP_PROVIDER=meta` e apontar o webhook da Meta para `/api/webhooks/whatsapp`.
   - **O envio por modelo já está pronto.** Dentro de 24 h desde a última mensagem da pessoa, sai texto livre; fora disso, sai o modelo aprovado. O teste fica em `lib/whatsapp/provider.test.ts`.
   - **Falta você criar os três modelos** na categoria "Utilidade", em pt_BR, e pôr os nomes nas variáveis `META_TEMPLATE_*`. Textos sugeridos:

@@ -17,7 +17,8 @@ import { confirmBill } from "@/lib/assistant/tools";
 import { CONFIG_FIELDS, CONFIG_KEYS, loadAppConfig, saveAppConfig } from "@/lib/app-config";
 import { pingAgent } from "@/lib/assistant/agent";
 import { readStatus, recordStatus } from "@/lib/diagnostics";
-import { checkWhatsApp as runWhatsAppCheck } from "@/lib/whatsapp/diagnose";
+import { checkWhatsApp as runWhatsAppCheck, setupZapcoderWebhook } from "@/lib/whatsapp/diagnose";
+import { providerName } from "@/lib/whatsapp/provider";
 import { changeDocument, changeFolderDeadline } from "@/lib/documents";
 import { deletePlan, savePlan, saveTrial } from "@/lib/admin-plans";
 import { planInput, trialInput, type PlanInput, type TrialInput } from "@/lib/plans";
@@ -415,14 +416,17 @@ export async function testAnthropicKey() {
   return pingAgent();
 }
 
-// Endereços para colar na UAZAPI, na Asaas e na Meta (com os tokens), só para o admin
+// Endereços para colar na ZapCoder (ou UAZAPI), na Asaas e na Meta (com os tokens), só para o admin
 export async function revealIntegrationInfo() {
   await requireAdmin();
   await loadAppConfig(true);
   const site = siteUrl();
   const e = process.env;
   return {
-    whatsappWebhook: e.UAZAPI_WEBHOOK_SECRET ? `${site}/api/webhooks/whatsapp?secret=${e.UAZAPI_WEBHOOK_SECRET}` : null,
+    // ZapCoder: URL limpa + segredo (assina cada entrega). UAZAPI (antiga): o segredo vai na URL.
+    whatsappWebhook: providerName(e) === "uazapi" ? (e.UAZAPI_WEBHOOK_SECRET ? `${site}/api/webhooks/whatsapp?secret=${e.UAZAPI_WEBHOOK_SECRET}` : null) : `${site}/api/webhooks/whatsapp`,
+    whatsappWebhookSecret: providerName(e) === "uazapi" ? null : e.ZAPCODER_WEBHOOK_SECRET ?? null,
+    whatsappProvider: providerName(e),
     asaasWebhook: `${site}/api/webhooks/asaas`,
     asaasToken: e.ASAAS_WEBHOOK_TOKEN ?? null,
     metaCallback: `${site}/api/webhooks/whatsapp`,
@@ -430,12 +434,21 @@ export async function revealIntegrationInfo() {
   };
 }
 
-// Diagnóstico do WhatsApp (só admin): o que a UAZAPI diz e o último sinal do webhook, da fila e do vínculo
+// Diagnóstico do WhatsApp (só admin): o que o gateway (ZapCoder) diz e o último sinal do webhook, da fila e do vínculo
 export async function checkWhatsApp() {
   await requireAdmin();
   await loadAppConfig(true);
   const [check, signals] = await Promise.all([runWhatsAppCheck(process.env, siteUrl()), readStatus().catch((): Awaited<ReturnType<typeof readStatus>> => ({}))]);
   return { check, signals };
+}
+
+// Cadastra o webhook na ZapCoder com o endereço do app e o segredo do sistema (só admin) e devolve o diagnóstico atualizado
+export async function setupWhatsAppWebhook() {
+  await requireAdmin();
+  await loadAppConfig(true);
+  const result = await setupZapcoderWebhook(process.env, siteUrl());
+  const [check, signals] = await Promise.all([runWhatsAppCheck(process.env, siteUrl()), readStatus().catch((): Awaited<ReturnType<typeof readStatus>> => ({}))]);
+  return { result, check, signals };
 }
 
 // ---- Cofre de senhas: o aparelho cifra e decifra; aqui só passa texto cifrado (base64) ----

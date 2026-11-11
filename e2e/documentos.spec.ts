@@ -1,6 +1,6 @@
 import { PDFDocument } from "pdf-lib";
 import sharp from "sharp";
-import { a11y, admin, createUser, expect, login, mockCalls, noHorizontalScroll, test } from "./fixtures";
+import { a11y, admin, createUser, expect, login, mockCalls, noHorizontalScroll, postWebhook, test } from "./fixtures";
 
 async function samplePdf(pages = 1) {
   const doc = await PDFDocument.create();
@@ -189,13 +189,10 @@ test.describe("Documentos", () => {
 test("DOC-W1 PDF enviado pelo WhatsApp aparece em Documentos e o original baixa igual", async ({ page, user }) => {
   const number = `55119${String(Date.now()).slice(-8)}`;
   await admin.from("channel_links").insert({ user_id: user.id, channel: "whatsapp", external_id: `+${number}`, verified_at: new Date().toISOString() });
-  const res = await fetch("http://localhost:3000/api/webhooks/whatsapp?secret=segredo-e2e", {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ EventType: "messages", token: "token-e2e", message: {
-      messageid: `DOC-${number}`, id: "DOC-REF", chatid: `${number}@s.whatsapp.net`, sender_pn: `${number}@s.whatsapp.net`, fromMe: false, isGroup: false, wasSentByApi: false,
-      messageType: "DocumentMessage", content: { mimetype: "application/pdf", fileName: "nota-hotel.pdf" }, messageTimestamp: Date.now(),
-    } }),
-  });
+  const res = await postWebhook({ EventType: "messages", token: "token-e2e", message: {
+    messageid: `DOC-${number}`, id: `5511900000000:DOC-${number}`, chatid: `${number}@s.whatsapp.net`, sender_pn: `${number}@s.whatsapp.net`, fromMe: false, isGroup: false, wasSentByApi: false,
+    messageType: "DocumentMessage", content: { mimetype: "application/pdf", fileName: "nota-hotel.pdf" }, messageTimestamp: Date.now(),
+  } });
   expect(res.status).toBe(200);
   await expect.poll(async () => (await mockCalls()).some((c) => c.url === "/send/text" || c.url === "/send/menu" ? String(c.body.number) === number && /Guardei em Documentos/.test(String(c.body.text)) : false), { timeout: 20_000 }).toBe(true);
 

@@ -5,14 +5,14 @@ import fs from "node:fs";
 if (fs.existsSync(".env.local")) process.loadEnvFile(".env.local");
 
 // Ponta a ponta contra o dev server com o Supabase local (npm run db:start) e um servidor
-// falso para a UAZAPI e a Asaas (e2e/mock-server.mjs). Sem ANTHROPIC_API_KEY: a conversa usa
+// falso para a ZapCoder e a Asaas (e2e/mock-server.mjs). Sem ANTHROPIC_API_KEY: a conversa usa
 // o intérprete de regras, que é determinístico. O agente tem testes de integração próprios.
 export const MOCK = "http://127.0.0.1:4010";
 export const E2E_ENV = {
-  UAZAPI_BASE_URL: MOCK,
-  UAZAPI_INSTANCE_TOKEN: "token-e2e",
-  UAZAPI_WEBHOOK_SECRET: "segredo-e2e",
-  WHATSAPP_PROVIDER: "uazapi",
+  ZAPCODER_BASE_URL: MOCK,
+  ZAPCODER_INSTANCE_TOKEN: "token-e2e",
+  ZAPCODER_WEBHOOK_SECRET: "segredo-e2e-do-webhook-com-mais-de-16",
+  WHATSAPP_PROVIDER: "zapcoder",
   WHATSAPP_BOT_NUMBER: "5511900000000",
   ASAAS_API_URL: `${MOCK}/v3`,
   ASAAS_API_KEY: "chave-e2e",

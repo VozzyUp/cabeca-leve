@@ -6,7 +6,7 @@ Como funciona:
 - **Sua VPS (Swarm + Traefik), pelo Portainer:** o app e um contêiner pequeno que chama a varredura de lembretes a cada minuto. O QStash não é necessário.
 - **GitHub:** a cada push na `main`, a Action aplica as migrações novas no banco, monta a imagem e manda o Portainer atualizar o serviço. Você não precisa fazer nada além de subir uma vez.
 
-A imagem não tem nenhuma chave dentro. No stack ficam só **7 valores de base**. Todas as outras chaves (Anthropic, Groq, UAZAPI, Asaas, Resend, push, Meta, suporte) você configura **depois, numa tela do próprio app**, em `/admin/configuracoes`. Elas ficam no banco, criptografadas.
+A imagem não tem nenhuma chave dentro. No stack ficam só **7 valores de base**. Todas as outras chaves (Anthropic, Groq, ZapCoder, Asaas, Resend, push, Meta, suporte) você configura **depois, numa tela do próprio app**, em `/admin/configuracoes`. Elas ficam no banco, criptografadas.
 
 | arquivo | para quê |
 | --- | --- |
@@ -103,7 +103,7 @@ Sem eles a imagem é publicada do mesmo jeito; só as etapas correspondentes avi
    | --- | --- |
    | Assistente | chave da Anthropic, o **modelo** (Haiku 5.5, Sonnet 5.5 ou Opus 5.5; padrão Sonnet 5.5) e o **nível de raciocínio** (baixo, médio, alto, muito alto, máximo; padrão médio). Valem na hora. O botão **Testar chave** mostra o modelo em uso. Se a chave for sem workspace, preencha também o ID do workspace |
    | Áudio | chave da Groq |
-   | WhatsApp | provedor, número do assistente, endereço e token da UAZAPI; use **Gerar** no segredo do webhook; **Botões nas respostas** (ligados no formato atual por padrão; se não aparecerem no seu celular, tente o formato antigo ou desligue). Para conferir, use **Ajustes > Testar aviso agora**: o aviso do WhatsApp vem com botões de teste |
+   | WhatsApp | provedor, número do assistente, token da instância da ZapCoder (o endereço é opcional); use **Gerar** no segredo do webhook; **Botões nas respostas** (ligados no formato atual por padrão; se não aparecerem no seu celular, tente o formato antigo ou desligue). Para conferir, use **Ajustes > Testar aviso agora**: o aviso do WhatsApp vem com botões de teste |
    | Cobrança | ambiente (sandbox ou produção), chave da Asaas; use **Gerar** no token do webhook |
    | E-mail | chave da Resend e remetente |
    | Custos (painel) | cotação do dólar, só para converter os valores da tela **Custo da IA** (padrão R$ 5,50) |
@@ -112,7 +112,7 @@ Sem eles a imagem é publicada do mesmo jeito; só as etapas correspondentes avi
    | Notificações | **Gerar** cria o par de chaves do push |
    | Suporte | e-mail e WhatsApp que recebem os chamados |
 
-4. Clique em **Mostrar** em "Endereços para colar nos serviços": ali estão o webhook da UAZAPI (já com o segredo), o da Asaas e o token, para colar nos painéis deles.
+4. Clique em **Mostrar** em "Endereços para colar nos serviços": ali estão o webhook da ZapCoder (o botão **Cadastrar webhook na ZapCoder**, no Diagnóstico, já registra), o da Asaas e o token, para colar nos painéis deles.
 5. Segredos aparecem na tela só com os 4 últimos caracteres. Para trocar, digite o valor novo. **Apagar** volta a valer o que estiver no stack.
 
 ## 8. Conferir

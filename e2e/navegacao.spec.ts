@@ -1,4 +1,4 @@
-import { admin, expect, login, test } from "./fixtures";
+import { admin, expect, login, postWebhook, test } from "./fixtures";
 
 test.describe("Navegação e configuração inicial", () => {
   test("NAV-H1 barra de cima: avisos com contador, menu da conta e sair @celular", async ({ page, user }) => {
@@ -86,10 +86,10 @@ test.describe("Navegação e configuração inicial", () => {
     await expect(dialog.getByRole("button", { name: "Continuar" })).toHaveCount(0);  // com o código na tela, ainda falta mandar
     // o código chega pelo WhatsApp: a janela percebe e libera o Continuar
     const code = (await status.locator(".font-mono").textContent())!.trim();
-    const res = await fetch("http://localhost:3000/api/webhooks/whatsapp?secret=segredo-e2e", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
+    const res = await postWebhook({
       EventType: "messages", token: "token-e2e",
       message: { messageid: `onb-${number}`, chatid: `${number}@s.whatsapp.net`, sender_pn: `${number}@s.whatsapp.net`, fromMe: false, isGroup: false, wasSentByApi: false, messageType: "Conversation", text: `Meu código: ${code}`, messageTimestamp: Date.now() },
-    }) });
+    });
     expect(res.status).toBe(200);
     await expect(dialog.getByRole("status").filter({ hasText: "WhatsApp vinculado" }).first()).toBeVisible({ timeout: 20_000 });
     await dialog.getByRole("button", { name: "Continuar" }).click();

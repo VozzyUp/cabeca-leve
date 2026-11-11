@@ -1,10 +1,8 @@
-import { admin, expect, login, MOCK, mockCalls, test } from "./fixtures";
+import { admin, expect, login, MOCK, mockCalls, postWebhook, test } from "./fixtures";
 
 // F16 + F02: vincular o número pelo código e organizar pelo WhatsApp.
-// O webhook é chamado como a UAZAPI chamaria; as respostas vão para o servidor falso.
-const SECRET = "segredo-e2e";
-const hook = (body: object, secret = SECRET) =>
-  fetch(`http://localhost:3000/api/webhooks/whatsapp?secret=${secret}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+// O webhook é chamado como a ZapCoder chamaria (corpo assinado); as respostas vão para o servidor falso.
+const hook = (body: object, secret?: string) => postWebhook(body, { secret });
 const inbound = (id: string, from: string, text: string) => ({
   EventType: "messages", token: "token-e2e",
   message: { messageid: id, chatid: `${from}@s.whatsapp.net`, sender_pn: `${from}@s.whatsapp.net`, fromMe: false, isGroup: false, wasSentByApi: false, messageType: "Conversation", text, messageTimestamp: Date.now() },
@@ -118,9 +116,8 @@ test.describe("F02 e F16 WhatsApp", () => {
   });
 
   test("F02-N2 webhook sem o segredo certo é recusado", async () => {
-    expect((await hook(inbound("Z1", phone(), "oi"), "errado")).status).toBe(401);
-    const wrongToken = { ...inbound("Z2", phone(), "oi"), token: "outro" };
-    expect((await hook(wrongToken)).status).toBe(401);
+    expect((await hook(inbound("Z1", phone(), "oi"), "segredo-errado-com-mais-de-16-caracteres")).status).toBe(401);
+    expect((await postWebhook(inbound("Z2", phone(), "oi"), { signed: false })).status).toBe(401);   // sem assinatura
   });
 
   test("F02-E2 mensagens do próprio número e de grupos são ignoradas", async () => {

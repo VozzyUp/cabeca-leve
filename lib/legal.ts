@@ -57,7 +57,7 @@ export function privacySections(o = operator()): Section[] {
         "Supabase: banco de dados e login.",
         "Anthropic: a inteligência artificial que lê sua mensagem (e foto ou documento) e escreve a resposta, e faz as buscas na internet das pesquisas agendadas.",
         "Groq: transcrição dos áudios em texto.",
-        "WhatsApp: a mensagem passa pelo provedor de conexão do WhatsApp que usamos (UAZAPI ou a API oficial da Meta).",
+        "WhatsApp: a mensagem passa pelo provedor de conexão do WhatsApp que usamos (ZapCoder, UAZAPI ou a API oficial da Meta).",
         "Asaas: cobrança e pagamento.",
         "Resend: e-mails de recibo, resumo e avisos.",
         "O serviço de notificação do seu navegador ou celular, para o aviso chegar com o app fechado.",

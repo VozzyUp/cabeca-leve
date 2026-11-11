@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { digitsOnly } from "./phone";
 
-// Canal WhatsApp atrás de uma interface: hoje a UAZAPI, depois a WhatsApp Cloud API
+// Canal WhatsApp atrás de uma interface: ZapCoder (padrão), UAZAPI (antigo) ou a WhatsApp Cloud API
 // oficial da Meta. Trocar é mudar WHATSAPP_PROVIDER; nada fora desta pasta muda.
 
 export type Inbound = {
@@ -21,7 +21,7 @@ export type Button = { id: string; title: string };
 export type Proactive = {
   template: "lembrete" | "resumo" | "aviso";
   params: string[];  // variáveis do modelo, na ordem ({{1}}, {{2}}…), cada uma numa linha só
-  text: string;      // o mesmo conteúdo em texto livre, para dentro da janela e para a UAZAPI
+  text: string;      // o mesmo conteúdo em texto livre, para dentro da janela e para ZapCoder/UAZAPI
 };
 
 // Nomes dos modelos aprovados no Gerenciador do WhatsApp (textos sugeridos em replica/backend.md)
@@ -29,7 +29,7 @@ const TEMPLATE_ENV = { lembrete: "META_TEMPLATE_LEMBRETE", resumo: "META_TEMPLAT
 const WINDOW_MS = 24 * 3_600_000;
 
 export interface WhatsAppProvider {
-  name: "uazapi" | "meta";
+  name: "zapcoder" | "uazapi" | "meta";
   // confere se o pedido veio mesmo do provedor (segredo, token ou assinatura)
   verifyWebhook(req: { url: string; headers: Headers; rawBody: string }): boolean;
   parseWebhook(body: unknown): Inbound[];
@@ -46,11 +46,11 @@ export interface WhatsAppProvider {
   sendFile(to: string, file: { bytes: Buffer; mimeType: string; fileName: string; caption?: string }): Promise<void>;
 }
 
-// WHATSAPP_BUTTONS (tela de admin): "button" (formato atual, padrão), "button_legacy" (formato antigo da UAZAPI) ou "off"
+// WHATSAPP_BUTTONS (tela de admin): "button" (formato atual, padrão), "button_legacy" (formato antigo) ou "off"
 export const buttonMode = () => (process.env.WHATSAPP_BUTTONS === "off" || process.env.WHATSAPP_BUTTONS === "button_legacy" ? process.env.WHATSAPP_BUTTONS : "button");
 export const buttonsEnabled = () => buttonMode() !== "off";
 
-// No máximo 3 botões, título de até 20 caracteres, sem "|" (a UAZAPI usa como separador) e ids sem quebra de linha
+// No máximo 3 botões, título de até 20 caracteres, sem "|" (ZapCoder e UAZAPI usam como separador) e ids sem quebra de linha
 export function cleanButtons(buttons: Button[]): Button[] {
   return buttons.slice(0, 3).map((b) => ({
     id: b.id.replace(/[|\n\r]/g, "").slice(0, 200),
@@ -79,28 +79,23 @@ async function ok(res: Response, what: string) {
   return res;
 }
 
-// ---- UAZAPI (https://docs.uazapi.com) ----
-function uazapi(): WhatsAppProvider {
-  const base = (process.env.UAZAPI_BASE_URL ?? "").replace(/\/$/, "");
-  const token = process.env.UAZAPI_INSTANCE_TOKEN ?? "";
-  const secret = process.env.UAZAPI_WEBHOOK_SECRET ?? "";
+// ---- ZapCoder (https://zapcoder.cloud/docs) e UAZAPI (https://docs.uazapi.com) ----
+// As duas falam o mesmo REST (/send/text, /send/menu, /send/media, /message/download) e mandam o mesmo corpo de webhook;
+// mudam só o endereço, a forma de conferir o webhook e qual id usar para baixar a mídia.
+type Gateway = { name: "zapcoder" | "uazapi"; label: string; base: string; token: string; verify: WhatsAppProvider["verifyWebhook"]; downloadRef: (m: Record<string, unknown>) => string };
+
+function gatewayProvider(g: Gateway): WhatsAppProvider {
+  const { base, token, label } = g;
   const headers = { "Content-Type": "application/json", token };
   const download = async (ref: string, extra: Record<string, unknown>, fallbackType: string) => {
-    const res = await ok(await fetch(`${base}/message/download`, { method: "POST", headers, body: JSON.stringify({ id: ref, ...extra }) }), "uazapi download");
+    const res = await ok(await fetch(`${base}/message/download`, { method: "POST", headers, body: JSON.stringify({ id: ref, ...extra }) }), `${label} download`);
     const { fileURL, mimetype } = (await res.json()) as { fileURL: string; mimetype?: string };
-    const file = await ok(await fetch(fileURL), "uazapi fileURL");
+    const file = await ok(await fetch(fileURL), `${label} fileURL`);
     return { data: await file.arrayBuffer(), mimeType: mimetype ?? file.headers.get("content-type") ?? fallbackType };
   };
   return {
-    name: "uazapi",
-    // a UAZAPI não assina o webhook: exigimos o segredo na URL E o token da instância no corpo
-    verifyWebhook({ url, rawBody }) {
-      if (!secret || !token) return false;
-      const given = new URL(url).searchParams.get("secret") ?? "";
-      let bodyToken = "";
-      try { bodyToken = String((JSON.parse(rawBody) as { token?: unknown }).token ?? ""); } catch { return false; }
-      return safeEqual(given, secret) && safeEqual(bodyToken, token);
-    },
+    name: g.name,
+    verifyWebhook: g.verify,
     parseWebhook(body) {
       const b = body as { EventType?: string; message?: Record<string, unknown> };
       const m = b.message;
@@ -113,27 +108,28 @@ function uazapi(): WhatsAppProvider {
       const isImage = /image/i.test(type);  // figurinha (sticker) não entra
       const isFile = /document/i.test(type);  // PDF, nota enviada como arquivo
       const text = typeof m.text === "string" && m.text.trim() ? m.text.trim() : null;
-      const buttonId = typeof m.buttonOrListid === "string" && m.buttonOrListid.trim() ? m.buttonOrListid.trim() : null;
+      const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
+      const buttonId = str(m.buttonOrListid) ?? str(m.buttonOrListID);
       if (!text && !isAudio && !isImage && !isFile && !buttonId) return [];
       const id = String(m.messageid ?? m.id ?? "");
       const content = (m.content && typeof m.content === "object" ? m.content : {}) as Record<string, unknown>;
-      const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
+      const ref = g.downloadRef(m) || id;
       return [{ externalId: id, from: digitsOnly(jid.split("@")[0]), text: isAudio || isImage || isFile ? null : text, button: buttonId ? { id: buttonId } : null,
-        audio: isAudio ? { ref: String(m.id ?? id) } : null, image: isImage ? { ref: String(m.id ?? id), caption: text } : null,
-        file: isFile ? { ref: String(m.id ?? id), mimeType: str(content.mimetype) ?? str(m.mimetype), fileName: str(content.fileName) ?? str(m.fileName) ?? str(m.docName), caption: text } : null,
+        audio: isAudio ? { ref } : null, image: isImage ? { ref, caption: text } : null,
+        file: isFile ? { ref, mimeType: str(content.mimetype) ?? str(m.mimetype), fileName: str(content.fileName) ?? str(m.fileName) ?? str(m.docName), caption: text } : null,
         at: new Date(Number(m.messageTimestamp) || Date.now()) }];
     },
     async sendText(to, text) {
-      await ok(await fetch(`${base}/send/text`, { method: "POST", headers, body: JSON.stringify({ number: digitsOnly(to), text, linkPreview: false }) }), "uazapi send/text");
+      await ok(await fetch(`${base}/send/text`, { method: "POST", headers, body: JSON.stringify({ number: digitsOnly(to), text, linkPreview: false }) }), `${label} send/text`);
     },
     async sendButtons(to, text, buttons) {
       // "texto|id" por botão. O formato "button" é o atual; "button_legacy" só cria botões de resposta, no formato antigo
       await ok(await fetch(`${base}/send/menu`, { method: "POST", headers, body: JSON.stringify({
         number: digitsOnly(to), type: buttonMode() === "button_legacy" ? "button_legacy" : "button", text, choices: buttons.map((b) => `${b.title}|${b.id}`),
-      }) }), "uazapi send/menu");
+      }) }), `${label} send/menu`);
     },
     async sendProactive(to, msg, _lastInboundAt, buttons) {
-      // a UAZAPI não tem janela nem modelos: com botões, vai direto como mensagem de botões
+      // sem janela nem modelos: com botões, vai direto como mensagem de botões
       if (buttons?.length) return sendReply(this, to, msg.text, buttons);
       await this.sendText(to, msg.text);
     },
@@ -151,9 +147,50 @@ function uazapi(): WhatsAppProvider {
       const image = file.mimeType.startsWith("image/");
       await ok(await fetch(`${base}/send/media`, { method: "POST", headers, body: JSON.stringify({
         number: digitsOnly(to), type: image ? "image" : "document", file: file.bytes.toString("base64"), docName: file.fileName, text: file.caption ?? "",
-      }) }), "uazapi send/media");
+      }) }), `${label} send/media`);
     },
   };
+}
+
+// ZapCoder assina cada entrega: X-Zapcoder-Signature: sha256=<HMAC-SHA256 do corpo cru com o segredo do webhook>.
+// A documentação não diz se o resumo vem em hexadecimal ou base64, então aceitamos os dois.
+export function zapcoderSignatureOk(secret: string, signature: string, rawBody: string) {
+  if (!secret || !signature.startsWith("sha256=")) return false;
+  const given = signature.slice("sha256=".length).trim();
+  const mac = crypto.createHmac("sha256", secret).update(rawBody);
+  const digest = mac.digest();
+  return safeEqual(given, digest.toString("hex")) || safeEqual(given, digest.toString("base64"));
+}
+
+export const ZAPCODER_DEFAULT_URL = "https://zapcoder.cloud";
+
+function zapcoder(): WhatsAppProvider {
+  const base = (process.env.ZAPCODER_BASE_URL || ZAPCODER_DEFAULT_URL).replace(/\/$/, "");
+  const token = process.env.ZAPCODER_INSTANCE_TOKEN ?? "";
+  const secret = process.env.ZAPCODER_WEBHOOK_SECRET ?? "";
+  return gatewayProvider({
+    name: "zapcoder", label: "zapcoder", base, token,
+    verify: ({ headers, rawBody }) => zapcoderSignatureOk(secret, headers.get("x-zapcoder-signature") ?? "", rawBody),
+    downloadRef: (m) => String(m.messageid ?? ""),   // nos /message/* o id é o do WhatsApp, sem o prefixo do aparelho
+  });
+}
+
+function uazapi(): WhatsAppProvider {
+  const base = (process.env.UAZAPI_BASE_URL ?? "").replace(/\/$/, "");
+  const token = process.env.UAZAPI_INSTANCE_TOKEN ?? "";
+  const secret = process.env.UAZAPI_WEBHOOK_SECRET ?? "";
+  return gatewayProvider({
+    name: "uazapi", label: "uazapi", base, token,
+    // a UAZAPI não assina o webhook: exigimos o segredo na URL E o token da instância no corpo
+    verify({ url, rawBody }) {
+      if (!secret || !token) return false;
+      const given = new URL(url).searchParams.get("secret") ?? "";
+      let bodyToken = "";
+      try { bodyToken = String((JSON.parse(rawBody) as { token?: unknown }).token ?? ""); } catch { return false; }
+      return safeEqual(given, secret) && safeEqual(bodyToken, token);
+    },
+    downloadRef: (m) => String(m.id ?? ""),
+  });
 }
 
 // ---- WhatsApp Cloud API (Meta, v24.0) ----
@@ -252,8 +289,18 @@ function meta(): WhatsAppProvider {
   };
 }
 
+type Env = Record<string, string | undefined>;
+
+// Qual provedor vale: o escolhido em WHATSAPP_PROVIDER; sem escolha, o que estiver configurado (ZapCoder primeiro, depois a UAZAPI que já rodava)
+export function providerName(env: Env = process.env): "zapcoder" | "uazapi" | "meta" {
+  const p = env.WHATSAPP_PROVIDER;
+  if (p === "zapcoder" || p === "uazapi" || p === "meta") return p;
+  return !env.ZAPCODER_INSTANCE_TOKEN && env.UAZAPI_INSTANCE_TOKEN ? "uazapi" : "zapcoder";
+}
+
 export function whatsapp(): WhatsAppProvider | null {
-  const p = process.env.WHATSAPP_PROVIDER ?? "uazapi";
+  const p = providerName();
   if (p === "meta") return process.env.META_WHATSAPP_TOKEN ? meta() : null;
-  return process.env.UAZAPI_BASE_URL && process.env.UAZAPI_INSTANCE_TOKEN ? uazapi() : null;
+  if (p === "uazapi") return process.env.UAZAPI_BASE_URL && process.env.UAZAPI_INSTANCE_TOKEN ? uazapi() : null;
+  return process.env.ZAPCODER_INSTANCE_TOKEN ? zapcoder() : null;
 }
